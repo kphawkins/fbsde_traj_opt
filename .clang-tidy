@@ -89,6 +89,11 @@ CheckOptions:
     value: k
   - key: readability-identifier-naming.MacroDefinitionCase
     value: UPPER_CASE
+  # Google mandates header guards of the form <PROJECT>_<PATH>_<FILE>_H_, i.e. a trailing
+  # underscore, which UPPER_CASE alone rejects as invalid casing. Exempt anything all-caps that
+  # merely ends in an underscore, which is exactly (and only) the header-guard shape.
+  - key: readability-identifier-naming.MacroDefinitionIgnoredRegexp
+    value: '^[A-Z0-9_]+_$'
 
   # ---- Eigen / math accommodations ------------------------------------------
   # Eigen expression templates are large by-value objects whose copies are lazy; the value-param
