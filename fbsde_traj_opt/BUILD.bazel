@@ -1,0 +1,46 @@
+"""Core library sources.
+
+Following P1204R0, headers, sources, and unit tests live together in this single directory; a
+test for `foo.cpp` is named `foo.test.cpp` and sits beside it.
+
+First-party headers are included with quoted paths (`#include "fbsde_traj_opt/cholesky.hpp"`)
+rather than P1204R0's suggested angle-bracket form: Bazel 9 refuses `includes = ["."]` at the
+workspace root as a security risk (it would let any target include arbitrary workspace files), so
+a root-level include-path shim isn't available. Quoted includes need no extra configuration and
+match the Google C++ Style Guide.
+"""
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//bazel:copts.bzl", "FBSDE_COPTS", "FBSDE_TEST_COPTS")
+
+package(
+    default_visibility = ["//visibility:public"],
+    # Compile every header standalone to catch missing includes. Set per-package rather than
+    # globally in .bazelrc, because globally it would also force Eigen's non-standalone internal
+    # headers to compile on their own, which they cannot.
+    features = ["parse_headers"],
+)
+
+cc_library(
+    name = "cholesky",
+    srcs = ["cholesky.cpp"],
+    hdrs = ["cholesky.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "cholesky_test",
+    size = "small",
+    srcs = ["cholesky.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":cholesky",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
