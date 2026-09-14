@@ -1,0 +1,106 @@
+---
+# Check set for a numerical/scientific C++ library.
+#
+# Enabled families: bugprone, google (the style guide we follow), modernize, performance,
+# readability. Notably absent: cppcoreguidelines-* and hicpp-*, which overlap heavily with the
+# above and whose bans on C-style arrays, magic numbers, and non-const globals conflict with both
+# Eigen idioms and GoogleTest macros; and llvm-*, whose header-guard convention is not ours.
+Checks: >
+  -*,
+  bugprone-*,
+  google-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+
+  -bugprone-easily-swappable-parameters,
+  -bugprone-exception-escape,
+
+  -google-readability-todo,
+
+  -modernize-use-trailing-return-type,
+
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-function-cognitive-complexity,
+  -readability-math-missing-parentheses
+
+# Every enabled check is an error. Combined with a pinned clang-format/clang-tidy version in
+# .pre-commit-config.yaml, this is safe: without the pin, a clang-tidy upgrade that adds a check
+# under one of the wildcards would break the build for everyone at once.
+WarningsAsErrors: '*'
+
+# Only diagnose our own headers. Without this, every diagnostic Eigen's headers can produce is
+# reported once per including translation unit.
+HeaderFilterRegex: '(^|/)fbsde_traj_opt/[^/]*\.hpp$'
+
+# Apply --fix edits using the project .clang-format.
+FormatStyle: file
+
+CheckOptions:
+  # ---- Google naming conventions (cppguide.html#Naming) --------------------
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.UnionCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantPrefix
+    value: k
+  - key: readability-identifier-naming.TypeAliasCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypedefCase
+    value: CamelCase
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: CamelCase
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.ParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.MemberCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: _
+  - key: readability-identifier-naming.ProtectedMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.ProtectedMemberSuffix
+    value: _
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstexprVariablePrefix
+    value: k
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: k
+  - key: readability-identifier-naming.StaticConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.StaticConstantPrefix
+    value: k
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+
+  # ---- Eigen / math accommodations ------------------------------------------
+  # Eigen expression templates are large by-value objects whose copies are lazy; the value-param
+  # and const-value-param heuristics mis-score them. Raise the threshold so only genuinely large
+  # concrete types are flagged.
+  - key: performance-unnecessary-value-param.AllowedTypes
+    value: '::Eigen::.*'
+  - key: performance-for-range-copy.AllowedTypes
+    value: '::Eigen::.*'
+  # Auto-generated braces are fine for us; keep single-statement ifs readable.
+  - key: readability-braces-around-statements.ShortStatementLines
+    value: '1'
+  # GoogleTest's EXPECT_/ASSERT_ macros produce deep expression nesting.
+  - key: readability-implicit-bool-conversion.AllowPointerConditions
+    value: 'true'
