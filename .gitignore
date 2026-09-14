@@ -1,0 +1,29 @@
+# ---- Bazel ----------------------------------------------------------------
+# Convenience symlinks Bazel creates in the workspace root: bazel-<workspace>,
+# bazel-bin, bazel-out, bazel-testlogs.
+/bazel-*
+
+# Machine-local Bazel settings, imported by .bazelrc via try-import.
+/user.bazelrc
+
+# MODULE.bazel.lock is intentionally NOT ignored: it pins the resolved dependency
+# graph and belongs in version control.
+
+# ---- Clang tooling ----------------------------------------------------------
+# Generated from the Bazel build; regenerate rather than commit.
+/compile_commands.json
+/.cache/
+/.clangd/
+.clang-tidy-cache/
+
+# ---- Editors and OS ---------------------------------------------------------
+/.vscode/
+/.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ---- Python (pre-commit virtualenvs, if created in-tree) --------------------
+/.venv/
+__pycache__/
