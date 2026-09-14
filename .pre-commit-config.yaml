@@ -1,0 +1,54 @@
+# Run `pre-commit install` once after cloning.
+# Run `pre-commit run --all-files` to check the whole tree.
+# Run `pre-commit autoupdate` to refresh the `rev` pins below.
+
+minimum_pre_commit_version: "3.5.0"
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  # ---- General hygiene ------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # ---- C++ formatting --------------------------------------------------------
+  # Pinned to clang-format 21.1.8 to match .clang-format, which uses
+  # QualifierAlignment: Custom. This hook ships its own clang-format binary, so
+  # contributors do not need one installed locally.
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v21.1.8
+    hooks:
+      - id: clang-format
+        types_or: [c, c++]
+
+  # ---- Bazel formatting -------------------------------------------------------
+  - repo: https://github.com/keith/pre-commit-buildifier
+    rev: 8.5.1.3
+    hooks:
+      - id: buildifier
+      - id: buildifier-lint
+
+  # ---- C++ static analysis ----------------------------------------------------
+  # A local hook, not a remote one: clang-tidy needs compiler flags that only the build system
+  # knows. See tools/run_clang_tidy.sh for how they are obtained.
+  #
+  # If this becomes too slow to live with, add `stages: [manual]` and let CI be the gate.
+  - repo: local
+    hooks:
+      - id: clang-tidy
+        name: clang-tidy
+        entry: tools/run_clang_tidy.sh
+        language: script
+        files: ^fbsde_traj_opt/.*\.(cpp|hpp)$
+        require_serial: true
