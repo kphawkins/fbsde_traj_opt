@@ -1,0 +1,65 @@
+---
+# Google C++ Style Guide with three project-wide deviations:
+#   * 2-space indentation (Google's default, stated explicitly for clarity)
+#   * 120-column limit instead of 80
+#   * west-const ("const int x"), enforced via QualifierAlignment
+#
+# Targets clang-format 21.
+Language: Cpp
+BasedOnStyle: Google
+
+IndentWidth: 2
+ColumnLimit: 120
+
+# West-const.
+#
+# QualifierAlignment: Left would also produce west-const, but it only says "move qualifiers
+# left" -- it does not pin down the relative order of static/inline/constexpr/const when several
+# appear together, so that ordering stays whatever the author typed and is a permanent source of
+# reviewer bikeshedding. Custom + an explicit QualifierOrder fixes the order too, is
+# self-documenting in this file, and carries the identical risk profile (same underlying
+# QualifierAlignmentFixer pre-pass).
+#
+# Caveat, from clang-format's own docs: "Setting QualifierAlignment to something other than Leave
+# COULD lead to incorrect code formatting due to incorrect decisions made due to clang-format's
+# lack of complete semantic information. As such extra care should be taken to review code changes
+# made by the use of this option." This is a real risk, not boilerplate -- it is a token-level
+# rewrite without a type system. Low-risk at this project's current size; the rule going forward
+# is to read the qualifier hunks specifically on the first bulk-format of any large diff. If a
+# miscompile is ever found, the retreat is QualifierAlignment: Leave plus code review.
+QualifierAlignment: Custom
+QualifierOrder: [friend, static, inline, constexpr, const, volatile, type]
+
+# Keep a stable, reviewable include order. First-party headers use quoted, project-prefixed paths
+# (see BUILD.bazel / README for why quoted rather than angle-bracket), so they need their own
+# category to avoid being lumped in with third-party quoted includes.
+SortIncludes: CaseSensitive
+IncludeBlocks: Preserve
+IncludeCategories:
+  # The unit-under-test header in a .cpp / .test.cpp file.
+  - Regex: '^"fbsde_traj_opt/.*\.hpp"$'
+    Priority: 1
+  # C++ standard library.
+  - Regex: '^<[a-z_]+>$'
+    Priority: 2
+  # Third-party (Eigen, GoogleTest).
+  - Regex: '^<.*>$'
+    Priority: 3
+  - Regex: '.*'
+    Priority: 4
+
+# Eigen comma-initializer blocks (matrix literals) read as matrices only if clang-format leaves
+# the author's line breaks alone. Without this, a 3x3 covariance literal collapses onto one
+# 120-column line.
+BinPackArguments: false
+BinPackParameters: false
+
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+
+AllowShortFunctionsOnASingleLine: Inline
+InsertNewlineAtEOF: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+SeparateDefinitionBlocks: Always
+...
