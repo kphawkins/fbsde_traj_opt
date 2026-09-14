@@ -1,0 +1,95 @@
+name: CI
+
+# Required status checks before merging into main; see branch protection settings.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Keep in step with the clang-format version pinned in .pre-commit-config.yaml, so clang-tidy
+  # (which has no pin of its own -- it uses whatever `clang-tidy` is on PATH) stays on the same
+  # major release as clang-format instead of drifting to whatever Ubuntu's default happens to be.
+  LLVM_VERSION: "21"
+
+jobs:
+  test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Clang ${{ env.LLVM_VERSION }}
+        run: |
+          wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh
+          chmod +x /tmp/llvm.sh
+          sudo /tmp/llvm.sh "${LLVM_VERSION}"
+          # The runner image preinstalls its own clang and already owns the `clang`/`clang++`
+          # update-alternatives slots at an unknown priority, so installing ours there is a race
+          # we can silently lose (and did: Bazel kept picking up the image's older Clang). Put the
+          # unversioned binaries LLVM's packaging ships under /usr/lib/llvm-N/bin first on PATH
+          # instead, which every later step -- including tools/run_clang_tidy.sh's plain
+          # `clang-tidy` -- then resolves unambiguously to this version.
+          echo "/usr/lib/llvm-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
+
+      - name: Verify Clang ${{ env.LLVM_VERSION }} is what's on PATH
+        run: clang++ --version | grep -q "clang version ${LLVM_VERSION}\."
+
+      - name: bazel test //...
+        run: bazel test --config=ci //...
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Clang ${{ env.LLVM_VERSION }}
+        run: |
+          wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh
+          chmod +x /tmp/llvm.sh
+          sudo /tmp/llvm.sh "${LLVM_VERSION}"
+          # llvm.sh's default package set (clang, lldb, lld, clangd) doesn't include clang-tidy --
+          # that's a separate package.
+          sudo apt-get install -y "clang-tidy-${LLVM_VERSION}"
+          # See the identical step in the test job for why PATH, not update-alternatives.
+          echo "/usr/lib/llvm-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Clang ${{ env.LLVM_VERSION }} is what's on PATH
+        run: |
+          clang++ --version | grep -q "clang version ${LLVM_VERSION}\."
+          clang-tidy --version | grep -q "LLVM version ${LLVM_VERSION}\."
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
+
+      # tools/run_clang_tidy.sh falls back to reading compiler flags out of Bazel's fetched
+      # external repositories (Eigen, GoogleTest) when no compile_commands.json is present, which
+      # is the case here -- it's gitignored as a generated file. `bazel build` populates them.
+      - name: Fetch Bazel dependencies (needed by clang-tidy's flag lookup)
+        run: bazel build --config=ci //...
+
+      - name: Run pre-commit (clang-format, buildifier, clang-tidy, hygiene hooks)
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
