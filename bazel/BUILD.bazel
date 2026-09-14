@@ -1,0 +1,2 @@
+# Intentionally empty: this file's only purpose is to mark `bazel/` as a package so that
+# `bazel/copts.bzl` can be loaded from other packages via `//bazel:copts.bzl`.

@@ -1,0 +1,69 @@
+# ---------------------------------------------------------------------------
+# Toolchain: force Clang.
+#
+# repo_env, not action_env: action_env injects the variable into the key of
+# every single action, so flipping it invalidates the entire action cache.
+# repo_env affects repository-rule and toolchain resolution, which is where
+# CC/CXX are actually read.
+# ---------------------------------------------------------------------------
+build --repo_env=CC=clang
+build --repo_env=CXX=clang++
+
+# ---------------------------------------------------------------------------
+# Language standard.
+#
+# --host_cxxopt is not optional: googletest drags in abseil and re2, parts of
+# which are built in the exec configuration. Without the host flag those are
+# built as a different standard than our code, and the resulting ODR/ABI
+# mismatch shows up as link errors or, worse, silent misbehavior.
+# ---------------------------------------------------------------------------
+build --cxxopt=-std=c++23
+build --host_cxxopt=-std=c++23
+
+# ---------------------------------------------------------------------------
+# Make external repositories' include paths system include paths.
+#
+# On Bazel 9, cc_library(includes = ...) emits -I rather than -isystem, so
+# Eigen's headers are no longer system headers and every strict warning fires
+# from inside Eigen's template internals. This feature restores -isystem for
+# external repos only, which is exactly the scope we want: strict on our code,
+# quiet inside Eigen and GoogleTest.
+# ---------------------------------------------------------------------------
+build --features=external_include_paths
+
+# ---------------------------------------------------------------------------
+# Build hygiene.
+#
+# layering_check: error out when a target includes a header from a transitive
+# dependency it does not declare directly. Requires Clang + module maps.
+#
+# parse_headers is deliberately NOT set here. Globally it would force every
+# header of every external repository to compile standalone, and Eigen exports
+# many internal headers that are not standalone-compilable. It is enabled
+# per-package instead, via package(features = ["parse_headers"]).
+# ---------------------------------------------------------------------------
+build --features=layering_check
+
+# ---------------------------------------------------------------------------
+# Misc.
+# ---------------------------------------------------------------------------
+build --enable_platform_specific_config
+
+test --test_output=errors
+test --test_summary=terse
+test --test_verbose_timeout_warnings
+
+# ---------------------------------------------------------------------------
+# CI: no interactive progress, and keep going to see every failure.
+# Used as: bazel test --config=ci //...
+# ---------------------------------------------------------------------------
+build:ci --show_timestamps
+build:ci --color=no
+build:ci --curses=no
+build:ci --keep_going
+build:ci --announce_rc
+
+# ---------------------------------------------------------------------------
+# Machine-local overrides. Not committed; see .gitignore.
+# ---------------------------------------------------------------------------
+try-import %workspace%/user.bazelrc
