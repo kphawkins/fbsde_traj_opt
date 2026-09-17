@@ -66,3 +66,27 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "const_diagonal_sde_diffusion_term",
+    hdrs = ["const_diagonal_sde_diffusion_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "const_diagonal_sde_diffusion_term_test",
+    size = "small",
+    srcs = ["const_diagonal_sde_diffusion_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":const_diagonal_sde_diffusion_term",
+        ":sde_diffusion_term",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
