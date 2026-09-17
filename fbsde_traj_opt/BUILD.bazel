@@ -44,3 +44,25 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "sde_diffusion_term",
+    hdrs = ["sde_diffusion_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "sde_diffusion_term_test",
+    size = "small",
+    srcs = ["sde_diffusion_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":sde_diffusion_term",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
