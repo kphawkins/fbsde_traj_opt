@@ -204,3 +204,26 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "const_linear_feedback_sde_control_policy_term",
+    hdrs = ["const_linear_feedback_sde_control_policy_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "const_linear_feedback_sde_control_policy_term_test",
+    size = "small",
+    srcs = ["const_linear_feedback_sde_control_policy_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":const_linear_feedback_sde_control_policy_term",
+        ":sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

@@ -19,12 +19,14 @@ namespace fbsde_traj_opt {
 // (SdeControlDriftMatTerm), and `Sigma` shapes the injected Brownian noise (SdeDiffusionTerm).
 // `State` is the fixed-size Eigen column vector type of `x_k`.
 //
-// Also included are the concepts for the cost terms of the associated trajectory optimization
-// problem over stages 0..K: a running cost `l(k, x_k, u_k)` (SdeRunningCostTerm) charged at every
-// stage up to but not including the terminal stage, and a terminal cost `phi(x_K)`
-// (SdeTerminalCostTerm) charged only at the terminal stage. The value function of the problem is
-// the expected value, under the SDE dynamics above, of the sum of the running costs over stages
-// 0..K-1 plus the terminal cost at stage K.
+// Also included is the concept for a feedback control policy `u_k = pi(k, x_k)`
+// (SdeControlPolicyTerm) that closes the loop by choosing the control applied at each stage from
+// the current stage and state, and the concepts for the cost terms of the associated trajectory
+// optimization problem over stages 0..K: a running cost `l(k, x_k, u_k)` (SdeRunningCostTerm)
+// charged at every stage up to but not including the terminal stage, and a terminal cost
+// `phi(x_K)` (SdeTerminalCostTerm) charged only at the terminal stage. The value function of the
+// problem is the expected value, under the SDE dynamics above, of the sum of the running costs
+// over stages 0..K-1 plus the terminal cost at stage K.
 
 // Concept for a functor type `T` that supplies the uncontrolled drift `f(k, x_k)` of the forward
 // SDE -- the component of the drift that is independent of both the control `u_k` and the noise
@@ -77,6 +79,22 @@ concept SdeDiffusionTerm =
     EigenFixedSizeColumnVector<State> && requires(const T& diffusion_term, std::size_t stage, const State& state) {
       { diffusion_term(stage, state) } -> EigenFixedSizeSquareMatrixOfDimension<State::RowsAtCompileTime>;
     };
+
+// Concept for a functor type `T` that supplies a feedback control policy `pi(k, x_k)` of a
+// discrete-time stochastic control problem, mapping the current stage and state to the control
+// `u_k` applied at that stage.
+//
+// A conforming `T` is callable as `control_policy_term(stage, state)`, where `stage` is a
+// `std::size_t` and `state` is a `State`, and returns a fixed-size Eigen column vector of the
+// same compile-time size as `Control`.
+template <typename T, typename State, typename Control>
+concept SdeControlPolicyTerm = EigenFixedSizeColumnVector<State> && EigenFixedSizeColumnVector<Control> &&
+                               std::same_as<typename State::Scalar, typename Control::Scalar> &&
+                               requires(const T& control_policy_term, std::size_t stage, const State& state) {
+                                 {
+                                   control_policy_term(stage, state)
+                                 } -> EigenFixedSizeColumnVectorOfDimension<Control::RowsAtCompileTime>;
+                               };
 
 // Concept for a functor type `T` that supplies the running cost `l(k, x_k, u_k)` charged at every
 // stage up to, but not including, the terminal stage of a discrete-time trajectory optimization
