@@ -31,8 +31,9 @@ Checks: >
 WarningsAsErrors: '*'
 
 # Only diagnose our own headers. Without this, every diagnostic Eigen's headers can produce is
-# reported once per including translation unit.
-HeaderFilterRegex: '(^|/)fbsde_traj_opt/[^/]*\.hpp$'
+# reported once per including translation unit. Matches headers directly under fbsde_traj_opt/ as
+# well as in subdirectories such as fbsde_traj_opt/utils/.
+HeaderFilterRegex: '(^|/)fbsde_traj_opt/.*\.hpp$'
 
 # Apply --fix edits using the project .clang-format.
 FormatStyle: file
