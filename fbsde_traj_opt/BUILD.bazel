@@ -158,3 +158,49 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "quadratic_regulator_sde_running_cost_term",
+    hdrs = ["quadratic_regulator_sde_running_cost_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "quadratic_regulator_sde_running_cost_term_test",
+    size = "small",
+    srcs = ["quadratic_regulator_sde_running_cost_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":quadratic_regulator_sde_running_cost_term",
+        ":sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "quadratic_regulator_sde_terminal_cost_term",
+    hdrs = ["quadratic_regulator_sde_terminal_cost_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "quadratic_regulator_sde_terminal_cost_term_test",
+    size = "small",
+    srcs = ["quadratic_regulator_sde_terminal_cost_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":quadratic_regulator_sde_terminal_cost_term",
+        ":sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
