@@ -202,10 +202,79 @@ struct NonEigenReturnDiffusion {
 static_assert(!SdeDiffusionTerm<NonEigenReturnDiffusion, State3>);
 
 // ---------------------------------------------------------------------------------------------
-// SdeRunningCostTerm
+// SdeControlPolicyTerm
 // ---------------------------------------------------------------------------------------------
 
 using Control2 = Eigen::Vector2d;
+
+// A conforming functor returning a fixed-size column vector matching the control's dimension.
+struct LinearControlPolicy {
+  auto operator()(std::size_t /*stage*/, const State3& state) const noexcept -> Eigen::Vector2d {
+    return state.head<2>();
+  }
+};
+
+static_assert(SdeControlPolicyTerm<LinearControlPolicy, State3, Control2>);
+
+// Rejected: the returned vector's fixed size doesn't match the control's.
+struct WrongSizeControlPolicy {
+  auto operator()(std::size_t /*stage*/, const State3& /*state*/) const noexcept -> Eigen::Vector3d {
+    return Eigen::Vector3d::Zero();
+  }
+};
+
+static_assert(!SdeControlPolicyTerm<WrongSizeControlPolicy, State3, Control2>);
+
+// Rejected: the returned type is a row vector, not a column vector.
+struct RowVectorControlPolicy {
+  auto operator()(std::size_t /*stage*/, const State3& /*state*/) const noexcept -> Eigen::RowVector2d {
+    return Eigen::RowVector2d::Zero();
+  }
+};
+
+static_assert(!SdeControlPolicyTerm<RowVectorControlPolicy, State3, Control2>);
+
+// Rejected: the returned vector is dynamically sized, even though it happens to be size 2 at
+// runtime.
+struct DynamicSizeControlPolicy {
+  auto operator()(std::size_t /*stage*/, const State3& /*state*/) const noexcept -> Eigen::VectorXd {
+    return Eigen::VectorXd::Zero(2);
+  }
+};
+
+static_assert(!SdeControlPolicyTerm<DynamicSizeControlPolicy, State3, Control2>);
+
+// Rejected: the state and control types have different scalar types, even though the functor
+// itself would otherwise conform.
+using FloatControl2 = Eigen::Vector2f;
+
+static_assert(!SdeControlPolicyTerm<LinearControlPolicy, State3, FloatControl2>);
+
+// Rejected: the state type itself is dynamically sized, regardless of the functor.
+static_assert(!SdeControlPolicyTerm<LinearControlPolicy, Eigen::VectorXd, Control2>);
+
+// Rejected: the control type itself is dynamically sized, regardless of the functor.
+static_assert(!SdeControlPolicyTerm<LinearControlPolicy, State3, Eigen::VectorXd>);
+
+// Rejected: not callable with (std::size_t, State) at all.
+struct WrongSignatureControlPolicy {
+  auto operator()(const std::string& /*stage*/, const State3& /*state*/) const noexcept -> Eigen::Vector2d {
+    return Eigen::Vector2d::Zero();
+  }
+};
+
+static_assert(!SdeControlPolicyTerm<WrongSignatureControlPolicy, State3, Control2>);
+
+// Rejected: the return type isn't an Eigen expression at all.
+struct NonEigenReturnControlPolicy {
+  auto operator()(std::size_t /*stage*/, const State3& /*state*/) const noexcept -> double { return 1.0; }
+};
+
+static_assert(!SdeControlPolicyTerm<NonEigenReturnControlPolicy, State3, Control2>);
+
+// ---------------------------------------------------------------------------------------------
+// SdeRunningCostTerm
+// ---------------------------------------------------------------------------------------------
 
 // A conforming functor returning a Scalar matching the state's and control's shared scalar type.
 struct QuadraticRunningCost {
@@ -224,10 +293,6 @@ struct WrongScalarRunningCost {
 };
 
 static_assert(!SdeRunningCostTerm<WrongScalarRunningCost, State3, Control2>);
-
-// Rejected: the state and control types have different scalar types, even though the functor
-// itself would otherwise conform.
-using FloatControl2 = Eigen::Vector2f;
 
 static_assert(!SdeRunningCostTerm<QuadraticRunningCost, State3, FloatControl2>);
 
