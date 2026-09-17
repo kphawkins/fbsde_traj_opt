@@ -201,6 +201,97 @@ struct NonEigenReturnDiffusion {
 
 static_assert(!SdeDiffusionTerm<NonEigenReturnDiffusion, State3>);
 
+// ---------------------------------------------------------------------------------------------
+// SdeRunningCostTerm
+// ---------------------------------------------------------------------------------------------
+
+using Control2 = Eigen::Vector2d;
+
+// A conforming functor returning a Scalar matching the state's and control's shared scalar type.
+struct QuadraticRunningCost {
+  auto operator()(std::size_t /*stage*/, const State3& state, const Control2& control) const noexcept -> double {
+    return state.squaredNorm() + control.squaredNorm();
+  }
+};
+
+static_assert(SdeRunningCostTerm<QuadraticRunningCost, State3, Control2>);
+
+// Rejected: the returned Scalar doesn't match the state's and control's scalar type.
+struct WrongScalarRunningCost {
+  auto operator()(std::size_t /*stage*/, const State3& /*state*/, const Control2& /*control*/) const noexcept -> float {
+    return 0.0F;
+  }
+};
+
+static_assert(!SdeRunningCostTerm<WrongScalarRunningCost, State3, Control2>);
+
+// Rejected: the state and control types have different scalar types, even though the functor
+// itself would otherwise conform.
+using FloatControl2 = Eigen::Vector2f;
+
+static_assert(!SdeRunningCostTerm<QuadraticRunningCost, State3, FloatControl2>);
+
+// Rejected: the state type itself is dynamically sized, regardless of the functor.
+static_assert(!SdeRunningCostTerm<QuadraticRunningCost, Eigen::VectorXd, Control2>);
+
+// Rejected: the control type itself is dynamically sized, regardless of the functor.
+static_assert(!SdeRunningCostTerm<QuadraticRunningCost, State3, Eigen::VectorXd>);
+
+// Rejected: not callable with (std::size_t, State, Control) at all.
+struct WrongSignatureRunningCost {
+  auto operator()(const std::string& /*stage*/, const State3& /*state*/, const Control2& /*control*/) const noexcept
+      -> double {
+    return 0.0;
+  }
+};
+
+static_assert(!SdeRunningCostTerm<WrongSignatureRunningCost, State3, Control2>);
+
+// Rejected: the return type isn't a Scalar at all.
+struct NonScalarReturnRunningCost {
+  auto operator()(std::size_t /*stage*/, const State3& /*state*/, const Control2& /*control*/) const noexcept
+      -> Eigen::Vector3d {
+    return Eigen::Vector3d::Zero();
+  }
+};
+
+static_assert(!SdeRunningCostTerm<NonScalarReturnRunningCost, State3, Control2>);
+
+// ---------------------------------------------------------------------------------------------
+// SdeTerminalCostTerm
+// ---------------------------------------------------------------------------------------------
+
+// A conforming functor returning a Scalar matching the state's scalar type.
+struct QuadraticTerminalCost {
+  auto operator()(const State3& state) const noexcept -> double { return state.squaredNorm(); }
+};
+
+static_assert(SdeTerminalCostTerm<QuadraticTerminalCost, State3>);
+
+// Rejected: the returned Scalar doesn't match the state's scalar type.
+struct WrongScalarTerminalCost {
+  auto operator()(const State3& /*state*/) const noexcept -> float { return 0.0F; }
+};
+
+static_assert(!SdeTerminalCostTerm<WrongScalarTerminalCost, State3>);
+
+// Rejected: the state type itself is dynamically sized, regardless of the functor.
+static_assert(!SdeTerminalCostTerm<QuadraticTerminalCost, Eigen::VectorXd>);
+
+// Rejected: not callable with (State) at all.
+struct WrongSignatureTerminalCost {
+  auto operator()(const std::string& /*state*/) const noexcept -> double { return 0.0; }
+};
+
+static_assert(!SdeTerminalCostTerm<WrongSignatureTerminalCost, State3>);
+
+// Rejected: the return type isn't a Scalar at all.
+struct NonScalarReturnTerminalCost {
+  auto operator()(const State3& /*state*/) const noexcept -> Eigen::Vector3d { return Eigen::Vector3d::Zero(); }
+};
+
+static_assert(!SdeTerminalCostTerm<NonScalarReturnTerminalCost, State3>);
+
 TEST(SdeTermConceptsTest, CompileTimeChecksPassed) {
   // All the interesting checks for these concepts are the static_asserts above; this test exists
   // only so the target has a runnable case.
