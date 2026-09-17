@@ -112,3 +112,49 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "const_linear_sde_state_drift_term",
+    hdrs = ["const_linear_sde_state_drift_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "const_linear_sde_state_drift_term_test",
+    size = "small",
+    srcs = ["const_linear_sde_state_drift_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":const_linear_sde_state_drift_term",
+        ":sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "const_linear_sde_control_drift_mat_term",
+    hdrs = ["const_linear_sde_control_drift_mat_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "const_linear_sde_control_drift_mat_term_test",
+    size = "small",
+    srcs = ["const_linear_sde_control_drift_mat_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":const_linear_sde_control_drift_mat_term",
+        ":sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
