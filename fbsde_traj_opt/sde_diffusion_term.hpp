@@ -4,35 +4,11 @@
 #ifndef FBSDE_TRAJ_OPT_SDE_DIFFUSION_TERM_HPP_
 #define FBSDE_TRAJ_OPT_SDE_DIFFUSION_TERM_HPP_
 
-#include <concepts>
 #include <cstddef>
 
-#include <Eigen/Core>
+#include "fbsde_traj_opt/eigen_concepts.hpp"
 
 namespace fbsde_traj_opt {
-
-namespace detail {
-
-// True for Eigen expression types that expose a fixed (non-Dynamic) compile-time shape. This
-// holds not just for Eigen::Matrix/Eigen::Array but also for Eigen::DiagonalMatrix and other
-// expression templates, since every one of them defines RowsAtCompileTime/ColsAtCompileTime
-// through its respective CRTP base class.
-template <typename T>
-concept EigenExpressionWithCompileTimeShape = requires {
-  typename T::Scalar;
-  { T::RowsAtCompileTime } -> std::convertible_to<int>;
-  { T::ColsAtCompileTime } -> std::convertible_to<int>;
-};
-
-template <typename T>
-concept EigenFixedSizeColumnVector =
-    EigenExpressionWithCompileTimeShape<T> && T::ColsAtCompileTime == 1 && T::RowsAtCompileTime != Eigen::Dynamic;
-
-template <typename T, int N>
-concept EigenFixedSizeSquareMatrixOfDimension =
-    EigenExpressionWithCompileTimeShape<T> && T::RowsAtCompileTime == N && T::ColsAtCompileTime == N;
-
-}  // namespace detail
 
 // Concept for a functor type `T` that supplies the diffusion coefficient (the "Sigma" matrix) of a
 // discrete-time forward SDE
@@ -53,12 +29,10 @@ concept EigenFixedSizeSquareMatrixOfDimension =
 // Sigma is required to be nonsingular for every stage and state a conforming type is invoked
 // with; this is a semantic requirement on implementations that the concept itself cannot check.
 template <typename T, typename State>
-concept SdeDiffusionTerm = detail::EigenFixedSizeColumnVector<State> &&
-                           requires(const T& diffusion_term, std::size_t stage, const State& state) {
-                             {
-                               diffusion_term(stage, state)
-                             } -> detail::EigenFixedSizeSquareMatrixOfDimension<State::RowsAtCompileTime>;
-                           };
+concept SdeDiffusionTerm =
+    EigenFixedSizeColumnVector<State> && requires(const T& diffusion_term, std::size_t stage, const State& state) {
+      { diffusion_term(stage, state) } -> EigenFixedSizeSquareMatrixOfDimension<State::RowsAtCompileTime>;
+    };
 
 }  // namespace fbsde_traj_opt
 
