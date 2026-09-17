@@ -13,7 +13,7 @@
 
 namespace fbsde_traj_opt {
 
-// An SdeDiffusionTerm (see sde_diffusion_term.hpp) whose Sigma matrix is diagonal and constant
+// An SdeDiffusionTerm (see sde_term_concepts.hpp) whose Sigma matrix is diagonal and constant
 // across every stage and state.
 //
 // `N` is the compile-time state dimension; `Scalar` defaults to `double`.

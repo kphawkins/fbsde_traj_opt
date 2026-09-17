@@ -8,7 +8,7 @@
 #include <Eigen/Core>
 #include <gtest/gtest.h>
 
-#include "fbsde_traj_opt/sde_diffusion_term.hpp"
+#include "fbsde_traj_opt/sde_term_concepts.hpp"
 
 namespace fbsde_traj_opt {
 namespace {

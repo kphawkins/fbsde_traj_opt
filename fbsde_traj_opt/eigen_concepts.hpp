@@ -26,10 +26,22 @@ template <typename T>
 concept EigenFixedSizeColumnVector =
     EigenExpressionWithCompileTimeShape<T> && T::ColsAtCompileTime == 1 && T::RowsAtCompileTime != Eigen::Dynamic;
 
+// True for fixed-size Eigen column vector types with a specific compile-time dimension `N`.
+template <typename T, int N>
+concept EigenFixedSizeColumnVectorOfDimension = EigenFixedSizeColumnVector<T> && T::RowsAtCompileTime == N;
+
 // True for Eigen matrix types that are square with fixed compile-time dimension `N`.
 template <typename T, int N>
 concept EigenFixedSizeSquareMatrixOfDimension =
     EigenExpressionWithCompileTimeShape<T> && T::RowsAtCompileTime == N && T::ColsAtCompileTime == N;
+
+// True for Eigen matrix types with fixed compile-time row count `N` and an unconstrained but
+// still fixed (non-Dynamic) column count. Used where the number of rows is pinned by some other
+// quantity (e.g. the state dimension) but the number of columns is free (e.g. the control
+// dimension).
+template <typename T, int N>
+concept EigenFixedSizeMatrixWithRowsOfDimension =
+    EigenExpressionWithCompileTimeShape<T> && T::RowsAtCompileTime == N && T::ColsAtCompileTime != Eigen::Dynamic;
 
 }  // namespace fbsde_traj_opt
 
