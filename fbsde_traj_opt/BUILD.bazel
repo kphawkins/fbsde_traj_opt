@@ -46,11 +46,33 @@ cc_test(
 )
 
 cc_library(
+    name = "eigen_concepts",
+    hdrs = ["eigen_concepts.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "eigen_concepts_test",
+    size = "small",
+    srcs = ["eigen_concepts.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":eigen_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "sde_diffusion_term",
     hdrs = ["sde_diffusion_term.hpp"],
     copts = FBSDE_COPTS,
     deps = [
-        "@eigen",
+        ":eigen_concepts",
     ],
 )
 
