@@ -103,8 +103,8 @@ TEST(ErrorResultTest, CapturesTheCallSiteByDefault) {
 }
 
 TEST(ExpectedErrorPrintTest, IncludesTheMessageFileLineAndFunction) {
-  const ExpectedError error{"Something went wrong."};
-  const int expected_line = error.location.line();
+  const ExpectedError error{.message = "Something went wrong."};
+  const int expected_line = static_cast<int>(error.location.line());
 
   std::ostringstream stream;
   stream << error;
@@ -117,7 +117,7 @@ TEST(ExpectedErrorPrintTest, IncludesTheMessageFileLineAndFunction) {
 }
 
 TEST(ReportErrorTest, PrintsTheErrorToStderrAndReturnsFalse) {
-  const ExpectedError error{"Something went wrong."};
+  const ExpectedError error{.message = "Something went wrong."};
 
   testing::internal::CaptureStderr();
   const bool reported_success = ReportError(error);
@@ -150,7 +150,7 @@ TEST(ReportResultTest, PrintsTheErrorAndReturnsFalseOnFailure) {
 }
 
 TEST(ResultReportErrorMacroTest, BehavesLikeReportError) {
-  const ExpectedError error{"Macro-reported error."};
+  const ExpectedError error{.message = "Macro-reported error."};
 
   testing::internal::CaptureStderr();
   const bool reported_success = RESULT_REPORT_ERROR(error);

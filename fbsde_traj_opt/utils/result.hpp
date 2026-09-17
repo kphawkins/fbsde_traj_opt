@@ -58,7 +58,9 @@ using Result = std::expected<T, ExpectedError>;
 // ---------------------------------------------------------------------------------------------
 
 // Builds a successful Result<void>.
-inline auto SuccessResult() noexcept -> Result<> { return {}; }
+inline auto SuccessResult() noexcept -> Result<> {
+  return {};
+}
 
 // Builds a successful Result<std::decay_t<T>> holding `value`.
 template <typename T>
@@ -73,9 +75,9 @@ auto SuccessResult(T&& value) noexcept(std::is_nothrow_constructible_v<std::deca
 // regardless of which T the enclosing function's Result<T> uses -- exactly like returning
 // std::unexpected(...) does for a bare std::expected.
 inline auto ErrorResult(std::string_view message,
-                         std::source_location location = std::source_location::current()) noexcept
+                        std::source_location location = std::source_location::current()) noexcept
     -> std::unexpected<ExpectedError> {
-  return std::unexpected<ExpectedError>(ExpectedError{message, location});
+  return std::unexpected<ExpectedError>(ExpectedError{.message = message, .location = location});
 }
 
 // Pretty-prints `error` to stderr. Returns false, so it composes with early-return macros.
@@ -96,11 +98,11 @@ auto ReportResult(const Result<T>& result) noexcept -> bool {
 
 // Generates an error: returns ErrorResult(message) from the enclosing function unless `condition`
 // holds. The enclosing function must return some fbsde_traj_opt::Result<T>.
-#define RESULT_ASSERT(condition, message) \
-  do {                                    \
-    if (!(condition)) {                   \
+#define RESULT_ASSERT(condition, message)            \
+  do {                                               \
+    if (!(condition)) {                              \
       return ::fbsde_traj_opt::ErrorResult(message); \
-    }                                     \
+    }                                                \
   } while (false)
 
 // Reports (pretty-prints to stderr) a standalone ExpectedError.
