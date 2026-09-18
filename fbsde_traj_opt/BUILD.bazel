@@ -385,3 +385,26 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "stage_varying_linear_feedback_sde_control_policy_term",
+    hdrs = ["stage_varying_linear_feedback_sde_control_policy_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "stage_varying_linear_feedback_sde_control_policy_term_test",
+    size = "small",
+    srcs = ["stage_varying_linear_feedback_sde_control_policy_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":sde_term_concepts",
+        ":stage_varying_linear_feedback_sde_control_policy_term",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
