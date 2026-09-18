@@ -1,0 +1,54 @@
+"""Worked examples: end-to-end runs of the library that produce figures a reader can look at.
+
+Kept out of //fbsde_traj_opt so that the library's dependency graph stays free of the
+visualization layer, and so that an example is free to be concrete and opinionated in a way
+library code should not be.
+"""
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//bazel:copts.bzl", "FBSDE_COPTS", "FBSDE_TEST_COPTS")
+
+package(
+    default_visibility = ["//visibility:public"],
+    # Compile every header standalone to catch missing includes.
+    features = ["parse_headers"],
+)
+
+cc_library(
+    name = "lqr_experiment",
+    hdrs = ["lqr_experiment.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt:composed_cost_sde_model",
+        "//fbsde_traj_opt:composed_forward_sde_model",
+        "//fbsde_traj_opt:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt:const_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt:finite_horizon_lqr",
+        "//fbsde_traj_opt:quadratic_regulator_sde_running_cost_term",
+        "//fbsde_traj_opt:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt:trajectory_batch",
+        "//fbsde_traj_opt:zero_order_hold_discretization",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "//fbsde_traj_opt/viz:trajectory_batch_plots",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "lqr_experiment_test",
+    size = "small",
+    srcs = ["lqr_experiment.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":lqr_experiment",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@nlohmann_json//:json",
+    ],
+)
