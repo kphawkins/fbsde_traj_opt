@@ -63,5 +63,19 @@ TEST(QuadraticRegulatorSdeRunningCostTermTest, OperatorIgnoresStage) {
   EXPECT_DOUBLE_EQ(cost_stage_zero, cost_stage_far);
 }
 
+TEST(QuadraticRegulatorSdeRunningCostTermTest, CostMatAccessorsReturnConstructorMatrices) {
+  const Eigen::Matrix3d q = Eigen::Vector3d(1.0, 2.0, 3.0).asDiagonal();
+  const Eigen::Matrix2d r = Eigen::Vector2d(4.0, 5.0).asDiagonal();
+  Eigen::Matrix<double, 3, 2> n;
+  n << 0.5, -0.5,  //
+      1.5, -1.5,   //
+      2.5, -2.5;
+  const QuadraticRegulatorSdeRunningCostTerm<3, 2> term(q, r, n);
+
+  EXPECT_TRUE(term.StateCostMat().isApprox(q));
+  EXPECT_TRUE(term.ControlCostMat().isApprox(r));
+  EXPECT_TRUE(term.CrossCostMat().isApprox(n));
+}
+
 }  // namespace
 }  // namespace fbsde_traj_opt

@@ -30,6 +30,12 @@ class QuadraticRegulatorSdeTerminalCostTerm {
   // Returns x^T F x.
   auto operator()(const State& state) const noexcept -> Scalar { return state.dot(f_ * state); }
 
+  // Returns `F`, the terminal cost matrix.
+  //
+  // Exposed for the same reason as QuadraticRegulatorSdeRunningCostTerm's cost-matrix accessors:
+  // it seeds the Riccati recursion of finite_horizon_lqr.hpp.
+  [[nodiscard]] auto TerminalCostMat() const noexcept -> const Eigen::Matrix<Scalar, N, N>& { return f_; }
+
  private:
   Eigen::Matrix<Scalar, N, N> f_;
 };

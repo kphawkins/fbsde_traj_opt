@@ -40,5 +40,15 @@ TEST(ConstLinearSdeControlDriftMatTermTest, OperatorIgnoresStageAndState) {
   EXPECT_TRUE(b_stage_zero.isApprox(b_stage_far));
 }
 
+TEST(ConstLinearSdeControlDriftMatTermTest, DriftMatReturnsConstructorMatrix) {
+  Eigen::Matrix<double, 3, 2> b;
+  b << 1.0, 2.0,  //
+      3.0, 4.0,   //
+      5.0, 6.0;
+  const ConstLinearSdeControlDriftMatTerm<3, 2> term(b);
+
+  EXPECT_TRUE(term.DriftMat().isApprox(b));
+}
+
 }  // namespace
 }  // namespace fbsde_traj_opt

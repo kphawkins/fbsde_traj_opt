@@ -30,6 +30,12 @@ class ConstLinearSdeControlDriftMatTerm {
     return b_;
   }
 
+  // Returns `B`, the constant control drift matrix.
+  //
+  // Exposed for the same reason as ConstLinearSdeStateDriftTerm::DriftMat(): algorithms that
+  // specialize to linear dynamics need `B` itself, not just its action on a control.
+  [[nodiscard]] auto DriftMat() const noexcept -> const Eigen::Matrix<Scalar, N, M>& { return b_; }
+
  private:
   Eigen::Matrix<Scalar, N, M> b_;
 };

@@ -42,5 +42,15 @@ TEST(QuadraticRegulatorSdeTerminalCostTermTest, OperatorHandlesNonDiagonalF) {
   EXPECT_DOUBLE_EQ(cost, 5.0);
 }
 
+TEST(QuadraticRegulatorSdeTerminalCostTermTest, TerminalCostMatReturnsConstructorMatrix) {
+  Eigen::Matrix3d f;
+  f << 2.0, 0.0, 1.0,  //
+      0.0, 3.0, 0.0,   //
+      1.0, 0.0, 4.0;
+  const QuadraticRegulatorSdeTerminalCostTerm<3> term(f);
+
+  EXPECT_TRUE(term.TerminalCostMat().isApprox(f));
+}
+
 }  // namespace
 }  // namespace fbsde_traj_opt
