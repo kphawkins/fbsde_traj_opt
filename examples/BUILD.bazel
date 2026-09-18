@@ -52,3 +52,27 @@ cc_test(
         "@nlohmann_json//:json",
     ],
 )
+
+cc_library(
+    name = "lqr_models",
+    hdrs = ["lqr_models.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":lqr_experiment",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "lqr_models_test",
+    size = "medium",
+    srcs = ["lqr_models.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":lqr_experiment",
+        ":lqr_models",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
