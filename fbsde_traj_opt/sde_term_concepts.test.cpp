@@ -372,7 +372,7 @@ class LinearForwardSdeModel {
 
   auto operator()(std::size_t stage, const State3& state, const Control2& control, const State3& noise) const noexcept
       -> Eigen::Vector3d {
-    return state_drift_term_(stage, state) + control_drift_mat_term_(stage, state) * control +
+    return state + state_drift_term_(stage, state) + control_drift_mat_term_(stage, state) * control +
            diffusion_term_(stage, state) * noise;
   }
 
