@@ -91,9 +91,7 @@ class TrajectoryBatch {
                    const ControlPolicyT& control_policy,
                    const InitialDistributionT& initial_distribution,
                    std::uint64_t seed) noexcept -> Result<TrajectoryBatch> {
-    // Eigen's fixed-size LLT rather than the LowerCholeskyFactor() helper in cholesky.hpp: that
-    // helper works in dynamically sized matrices and would allocate, which this container does
-    // not do.
+    // Eigen's fixed-size LLT keeps the factorization allocation-free.
     const Eigen::Matrix<Scalar, N, N> covariance = initial_distribution.Covariance();
     const Eigen::LLT<Eigen::Matrix<Scalar, N, N>> covariance_factorization(covariance);
     RESULT_ASSERT(covariance_factorization.info() == Eigen::Success,
