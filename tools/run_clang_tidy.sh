@@ -10,8 +10,9 @@
 #      grows generated headers, more dependencies, or select()-conditional copts.
 #
 #   2. A hand-maintained flag set, below. Viable only because the project's compile flags are
-#      currently four items: the standard, the include root, Eigen, and GoogleTest. When this
-#      stops being true, switch to (1); nothing else in this script has to change.
+#      currently a handful of items: the standard, the include root, and one include path per
+#      external dependency. When this stops being true, switch to (1); nothing else in this
+#      script has to change.
 #
 set -euo pipefail
 
@@ -53,9 +54,11 @@ find_external() {
 
 eigen_include="$(find_external 'eigen*')"
 googletest_include="$(find_external 'googletest*')/googletest/include"
+nlohmann_json_include="$(find_external 'nlohmann_json*')/include"
 
 exec clang-tidy --quiet "$@" -- \
   -std=c++23 \
   -I"${repo_root}" \
   -isystem "${eigen_include}" \
-  -isystem "${googletest_include}"
+  -isystem "${googletest_include}" \
+  -isystem "${nlohmann_json_include}"
