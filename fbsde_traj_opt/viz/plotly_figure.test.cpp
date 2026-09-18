@@ -31,6 +31,19 @@ TEST(PlotlyFigureTest, NewFigureHasNoLinesAndKeepsItsTitles) {
   EXPECT_EQ(json.at("layout").at("yaxis").at("title").at("text"), "Cost");
 }
 
+TEST(PlotlyFigureTest, LogarithmicYAxisIsMarkedInTheLayoutAndTheAxisTitle) {
+  PlotlyFigure figure("Expected cost-to-go", "Stage", "Cost");
+
+  figure.UseLogarithmicYAxis();
+
+  const nlohmann::json layout = figure.ToJson().at("layout");
+  EXPECT_EQ(layout.at("yaxis").at("type"), "log");
+  // A reader who misses that a scale is logarithmic misreads every distance on it, so the axis
+  // title says so rather than leaving it to the tick labels.
+  EXPECT_EQ(layout.at("yaxis").at("title").at("text"), "Cost (log scale)");
+  EXPECT_FALSE(layout.at("xaxis").contains("type"));
+}
+
 TEST(PlotlyFigureTest, AddLineStoresThePointsAndTheStyle) {
   PlotlyFigure figure("Trajectories", "Stage", "Position");
 

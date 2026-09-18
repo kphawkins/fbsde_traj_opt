@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 #include <string>
 #include <vector>
@@ -70,6 +71,20 @@ struct CostToGoSeries {
   std::span<const double> expected_cost_to_go{};
 };
 
+// Which scale MakeCostToGoFigure() puts on the cost axis.
+enum class CostToGoAxisScale : std::uint8_t {
+  // Logarithmic if every plotted value is strictly positive, linear otherwise. The default,
+  // because expected cost-to-go is a nonnegative quantity whose comparisons routinely span orders
+  // of magnitude: a policy that costs a fortieth of another is, on a linear axis, a line pressed
+  // flat against zero, and the figure then shows only the worse policy. On a logarithmic axis the
+  // ratio between two policies is a vertical distance, which is the quantity the figure is for.
+  kLogarithmicWhenPositive,
+
+  // Always linear -- for a cost that can reach zero or go negative, or when absolute differences
+  // rather than ratios are the point.
+  kLinear,
+};
+
 // Builds a figure comparing the expected cost-to-go of one or more policies over the horizon.
 //
 // This is the figure that settles which policy is better, and it settles it at every stage rather
@@ -78,8 +93,10 @@ struct CostToGoSeries {
 //
 // Fails if `series` is empty or if the series do not all cover the same number of stages, since
 // plotting them against one stage axis would then be comparing different horizons.
-[[nodiscard]] auto MakeCostToGoFigure(std::string title, std::span<const CostToGoSeries> series) noexcept
-    -> Result<PlotlyFigure>;
+[[nodiscard]] auto MakeCostToGoFigure(
+    std::string title,
+    std::span<const CostToGoSeries> series,
+    CostToGoAxisScale axis_scale = CostToGoAxisScale::kLogarithmicWhenPositive) noexcept -> Result<PlotlyFigure>;
 
 // Adds one state dimension of `batch` to `figure`, as a faint cloud of sampled paths with the
 // mean path over it.

@@ -98,6 +98,11 @@ auto PlotlyFigure::AddLine(std::span<const double> x_values,
   return SuccessResult();
 }
 
+auto PlotlyFigure::UseLogarithmicYAxis() noexcept -> void {
+  layout_["yaxis"]["type"] = "log";
+  layout_["yaxis"]["title"]["text"] = layout_["yaxis"]["title"]["text"].get<std::string>() + " (log scale)";
+}
+
 auto PlotlyFigure::ToJson() const noexcept -> nlohmann::json {
   return {{"title", title_}, {"data", traces_}, {"layout", layout_}};
 }

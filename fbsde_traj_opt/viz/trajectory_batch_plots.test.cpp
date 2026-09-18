@@ -191,7 +191,50 @@ TEST(MakeCostToGoFigureTest, PlotsOneLinePerPolicyAgainstTheStageAxis) {
             std::vector<double>(kOptimal.begin(), kOptimal.end()));
   EXPECT_EQ(json.at("data").at(0).at("x").get<std::vector<double>>(), (std::vector<double>{0.0, 1.0, 2.0, 3.0}));
   EXPECT_EQ(json.at("data").at(1).at("colorRole"), "series-2");
-  EXPECT_EQ(json.at("layout").at("yaxis").at("title").at("text"), "Expected cost-to-go");
+  EXPECT_EQ(json.at("layout").at("yaxis").at("title").at("text"), "Expected cost-to-go (log scale)");
+}
+
+// Costs routinely differ between policies by more than an order of magnitude, and on a linear
+// axis the cheaper policy is then a line pressed flat against zero.
+TEST(MakeCostToGoFigureTest, PositiveCostsGetALogarithmicAxis) {
+  constexpr std::array<double, 3> kCheap{0.01, 0.005, 0.001};
+  constexpr std::array<double, 3> kExpensive{30.0, 29.0, 28.0};
+
+  const std::array<CostToGoSeries, 2> series{
+      CostToGoSeries{.name = "LQR", .expected_cost_to_go = kCheap},
+      CostToGoSeries{.name = "baseline", .color_role = PlotColorRole::kSeries2, .expected_cost_to_go = kExpensive},
+  };
+
+  const auto figure = MakeCostToGoFigure("Expected cost-to-go", series);
+  ASSERT_TRUE(figure.has_value()) << figure.error();
+
+  EXPECT_EQ(figure->ToJson().at("layout").at("yaxis").at("type"), "log");
+}
+
+// Plotly silently drops non-positive points from a log axis, so a series that touches zero keeps
+// the linear one.
+TEST(MakeCostToGoFigureTest, ACostThatReachesZeroKeepsTheLinearAxis) {
+  constexpr std::array<double, 3> kTouchesZero{2.0, 1.0, 0.0};
+
+  const std::array<CostToGoSeries, 1> series{CostToGoSeries{.name = "LQR", .expected_cost_to_go = kTouchesZero}};
+
+  const auto figure = MakeCostToGoFigure("Expected cost-to-go", series);
+  ASSERT_TRUE(figure.has_value()) << figure.error();
+
+  const nlohmann::json layout = figure->ToJson().at("layout");
+  EXPECT_FALSE(layout.at("yaxis").contains("type"));
+  EXPECT_EQ(layout.at("yaxis").at("title").at("text"), "Expected cost-to-go");
+}
+
+TEST(MakeCostToGoFigureTest, LinearScaleCanBeAskedForOutright) {
+  constexpr std::array<double, 3> kPositive{3.0, 2.0, 1.0};
+
+  const std::array<CostToGoSeries, 1> series{CostToGoSeries{.name = "LQR", .expected_cost_to_go = kPositive}};
+
+  const auto figure = MakeCostToGoFigure("Expected cost-to-go", series, CostToGoAxisScale::kLinear);
+  ASSERT_TRUE(figure.has_value()) << figure.error();
+
+  EXPECT_FALSE(figure->ToJson().at("layout").at("yaxis").contains("type"));
 }
 
 TEST(MakeCostToGoFigureTest, RejectsNoSeries) {

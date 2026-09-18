@@ -3,6 +3,7 @@
 
 #include "fbsde_traj_opt/viz/trajectory_batch_plots.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <span>
 #include <string>
@@ -14,7 +15,9 @@
 
 namespace fbsde_traj_opt::viz {
 
-auto MakeCostToGoFigure(std::string title, std::span<const CostToGoSeries> series) noexcept -> Result<PlotlyFigure> {
+auto MakeCostToGoFigure(std::string title,
+                        std::span<const CostToGoSeries> series,
+                        CostToGoAxisScale axis_scale) noexcept -> Result<PlotlyFigure> {
   RESULT_ASSERT(!series.empty(), "MakeCostToGoFigure: at least one series is required.");
 
   const std::size_t stage_count = series.front().expected_cost_to_go.size();
@@ -42,6 +45,15 @@ auto MakeCostToGoFigure(std::string title, std::span<const CostToGoSeries> serie
     const Result<> added = figure.AddLine(stages, one.expected_cost_to_go, style);
     if (!added.has_value()) {
       return std::unexpected(added.error());
+    }
+  }
+
+  if (axis_scale == CostToGoAxisScale::kLogarithmicWhenPositive) {
+    const bool all_positive = std::ranges::all_of(series, [](const CostToGoSeries& one) noexcept {
+      return std::ranges::all_of(one.expected_cost_to_go, [](double value) noexcept { return value > 0.0; });
+    });
+    if (all_positive) {
+      figure.UseLogarithmicYAxis();
     }
   }
 
