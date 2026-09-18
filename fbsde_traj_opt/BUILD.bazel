@@ -441,3 +441,26 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "zero_order_hold_discretization",
+    hdrs = ["zero_order_hold_discretization.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "zero_order_hold_discretization_test",
+    size = "small",
+    srcs = ["zero_order_hold_discretization.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":zero_order_hold_discretization",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
