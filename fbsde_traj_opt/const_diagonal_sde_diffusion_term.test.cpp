@@ -26,7 +26,7 @@ TEST(ConstDiagonalSdeDiffusionTermTest, MakeSucceedsWithAnOrdinaryDiagonal) {
 }
 
 TEST(ConstDiagonalSdeDiffusionTermTest, MakeSucceedsAtTheInclusiveBoundaryValues) {
-  const Eigen::Vector3d diagonal(-1e10, 1e10, 0.0);
+  const Eigen::Vector3d diagonal(1e-10, 1e10, 1.0);
 
   const auto term = Term3::Make(diagonal);
 
@@ -42,7 +42,23 @@ TEST(ConstDiagonalSdeDiffusionTermTest, MakeFailsWhenAnElementExceedsTheUpperBou
 }
 
 TEST(ConstDiagonalSdeDiffusionTermTest, MakeFailsWhenAnElementIsBelowTheLowerBound) {
-  const Eigen::Vector3d diagonal(-1e10 - 1.0, 1.0, 1.0);
+  const Eigen::Vector3d diagonal(1e-10 / 2.0, 1.0, 1.0);
+
+  const auto term = Term3::Make(diagonal);
+
+  EXPECT_FALSE(term.has_value());
+}
+
+TEST(ConstDiagonalSdeDiffusionTermTest, MakeFailsWhenAnElementIsZero) {
+  const Eigen::Vector3d diagonal(1.0, 0.0, 1.0);
+
+  const auto term = Term3::Make(diagonal);
+
+  EXPECT_FALSE(term.has_value());
+}
+
+TEST(ConstDiagonalSdeDiffusionTermTest, MakeFailsWhenAnElementIsNegative) {
+  const Eigen::Vector3d diagonal(1.0, -1.0, 1.0);
 
   const auto term = Term3::Make(diagonal);
 
