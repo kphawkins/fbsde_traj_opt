@@ -40,3 +40,29 @@ cc_test(
         "@nlohmann_json//:json",
     ],
 )
+
+cc_library(
+    name = "plotly_report",
+    srcs = ["plotly_report.cpp"],
+    hdrs = ["plotly_report.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":plotly_figure",
+        "//fbsde_traj_opt/utils:result",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_test(
+    name = "plotly_report_test",
+    size = "small",
+    srcs = ["plotly_report.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":plotly_figure",
+        ":plotly_report",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@nlohmann_json//:json",
+    ],
+)
