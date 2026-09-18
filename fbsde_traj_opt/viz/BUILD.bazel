@@ -66,3 +66,25 @@ cc_test(
         "@nlohmann_json//:json",
     ],
 )
+
+cc_library(
+    name = "open_in_browser",
+    srcs = ["open_in_browser.cpp"],
+    hdrs = ["open_in_browser.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+    ],
+)
+
+cc_test(
+    name = "open_in_browser_test",
+    size = "small",
+    srcs = ["open_in_browser.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":open_in_browser",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
