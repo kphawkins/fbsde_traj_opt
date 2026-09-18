@@ -5,6 +5,7 @@
 #define FBSDE_TRAJ_OPT_EIGEN_CONCEPTS_HPP_
 
 #include <concepts>
+#include <type_traits>
 
 #include <Eigen/Core>
 
@@ -20,6 +21,17 @@ concept EigenExpressionWithCompileTimeShape = requires {
   { T::RowsAtCompileTime } -> std::convertible_to<int>;
   { T::ColsAtCompileTime } -> std::convertible_to<int>;
 };
+
+// True when `T`, once any reference and cv-qualification are stripped, is an Eigen expression
+// with a fixed compile-time shape.
+//
+// A return-type requirement of the form `{ expr } -> Concept` tests the declared type of `expr`,
+// references and all. A concept written over an accessor that returns `const Eigen::Matrix<...>&`
+// -- as the matrix accessors on this project's constant terms do -- therefore needs this form;
+// EigenExpressionWithCompileTimeShape itself would be tested against the reference type and
+// always fail.
+template <typename T>
+concept DecaysToEigenExpressionWithCompileTimeShape = EigenExpressionWithCompileTimeShape<std::remove_cvref_t<T>>;
 
 // True for fixed-size (non-Dynamic) Eigen column vector types.
 template <typename T>

@@ -408,3 +408,36 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "finite_horizon_lqr",
+    hdrs = ["finite_horizon_lqr.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":eigen_concepts",
+        ":stage_varying_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "finite_horizon_lqr_test",
+    size = "small",
+    srcs = ["finite_horizon_lqr.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":composed_cost_sde_model",
+        ":composed_forward_sde_model",
+        ":const_diagonal_sde_diffusion_term",
+        ":const_linear_sde_control_drift_mat_term",
+        ":const_linear_sde_state_drift_term",
+        ":finite_horizon_lqr",
+        ":quadratic_regulator_sde_running_cost_term",
+        ":quadratic_regulator_sde_terminal_cost_term",
+        ":sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
