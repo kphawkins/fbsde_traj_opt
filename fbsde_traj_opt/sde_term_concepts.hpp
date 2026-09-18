@@ -13,7 +13,7 @@ namespace fbsde_traj_opt {
 
 // Concepts for the functor types that make up a discrete-time, control-affine forward SDE
 //
-//   x_{k+1} = f(k, x_k) + B(k, x_k) * u_k + Sigma(k, x_k) * z_k,     z_k ~ N(0, I),
+//   x_{k+1} = x_k + f(k, x_k) + B(k, x_k) * u_k + Sigma(k, x_k) * z_k,     z_k ~ N(0, I),
 //
 // where `f` is the uncontrolled drift (SdeStateDriftTerm), `B` is the control drift matrix
 // (SdeControlDriftMatTerm), and `Sigma` shapes the injected Brownian noise (SdeDiffusionTerm).
@@ -62,12 +62,9 @@ concept SdeControlDriftMatTerm = EigenFixedSizeColumnVector<State> &&
                                    } -> EigenFixedSizeMatrixWithRowsOfDimension<State::RowsAtCompileTime>;
                                  };
 
-// Concept for a functor type `T` that supplies the diffusion coefficient (the "Sigma" matrix) of a
-// discrete-time forward SDE
-//
-//   x_{k+1} = f(k, x_k) + Sigma(k, x_k) * z_k,     z_k ~ N(0, I),
-//
-// shaping the Brownian noise increment injected at each stage.
+// Concept for a functor type `T` that supplies the diffusion coefficient (the "Sigma" matrix)
+// shaping the Brownian noise increment `Sigma(k, x_k) * z_k` injected at each stage of the forward
+// SDE described above.
 //
 // A conforming `T` is callable as `diffusion_term(stage, state)`, where `stage` is a
 // `std::size_t` and `state` is a `State`, and returns a fixed-size N x N Eigen matrix, where N is
@@ -133,7 +130,7 @@ concept SdeTerminalCostTerm =
 // Concept for a functor type `T` that assembles the terms of a discrete-time, control-affine
 // forward SDE
 //
-//   x_{k+1} = f(k, x_k) + B(k, x_k) * u_k + Sigma(k, x_k) * z_k,     z_k ~ N(0, I),
+//   x_{k+1} = x_k + f(k, x_k) + B(k, x_k) * u_k + Sigma(k, x_k) * z_k,     z_k ~ N(0, I),
 //
 // into the single forward step above, while also exposing its three component terms so that other
 // algorithms can access `f`, `B`, and `Sigma` directly instead of only the assembled step.
