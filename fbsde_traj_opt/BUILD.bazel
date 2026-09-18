@@ -326,3 +326,26 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "counter_based_normal_sampler",
+    hdrs = ["counter_based_normal_sampler.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":eigen_concepts",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "counter_based_normal_sampler_test",
+    size = "small",
+    srcs = ["counter_based_normal_sampler.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":counter_based_normal_sampler",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
