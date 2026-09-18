@@ -96,6 +96,13 @@ class PlotlyFigure {
   auto AddLine(std::span<const double> x_values, std::span<const double> y_values, const LineStyle& style) noexcept
       -> Result<>;
 
+  // Switches the y axis to a logarithmic scale and appends a note to its title saying so, since
+  // a reader who misses that a scale is logarithmic misreads every distance on it.
+  //
+  // Only meaningful when every plotted value is strictly positive; Plotly drops non-positive
+  // points from a log axis rather than reporting them, so the caller must establish that first.
+  auto UseLogarithmicYAxis() noexcept -> void;
+
   // Returns the figure's title.
   [[nodiscard]] auto Title() const noexcept -> const std::string& { return title_; }
 
