@@ -90,6 +90,52 @@ cc_test(
 )
 
 cc_library(
+    name = "normal_distribution_concepts",
+    hdrs = ["normal_distribution_concepts.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":eigen_concepts",
+    ],
+)
+
+cc_test(
+    name = "normal_distribution_concepts_test",
+    size = "small",
+    srcs = ["normal_distribution_concepts.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":normal_distribution_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "diagonal_covariance_normal_distribution",
+    hdrs = ["diagonal_covariance_normal_distribution.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "diagonal_covariance_normal_distribution_test",
+    size = "small",
+    srcs = ["diagonal_covariance_normal_distribution.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":diagonal_covariance_normal_distribution",
+        ":normal_distribution_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "const_diagonal_sde_diffusion_term",
     hdrs = ["const_diagonal_sde_diffusion_term.hpp"],
     copts = FBSDE_COPTS,
