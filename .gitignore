@@ -27,3 +27,7 @@
 # ---- Python (pre-commit virtualenvs, if created in-tree) --------------------
 /.venv/
 __pycache__/
+
+# HTML reports written by //examples:lqr_experiments when run with its default output
+# directory. The committed copies of these live in docs/screenshots as images.
+/lqr_reports/
