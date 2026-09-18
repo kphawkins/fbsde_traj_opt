@@ -19,6 +19,11 @@ namespace fbsde_traj_opt {
 // (SdeControlDriftMatTerm), and `Sigma` shapes the injected Brownian noise (SdeDiffusionTerm).
 // `State` is the fixed-size Eigen column vector type of `x_k`.
 //
+// Also included is ForwardSdeModel, which composes SdeStateDriftTerm, SdeControlDriftMatTerm, and
+// SdeDiffusionTerm into a single functor that both computes the forward step `x_{k+1}` above and
+// exposes its three component terms, so that other algorithms (e.g. linearization or covariance
+// propagation) can access `f`, `B`, and `Sigma` directly rather than only the assembled step.
+//
 // Also included is the concept for a feedback control policy `u_k = pi(k, x_k)`
 // (SdeControlPolicyTerm) that closes the loop by choosing the control applied at each stage from
 // the current stage and state, and the concepts for the cost terms of the associated trajectory
@@ -123,6 +128,42 @@ template <typename T, typename State>
 concept SdeTerminalCostTerm =
     EigenFixedSizeColumnVector<State> && requires(const T& terminal_cost_term, const State& state) {
       { terminal_cost_term(state) } -> std::same_as<typename State::Scalar>;
+    };
+
+// Concept for a functor type `T` that assembles the terms of a discrete-time, control-affine
+// forward SDE
+//
+//   x_{k+1} = f(k, x_k) + B(k, x_k) * u_k + Sigma(k, x_k) * z_k,     z_k ~ N(0, I),
+//
+// into the single forward step above, while also exposing its three component terms so that other
+// algorithms can access `f`, `B`, and `Sigma` directly instead of only the assembled step.
+//
+// A conforming `T` is callable as `model(stage, state, control, noise)`, where `stage` is a
+// `std::size_t`, `state` is a `State`, `control` is a `Control`, and `noise` is a `State`
+// representing the noise increment `z_k` (dimensioned to match Sigma's N x N shape), and returns
+// the next state `x_{k+1}` as a fixed-size Eigen column vector of the same compile-time size as
+// `State`.
+//
+// `T` must also define member type aliases `StateDriftTerm`, `ControlDriftMatTerm`, and
+// `DiffusionTerm` that conform, respectively, to SdeStateDriftTerm, SdeControlDriftMatTerm, and
+// SdeDiffusionTerm for `State`, and expose them through const accessors `StateDrift()`,
+// `ControlDriftMat()`, and `Diffusion()`.
+template <typename T, typename State, typename Control>
+concept ForwardSdeModel =
+    EigenFixedSizeColumnVector<State> && EigenFixedSizeColumnVector<Control> &&
+    std::same_as<typename State::Scalar, typename Control::Scalar> &&
+    requires {
+      typename T::StateDriftTerm;
+      typename T::ControlDriftMatTerm;
+      typename T::DiffusionTerm;
+    } && SdeStateDriftTerm<typename T::StateDriftTerm, State> &&
+    SdeControlDriftMatTerm<typename T::ControlDriftMatTerm, State> &&
+    SdeDiffusionTerm<typename T::DiffusionTerm, State> &&
+    requires(const T& model, std::size_t stage, const State& state, const Control& control, const State& noise) {
+      { model(stage, state, control, noise) } -> EigenFixedSizeColumnVectorOfDimension<State::RowsAtCompileTime>;
+      { model.StateDrift() } -> std::convertible_to<const typename T::StateDriftTerm&>;
+      { model.ControlDriftMat() } -> std::convertible_to<const typename T::ControlDriftMatTerm&>;
+      { model.Diffusion() } -> std::convertible_to<const typename T::DiffusionTerm&>;
     };
 
 }  // namespace fbsde_traj_opt
