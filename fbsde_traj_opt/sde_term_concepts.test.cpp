@@ -546,6 +546,58 @@ static_assert(!ForwardSdeModel<LinearForwardSdeModel, State3, Eigen::VectorXd>);
 // itself would otherwise conform.
 static_assert(!ForwardSdeModel<LinearForwardSdeModel, State3, FloatControl2>);
 
+// ---------------------------------------------------------------------------------------------
+// CostSdeModel
+// ---------------------------------------------------------------------------------------------
+
+// A conforming type that bundles QuadraticRunningCost and QuadraticTerminalCost (defined above)
+// and exposes each through a const accessor.
+class QuadraticCostSdeModel {
+ public:
+  using RunningCostTerm = QuadraticRunningCost;
+  using TerminalCostTerm = QuadraticTerminalCost;
+
+  [[nodiscard]] auto RunningCost() const noexcept -> const RunningCostTerm& { return running_cost_term_; }
+
+  [[nodiscard]] auto TerminalCost() const noexcept -> const TerminalCostTerm& { return terminal_cost_term_; }
+
+ private:
+  RunningCostTerm running_cost_term_;
+  TerminalCostTerm terminal_cost_term_;
+};
+
+static_assert(CostSdeModel<QuadraticCostSdeModel, State3, Control2>);
+
+// Rejected: the member type aliases are present but the accessors are not.
+struct AliasOnlyCostSdeModel {
+  using RunningCostTerm = QuadraticRunningCost;
+  using TerminalCostTerm = QuadraticTerminalCost;
+};
+
+static_assert(!CostSdeModel<AliasOnlyCostSdeModel, State3, Control2>);
+
+// Rejected: one component type alias doesn't itself satisfy its sub-concept --
+// WrongScalarTerminalCost (defined above) returns a float rather than the state's scalar type.
+class BadComponentCostSdeModel {
+ public:
+  using RunningCostTerm = QuadraticRunningCost;
+  using TerminalCostTerm = WrongScalarTerminalCost;
+
+  [[nodiscard]] auto RunningCost() const noexcept -> const RunningCostTerm& { return running_cost_term_; }
+
+  [[nodiscard]] auto TerminalCost() const noexcept -> const TerminalCostTerm& { return terminal_cost_term_; }
+
+ private:
+  RunningCostTerm running_cost_term_;
+  TerminalCostTerm terminal_cost_term_;
+};
+
+static_assert(!CostSdeModel<BadComponentCostSdeModel, State3, Control2>);
+
+// Rejected: the state and control types have different scalar types, even though the bundle
+// itself would otherwise conform.
+static_assert(!CostSdeModel<QuadraticCostSdeModel, State3, FloatControl2>);
+
 TEST(SdeTermConceptsTest, CompileTimeChecksPassed) {
   // All the interesting checks for these concepts are the static_asserts above; this test exists
   // only so the target has a runnable case.
