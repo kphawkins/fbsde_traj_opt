@@ -5,6 +5,7 @@ visualization layer, and so that an example is free to be concrete and opinionat
 library code should not be.
 """
 
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("//bazel:copts.bzl", "FBSDE_COPTS", "FBSDE_TEST_COPTS")
@@ -74,5 +75,18 @@ cc_test(
         "@eigen",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
+    ],
+)
+
+cc_binary(
+    name = "lqr_experiments",
+    srcs = ["lqr_experiments_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":lqr_experiment",
+        ":lqr_models",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/viz:open_in_browser",
+        "//fbsde_traj_opt/viz:plotly_report",
     ],
 )
