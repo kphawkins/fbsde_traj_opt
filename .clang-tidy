@@ -5,6 +5,17 @@
 # readability. Notably absent: cppcoreguidelines-* and hicpp-*, which overlap heavily with the
 # above and whose bans on C-style arrays, magic numbers, and non-const globals conflict with both
 # Eigen idioms and GoogleTest macros; and llvm-*, whose header-guard convention is not ours.
+#
+# One individually disabled check deserves its reason recorded, and it has to be recorded here:
+# `Checks:` below is a YAML folded scalar, so a `#` inside it is ordinary text that gets folded
+# into the check list rather than a comment, and silently corrupts the entry that follows it.
+#
+#   readability-redundant-member-init contradicts the compiler. Clang's
+#   -Wmissing-designated-field-initializers, part of the -Wextra we build with, fires on any
+#   designated-initializer list that omits an aggregate member lacking a default member
+#   initializer -- so a `std::string` field in such an aggregate needs an explicit `{}` to be
+#   omittable at all. That same `{}` is what this check calls redundant. The compiler warning
+#   catches a real bug class (a forgotten field); this check catches only noise.
 Checks: >
   -*,
   bugprone-*,
@@ -21,6 +32,7 @@ Checks: >
   -modernize-use-trailing-return-type,
 
   -readability-identifier-length,
+  -readability-redundant-member-init,
   -readability-magic-numbers,
   -readability-function-cognitive-complexity,
   -readability-math-missing-parentheses

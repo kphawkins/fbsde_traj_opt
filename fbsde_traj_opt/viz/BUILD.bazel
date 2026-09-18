@@ -1,0 +1,42 @@
+"""Visualization: turning sampled trajectory data into browser-rendered Plotly figures.
+
+Kept in its own package so the core library stays free of the JSON dependency; nothing under
+//fbsde_traj_opt depends on anything here.
+
+Follows the same layout convention as //fbsde_traj_opt: headers, sources, and unit tests live
+together, and a test for `foo.cpp` is named `foo.test.cpp`.
+"""
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//bazel:copts.bzl", "FBSDE_COPTS", "FBSDE_TEST_COPTS")
+
+package(
+    default_visibility = ["//visibility:public"],
+    # Compile every header standalone to catch missing includes.
+    features = ["parse_headers"],
+)
+
+cc_library(
+    name = "plotly_figure",
+    srcs = ["plotly_figure.cpp"],
+    hdrs = ["plotly_figure.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@nlohmann_json//:json",
+    ],
+)
+
+cc_test(
+    name = "plotly_figure_test",
+    size = "small",
+    srcs = ["plotly_figure.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":plotly_figure",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@nlohmann_json//:json",
+    ],
+)
