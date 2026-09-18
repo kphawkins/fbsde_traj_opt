@@ -300,3 +300,29 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "composed_cost_sde_model",
+    hdrs = ["composed_cost_sde_model.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":sde_term_concepts",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "composed_cost_sde_model_test",
+    size = "small",
+    srcs = ["composed_cost_sde_model.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":composed_cost_sde_model",
+        ":quadratic_regulator_sde_running_cost_term",
+        ":quadratic_regulator_sde_terminal_cost_term",
+        ":sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

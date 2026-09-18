@@ -33,6 +33,9 @@ namespace fbsde_traj_opt {
 // problem is the expected value, under the SDE dynamics above, of the sum of the running costs
 // over stages 0..K-1 plus the terminal cost at stage K.
 
+// CostSdeModel bundles those two cost terms the way ForwardSdeModel bundles the three dynamics
+// terms, so that an algorithm which needs the whole objective takes one argument rather than two.
+
 // Concept for a functor type `T` that supplies the uncontrolled drift `f(k, x_k)` of the forward
 // SDE -- the component of the drift that is independent of both the control `u_k` and the noise
 // `z_k`.
@@ -162,6 +165,31 @@ concept ForwardSdeModel =
       { model.ControlDriftMat() } -> std::convertible_to<const typename T::ControlDriftMatTerm&>;
       { model.Diffusion() } -> std::convertible_to<const typename T::DiffusionTerm&>;
     };
+
+// Concept for a type `T` that bundles the two cost terms of a discrete-time trajectory
+// optimization problem over stages 0..K: the running cost `l(k, x_k, u_k)` charged at stages
+// 0..K-1 and the terminal cost `phi(x_K)` charged at stage K.
+//
+// `T` must define member type aliases `RunningCostTerm` and `TerminalCostTerm` that conform,
+// respectively, to SdeRunningCostTerm and SdeTerminalCostTerm, and expose them through const
+// accessors `RunningCost()` and `TerminalCost()`.
+//
+// Unlike ForwardSdeModel, a conforming `T` is not itself callable. ForwardSdeModel has an
+// assembled call operator because its three terms combine into exactly one meaningful quantity,
+// the forward step. The two cost terms do not: they are evaluated at different stages and with
+// different arguments, so any single call operator here would have to pick one of them
+// arbitrarily. Callers reach the term they want through the accessor instead.
+template <typename T, typename State, typename Control>
+concept CostSdeModel = EigenFixedSizeColumnVector<State> && EigenFixedSizeColumnVector<Control> &&
+                       std::same_as<typename State::Scalar, typename Control::Scalar> &&
+                       requires {
+                         typename T::RunningCostTerm;
+                         typename T::TerminalCostTerm;
+                       } && SdeRunningCostTerm<typename T::RunningCostTerm, State, Control> &&
+                       SdeTerminalCostTerm<typename T::TerminalCostTerm, State> && requires(const T& cost_model) {
+                         { cost_model.RunningCost() } -> std::convertible_to<const typename T::RunningCostTerm&>;
+                         { cost_model.TerminalCost() } -> std::convertible_to<const typename T::TerminalCostTerm&>;
+                       };
 
 }  // namespace fbsde_traj_opt
 
