@@ -88,3 +88,36 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "trajectory_batch_plots",
+    srcs = ["trajectory_batch_plots.cpp"],
+    hdrs = ["trajectory_batch_plots.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":plotly_figure",
+        "//fbsde_traj_opt/utils:result",
+    ],
+)
+
+cc_test(
+    name = "trajectory_batch_plots_test",
+    size = "small",
+    srcs = ["trajectory_batch_plots.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":plotly_figure",
+        ":trajectory_batch_plots",
+        "//fbsde_traj_opt:composed_forward_sde_model",
+        "//fbsde_traj_opt:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt:const_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt:trajectory_batch",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@nlohmann_json//:json",
+    ],
+)
