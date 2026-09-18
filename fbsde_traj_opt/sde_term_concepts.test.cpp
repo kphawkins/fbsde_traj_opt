@@ -357,6 +357,195 @@ struct NonScalarReturnTerminalCost {
 
 static_assert(!SdeTerminalCostTerm<NonScalarReturnTerminalCost, State3>);
 
+// ---------------------------------------------------------------------------------------------
+// ForwardSdeModel
+// ---------------------------------------------------------------------------------------------
+
+// A conforming functor that assembles LinearStateDrift, RectangularControlDriftMat, and
+// DenseIdentityDiffusion (defined above) into a full forward-step model, and exposes each
+// component term through a const accessor.
+class LinearForwardSdeModel {
+ public:
+  using StateDriftTerm = LinearStateDrift;
+  using ControlDriftMatTerm = RectangularControlDriftMat;
+  using DiffusionTerm = DenseIdentityDiffusion;
+
+  auto operator()(std::size_t stage, const State3& state, const Control2& control, const State3& noise) const noexcept
+      -> Eigen::Vector3d {
+    return state_drift_term_(stage, state) + control_drift_mat_term_(stage, state) * control +
+           diffusion_term_(stage, state) * noise;
+  }
+
+  [[nodiscard]] auto StateDrift() const noexcept -> const StateDriftTerm& { return state_drift_term_; }
+
+  [[nodiscard]] auto ControlDriftMat() const noexcept -> const ControlDriftMatTerm& { return control_drift_mat_term_; }
+
+  [[nodiscard]] auto Diffusion() const noexcept -> const DiffusionTerm& { return diffusion_term_; }
+
+ private:
+  StateDriftTerm state_drift_term_;
+  ControlDriftMatTerm control_drift_mat_term_;
+  DiffusionTerm diffusion_term_;
+};
+
+static_assert(ForwardSdeModel<LinearForwardSdeModel, State3, Control2>);
+
+// Rejected: no member type aliases or accessor methods at all -- only the call operator.
+struct StepOnlyForwardSdeModel {
+  auto operator()(std::size_t /*stage*/,
+                  const State3& state,
+                  const Control2& control,
+                  const State3& noise) const noexcept -> Eigen::Vector3d {
+    return -state + Eigen::Matrix<double, 3, 2>::Zero() * control + noise;
+  }
+};
+
+static_assert(!ForwardSdeModel<StepOnlyForwardSdeModel, State3, Control2>);
+
+// Rejected: the call operator returns the wrong fixed size for the state.
+class WrongReturnSizeForwardSdeModel {
+ public:
+  using StateDriftTerm = LinearStateDrift;
+  using ControlDriftMatTerm = RectangularControlDriftMat;
+  using DiffusionTerm = DenseIdentityDiffusion;
+
+  auto operator()(std::size_t /*stage*/,
+                  const State3& /*state*/,
+                  const Control2& /*control*/,
+                  const State3& /*noise*/) const noexcept -> Eigen::Vector2d {
+    return Eigen::Vector2d::Zero();
+  }
+
+  [[nodiscard]] auto StateDrift() const noexcept -> const StateDriftTerm& { return state_drift_term_; }
+
+  [[nodiscard]] auto ControlDriftMat() const noexcept -> const ControlDriftMatTerm& { return control_drift_mat_term_; }
+
+  [[nodiscard]] auto Diffusion() const noexcept -> const DiffusionTerm& { return diffusion_term_; }
+
+ private:
+  StateDriftTerm state_drift_term_;
+  ControlDriftMatTerm control_drift_mat_term_;
+  DiffusionTerm diffusion_term_;
+};
+
+static_assert(!ForwardSdeModel<WrongReturnSizeForwardSdeModel, State3, Control2>);
+
+// Rejected: the call operator's return type isn't an Eigen expression at all.
+class NonEigenReturnForwardSdeModel {
+ public:
+  using StateDriftTerm = LinearStateDrift;
+  using ControlDriftMatTerm = RectangularControlDriftMat;
+  using DiffusionTerm = DenseIdentityDiffusion;
+
+  auto operator()(std::size_t /*stage*/,
+                  const State3& /*state*/,
+                  const Control2& /*control*/,
+                  const State3& /*noise*/) const noexcept -> double {
+    return 0.0;
+  }
+
+  [[nodiscard]] auto StateDrift() const noexcept -> const StateDriftTerm& { return state_drift_term_; }
+
+  [[nodiscard]] auto ControlDriftMat() const noexcept -> const ControlDriftMatTerm& { return control_drift_mat_term_; }
+
+  [[nodiscard]] auto Diffusion() const noexcept -> const DiffusionTerm& { return diffusion_term_; }
+
+ private:
+  StateDriftTerm state_drift_term_;
+  ControlDriftMatTerm control_drift_mat_term_;
+  DiffusionTerm diffusion_term_;
+};
+
+static_assert(!ForwardSdeModel<NonEigenReturnForwardSdeModel, State3, Control2>);
+
+// Rejected: one component type alias doesn't itself satisfy its sub-concept -- WrongSizeStateDrift
+// (defined above) returns a Vector2d rather than matching State3's dimension.
+class BadComponentForwardSdeModel {
+ public:
+  using StateDriftTerm = WrongSizeStateDrift;
+  using ControlDriftMatTerm = RectangularControlDriftMat;
+  using DiffusionTerm = DenseIdentityDiffusion;
+
+  auto operator()(std::size_t stage, const State3& state, const Control2& control, const State3& noise) const noexcept
+      -> Eigen::Vector3d {
+    return control_drift_mat_term_(stage, state) * control + diffusion_term_(stage, state) * noise;
+  }
+
+  [[nodiscard]] auto StateDrift() const noexcept -> const StateDriftTerm& { return state_drift_term_; }
+
+  [[nodiscard]] auto ControlDriftMat() const noexcept -> const ControlDriftMatTerm& { return control_drift_mat_term_; }
+
+  [[nodiscard]] auto Diffusion() const noexcept -> const DiffusionTerm& { return diffusion_term_; }
+
+ private:
+  StateDriftTerm state_drift_term_;
+  ControlDriftMatTerm control_drift_mat_term_;
+  DiffusionTerm diffusion_term_;
+};
+
+static_assert(!ForwardSdeModel<BadComponentForwardSdeModel, State3, Control2>);
+
+// Rejected: missing the Diffusion() accessor.
+class MissingAccessorForwardSdeModel {
+ public:
+  using StateDriftTerm = LinearStateDrift;
+  using ControlDriftMatTerm = RectangularControlDriftMat;
+  using DiffusionTerm = DenseIdentityDiffusion;
+
+  auto operator()(std::size_t stage, const State3& state, const Control2& control, const State3& noise) const noexcept
+      -> Eigen::Vector3d {
+    return state_drift_term_(stage, state) + control_drift_mat_term_(stage, state) * control +
+           diffusion_term_(stage, state) * noise;
+  }
+
+  [[nodiscard]] auto StateDrift() const noexcept -> const StateDriftTerm& { return state_drift_term_; }
+
+  [[nodiscard]] auto ControlDriftMat() const noexcept -> const ControlDriftMatTerm& { return control_drift_mat_term_; }
+
+ private:
+  StateDriftTerm state_drift_term_;
+  ControlDriftMatTerm control_drift_mat_term_;
+  DiffusionTerm diffusion_term_;
+};
+
+static_assert(!ForwardSdeModel<MissingAccessorForwardSdeModel, State3, Control2>);
+
+// Rejected: not callable with (stage, state, control, noise) at all -- the noise argument is
+// missing.
+class WrongSignatureForwardSdeModel {
+ public:
+  using StateDriftTerm = LinearStateDrift;
+  using ControlDriftMatTerm = RectangularControlDriftMat;
+  using DiffusionTerm = DenseIdentityDiffusion;
+
+  auto operator()(std::size_t stage, const State3& state, const Control2& control) const noexcept -> Eigen::Vector3d {
+    return state_drift_term_(stage, state) + control_drift_mat_term_(stage, state) * control;
+  }
+
+  [[nodiscard]] auto StateDrift() const noexcept -> const StateDriftTerm& { return state_drift_term_; }
+
+  [[nodiscard]] auto ControlDriftMat() const noexcept -> const ControlDriftMatTerm& { return control_drift_mat_term_; }
+
+  [[nodiscard]] auto Diffusion() const noexcept -> const DiffusionTerm& { return diffusion_term_; }
+
+ private:
+  StateDriftTerm state_drift_term_;
+  ControlDriftMatTerm control_drift_mat_term_;
+  DiffusionTerm diffusion_term_;
+};
+
+static_assert(!ForwardSdeModel<WrongSignatureForwardSdeModel, State3, Control2>);
+
+// Rejected: the state type itself is dynamically sized, regardless of the functor.
+static_assert(!ForwardSdeModel<LinearForwardSdeModel, Eigen::VectorXd, Control2>);
+
+// Rejected: the control type itself is dynamically sized, regardless of the functor.
+static_assert(!ForwardSdeModel<LinearForwardSdeModel, State3, Eigen::VectorXd>);
+
+// Rejected: the state and control types have different scalar types, even though the functor
+// itself would otherwise conform.
+static_assert(!ForwardSdeModel<LinearForwardSdeModel, State3, FloatControl2>);
+
 TEST(SdeTermConceptsTest, CompileTimeChecksPassed) {
   // All the interesting checks for these concepts are the static_asserts above; this test exists
   // only so the target has a runnable case.
