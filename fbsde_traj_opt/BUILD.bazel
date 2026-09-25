@@ -496,3 +496,26 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "adam_optimizer",
+    hdrs = ["adam_optimizer.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "adam_optimizer_test",
+    size = "small",
+    srcs = ["adam_optimizer.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":adam_optimizer",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
