@@ -11,6 +11,7 @@
 #include <format>
 #include <numbers>
 #include <ranges>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -43,6 +44,56 @@ using StepReport = ValueFunctionSgdStepReport<double>;
 using SgdOptions = ValueFunctionSgdOptions<double>;
 
 constexpr double kDiagonalOffset = 1e-4;
+
+// Cumulative epoch counts on a geometric schedule, ending at `total`.
+//
+// Geometric rather than even because a fit moves fast at first and slowly later: evenly spaced
+// frames would spend most of an animation on a curve that has already stopped moving, and would
+// skip over the part where all the motion is.
+auto GeometricEpochSchedule(std::size_t total, std::size_t count) noexcept -> std::vector<std::size_t> {
+  std::vector<std::size_t> schedule;
+  schedule.reserve(count);
+  for (std::size_t index = 1; index <= count; ++index) {
+    const double exponent = static_cast<double>(index) / static_cast<double>(count);
+    const auto epochs = static_cast<std::size_t>(std::llround(std::pow(static_cast<double>(total), exponent)));
+    // Strictly increasing: the low end of a geometric schedule rounds to the same integer twice.
+    if (schedule.empty() || epochs > schedule.back()) {
+      schedule.push_back(epochs);
+    }
+  }
+  if (!schedule.empty()) {
+    schedule.back() = total;
+  }
+  return schedule;
+}
+
+// The index of the frame whose epoch count sits closest to `epochs`.
+auto NearestFrame(const std::vector<std::size_t>& frame_epochs, std::size_t epochs) noexcept -> std::size_t {
+  std::size_t best = 0;
+  for (std::size_t index = 1; index < frame_epochs.size(); ++index) {
+    const auto current = static_cast<double>(frame_epochs[index]);
+    const auto incumbent = static_cast<double>(frame_epochs[best]);
+    const auto wanted = static_cast<double>(epochs);
+    if (std::abs(current - wanted) < std::abs(incumbent - wanted)) {
+      best = index;
+    }
+  }
+  return best;
+}
+
+// Animation frames rounded to four decimals before they are serialized.
+//
+// A frame is a picture, not a record: it is read as a position on a curve or a step on a color
+// ramp, neither of which can show more than a few significant digits. Full double precision costs
+// roughly two and a half times the bytes for detail nothing on screen resolves, and an animated
+// heatmap is thousands of values per frame. The static figures beside these, and the table twins
+// under them, keep every digit.
+auto RoundedForDisplay(std::vector<double> values) noexcept -> std::vector<double> {
+  for (double& value : values) {
+    value = std::round(value * 1e4) / 1e4;
+  }
+  return values;
+}
 
 // A relative error, written so that a value at the level of rounding does not print as zero.
 auto FormatError(double value) noexcept -> std::string {
@@ -99,6 +150,8 @@ auto AddLogSeries(viz::PlotlyFigure& figure,
 constexpr int kGenericComponents = 8;
 constexpr int kGenericSamples = 121;
 constexpr int kGenericBatch = 16;
+constexpr std::size_t kGenericTotalEpochs = 4000;
+constexpr std::size_t kGenericFrames = 44;
 constexpr double kGenericLow = -4.0;
 constexpr double kGenericHigh = 4.0;
 
@@ -202,30 +255,64 @@ auto RunGenericFunctionFittingExperiment(std::uint64_t seed) noexcept -> Result<
     return curve;
   };
 
+  // One pass, captured at every step of a geometric schedule. The animation gets every frame; the
+  // snapshot figure picks four of them, so the two figures are two views of the same run rather
+  // than two runs.
+  const std::vector<std::size_t> schedule = GeometricEpochSchedule(kGenericTotalEpochs, kGenericFrames);
+  std::vector<StepReport> history;
+  std::vector<viz::AnimationFrame> frames;
+  std::vector<std::size_t> frame_epochs;
+
+  frames.push_back(viz::AnimationFrame{.label = "0 epochs", .trace_values = {RoundedForDisplay(sample_curve(*model))}});
+  frame_epochs.push_back(0);
+
+  std::size_t completed_epochs = 0;
+  for (std::size_t step = 0; step < schedule.size(); ++step) {
+    const std::size_t epochs = schedule[step] - completed_epochs;
+    if (const Result<> fitted =
+            fitter->FitEpochs<kGenericSamples>(*model, states, targets, epochs, seed + step, history);
+        !fitted.has_value()) {
+      return ErrorResult(fitted.error().message, fitted.error().location);
+    }
+    completed_epochs = schedule[step];
+
+    frames.push_back(viz::AnimationFrame{.label = std::to_string(completed_epochs) + " epochs",
+                                         .trace_values = {RoundedForDisplay(sample_curve(*model))}});
+    frame_epochs.push_back(completed_epochs);
+  }
+
+  viz::PlotlyFigure animated("Approximation over training", "State x", "Value");
+  RESULT_ASSERT(
+      animated.AddLine(plot_positions, plot_target, viz::LineStyle{.name = "Target", .color_role = kSeriesRoles[0]})
+          .has_value(),
+      "RunGenericFunctionFittingExperiment: the animated figure's target curve could not be plotted.");
+  RESULT_ASSERT(animated
+                    .AddLine(plot_positions,
+                             frames.back().trace_values[0],
+                             viz::LineStyle{.name = "Approximation", .color_role = kSeriesRoles[1]})
+                    .has_value(),
+                "RunGenericFunctionFittingExperiment: the animated approximation curve could not be plotted.");
+  constexpr std::array<std::size_t, 1> kAnimatedTrace{1};
+  RESULT_ASSERT(
+      animated
+          .Animate(
+              kAnimatedTrace, frames, viz::AnimationStyle{.frame_duration_ms = 70.0, .slider_prefix = "Fitted after "})
+          .has_value(),
+      "RunGenericFunctionFittingExperiment: the approximation animation could not be built.");
+
+  // The same run, four frames of it, side by side for a reader who wants them all at once.
   viz::PlotlyFigure approach("Target and approximation", "State x", "Value");
   RESULT_ASSERT(
       approach.AddLine(plot_positions, plot_target, viz::LineStyle{.name = "Target", .color_role = kSeriesRoles[0]})
           .has_value(),
       "RunGenericFunctionFittingExperiment: the target curve could not be plotted.");
-
-  // Snapshots on a logarithmic schedule: the approximation moves fast early and slowly late, so
-  // evenly spaced snapshots would all look alike.
-  constexpr std::array<std::size_t, 4> kSnapshotEpochs{5, 45, 450, 4000};
-  std::vector<StepReport> history;
-  std::size_t completed_epochs = 0;
+  constexpr std::array<std::size_t, 4> kSnapshotEpochs{5, 45, 450, kGenericTotalEpochs};
   for (std::size_t snapshot = 0; snapshot < kSnapshotEpochs.size(); ++snapshot) {
-    const std::size_t epochs = kSnapshotEpochs[snapshot] - completed_epochs;
-    if (const Result<> fitted =
-            fitter->FitEpochs<kGenericSamples>(*model, states, targets, epochs, seed + snapshot, history);
-        !fitted.has_value()) {
-      return ErrorResult(fitted.error().message, fitted.error().location);
-    }
-    completed_epochs = kSnapshotEpochs[snapshot];
-
-    const std::string name = "After " + std::to_string(completed_epochs) + " epochs";
+    const std::size_t frame = NearestFrame(frame_epochs, kSnapshotEpochs[snapshot]);
+    const std::string name = "After " + std::to_string(frame_epochs[frame]) + " epochs";
     RESULT_ASSERT(approach
                       .AddLine(plot_positions,
-                               sample_curve(*model),
+                               frames[frame].trace_values[0],
                                viz::LineStyle{.name = name, .color_role = kSeriesRoles[snapshot + 1]})
                       .has_value(),
                   "RunGenericFunctionFittingExperiment: an approximation curve could not be plotted.");
@@ -303,10 +390,12 @@ auto RunGenericFunctionFittingExperiment(std::uint64_t seed) noexcept -> Result<
       .description = "A soft minimum of eight quadratics, fitted by stochastic gradient descent to a target that is "
                      "nowhere a quadratic: a bowl with a ripple on it, sampled on a uniform grid. Every step is held "
                      "to a root-mean-square change of 0.02 in the fitted values, so the approximation walks toward "
-                     "the target rather than jumping at it -- the fourth figure shows how often that bound binds. No "
-                     "FBSDE machinery is involved; this is the model and the fitter alone.",
+                     "the target rather than jumping at it -- press play on the first figure to watch it do so, and "
+                     "see the last figure for how often that bound binds. No FBSDE machinery is involved; this is "
+                     "the model and the fitter alone.",
       .summary = "fitted a bowl-plus-ripple to within a fraction of a percent of its range, by SGD alone",
-      .figures = {std::move(approach), std::move(residual), std::move(change), std::move(activity)},
+      .figures =
+          {std::move(animated), std::move(approach), std::move(residual), std::move(change), std::move(activity)},
       .final_root_mean_squared_residual = std::sqrt(squared_total / static_cast<double>(final_curve.size())),
       .worst_relative_error = worst_relative});
 }
@@ -549,21 +638,21 @@ auto RunLqrBackwardPassExperiment(std::uint64_t seed) noexcept -> Result<ValueFu
 
   // A slice through the state plane, at two stages, exact against fitted.
   constexpr int kSlicePoints = 161;
-  constexpr std::size_t kMidStage = kLqrStages / 2;
   std::vector<double> slice_positions;
   slice_positions.reserve(kSlicePoints);
   for (int index = 0; index < kSlicePoints; ++index) {
     slice_positions.push_back(-3.0 + (6.0 * static_cast<double>(index) / static_cast<double>(kSlicePoints - 1)));
   }
 
-  viz::PlotlyFigure slice("Value function along the line x2 = 0", "State x1", "Value");
-  std::size_t role_index = 0;
-  for (const std::size_t stage : {std::size_t{0}, kMidStage}) {
+  // The exact and the fitted value function along that slice, at every stage. Ordered the way the
+  // recursion ran -- from the last stage it estimated back to stage 0 -- so that playing the
+  // animation is watching the backward pass happen, and the figure comes to rest on stage 0.
+  const auto curves_at = [&slice_positions, &exact_value, &fitted_parameters](
+                             std::size_t stage) noexcept -> Result<std::vector<std::vector<double>>> {
     const Result<LqrValueFunction> fitted = LqrValueFunction::Make(fitted_parameters[stage], 1.0, kDiagonalOffset);
     if (!fitted.has_value()) {
       return ErrorResult(fitted.error().message, fitted.error().location);
     }
-
     std::vector<double> exact_curve;
     std::vector<double> fitted_curve;
     exact_curve.reserve(slice_positions.size());
@@ -573,22 +662,40 @@ auto RunLqrBackwardPassExperiment(std::uint64_t seed) noexcept -> Result<ValueFu
       exact_curve.push_back(exact_value(stage, state));
       fitted_curve.push_back((*fitted)(state));
     }
+    return SuccessResult(std::vector<std::vector<double>>{RoundedForDisplay(std::move(exact_curve)),
+                                                          RoundedForDisplay(std::move(fitted_curve))});
+  };
 
-    const std::string suffix = " at stage " + std::to_string(stage);
-    RESULT_ASSERT(slice
-                      .AddLine(slice_positions,
-                               exact_curve,
-                               viz::LineStyle{.name = "Exact" + suffix, .color_role = kSeriesRoles[role_index]})
-                      .has_value(),
-                  "RunLqrBackwardPassExperiment: an exact value curve could not be plotted.");
-    RESULT_ASSERT(slice
-                      .AddLine(slice_positions,
-                               fitted_curve,
-                               viz::LineStyle{.name = "Fitted" + suffix, .color_role = kSeriesRoles[role_index + 1]})
-                      .has_value(),
-                  "RunLqrBackwardPassExperiment: a fitted value curve could not be plotted.");
-    role_index += 2;
+  std::vector<viz::AnimationFrame> slice_frames;
+  for (std::size_t stage = kLqrStages - 1; stage-- > 0;) {
+    Result<std::vector<std::vector<double>>> curves = curves_at(stage);
+    if (!curves.has_value()) {
+      return ErrorResult(curves.error().message, curves.error().location);
+    }
+    slice_frames.push_back(
+        viz::AnimationFrame{.label = "stage " + std::to_string(stage), .trace_values = std::move(*curves)});
   }
+
+  viz::PlotlyFigure slice("Value function along the line x2 = 0", "State x1", "Value");
+  RESULT_ASSERT(slice
+                    .AddLine(slice_positions,
+                             slice_frames.back().trace_values[0],
+                             viz::LineStyle{.name = "Exact", .color_role = kSeriesRoles[0]})
+                    .has_value(),
+                "RunLqrBackwardPassExperiment: the exact value curve could not be plotted.");
+  RESULT_ASSERT(slice
+                    .AddLine(slice_positions,
+                             slice_frames.back().trace_values[1],
+                             viz::LineStyle{.name = "Fitted", .color_role = kSeriesRoles[1]})
+                    .has_value(),
+                "RunLqrBackwardPassExperiment: the fitted value curve could not be plotted.");
+  constexpr std::array<std::size_t, 2> kAnimatedSliceTraces{0, 1};
+  RESULT_ASSERT(slice
+                    .Animate(kAnimatedSliceTraces,
+                             slice_frames,
+                             viz::AnimationStyle{.frame_duration_ms = 320.0, .slider_prefix = "Backward pass at "})
+                    .has_value(),
+                "RunLqrBackwardPassExperiment: the backward pass animation could not be built.");
 
   viz::PlotlyFigure accuracy("Accuracy by stage, relative to the exact value function", "Stage", "Relative error");
   accuracy.UseLogarithmicYAxis();
@@ -658,7 +765,9 @@ auto RunLqrBackwardPassExperiment(std::uint64_t seed) noexcept -> Result<ValueFu
       .name = "A backward pass over an LQR problem",
       .description =
           "The Taylor Noiseless estimator swept backward over a linear-quadratic problem, fitting a value function "
-          "approximation at every stage to the targets it produces. The forward samples were rolled out under a "
+          "approximation at every stage to the targets it produces. Press play on the first figure to watch the "
+          "recursion march back from the terminal stage to stage 0, the fitted curve tracking the exact one the "
+          "whole way. The forward samples were rolled out under a "
           "deliberately suboptimal drift, so the estimator is genuinely off-policy; the third figure reports the "
           "Girsanov drift that costs. Because the true value function of this problem is exactly quadratic, the "
           "Riccati recursion gives the right answer at every stage, and the second figure takes the error apart "
@@ -692,6 +801,13 @@ constexpr double kPlaneHigh = 3.0;
 // A finer grid for drawing than the one that was fitted, so the figures are not a picture of the
 // training set.
 constexpr int kPlaneDrawAxis = 61;
+
+// The animated figures redraw their whole grid on every frame, so they use a coarser one: at the
+// drawing grid's resolution a few dozen frames would be several megabytes of JSON, for detail an
+// animation cannot be read at anyway.
+constexpr int kPlaneAnimationAxis = 41;
+constexpr std::size_t kPlaneTotalEpochs = 1500;
+constexpr std::size_t kPlaneFrames = 22;
 
 using PlaneModel = SoftMinQuadraticValueFunctionApprox<2, kPlaneComponents>;
 using PlaneState = PlaneModel::State;
@@ -774,10 +890,49 @@ auto RunTwoDimensionalFittingExperiment(std::uint64_t seed) noexcept -> Result<V
     return ErrorResult(fitter.error().message, fitter.error().location);
   }
 
+  // The coarse grid the animation redraws, and the two frame sequences taken over it.
+  const std::vector<double> animation_axis = PlaneAxisValues(kPlaneAnimationAxis);
+  const auto animation_grids = [&animation_axis, &model]() noexcept -> std::vector<std::vector<double>> {
+    std::vector<double> approximation;
+    std::vector<double> error;
+    const auto cells = animation_axis.size() * animation_axis.size();
+    approximation.reserve(cells);
+    error.reserve(cells);
+    for (const double second : animation_axis) {
+      for (const double first : animation_axis) {
+        const PlaneState state(first, second);
+        const double value = (*model)(state);
+        approximation.push_back(value);
+        error.push_back(value - PlaneTarget(state));
+      }
+    }
+    return {std::move(approximation), std::move(error)};
+  };
+
   std::vector<StepReport> history;
-  if (const Result<> fitted = fitter->FitEpochs<kPlaneSamples>(*model, states, targets, 1500, seed, history);
-      !fitted.has_value()) {
-    return ErrorResult(fitted.error().message, fitted.error().location);
+  std::vector<viz::AnimationFrame> approximation_frames;
+  std::vector<viz::AnimationFrame> error_frames;
+  {
+    std::vector<std::vector<double>> grids = animation_grids();
+    approximation_frames.push_back(
+        viz::AnimationFrame{.label = "0 epochs", .trace_values = {RoundedForDisplay(grids[0])}});
+    error_frames.push_back(viz::AnimationFrame{.label = "0 epochs", .trace_values = {RoundedForDisplay(grids[1])}});
+  }
+
+  const std::vector<std::size_t> schedule = GeometricEpochSchedule(kPlaneTotalEpochs, kPlaneFrames);
+  std::size_t completed_epochs = 0;
+  for (std::size_t step = 0; step < schedule.size(); ++step) {
+    const std::size_t epochs = schedule[step] - completed_epochs;
+    if (const Result<> fitted = fitter->FitEpochs<kPlaneSamples>(*model, states, targets, epochs, seed + step, history);
+        !fitted.has_value()) {
+      return ErrorResult(fitted.error().message, fitted.error().location);
+    }
+    completed_epochs = schedule[step];
+
+    std::vector<std::vector<double>> grids = animation_grids();
+    const std::string label = std::to_string(completed_epochs) + " epochs";
+    approximation_frames.push_back(viz::AnimationFrame{.label = label, .trace_values = {RoundedForDisplay(grids[0])}});
+    error_frames.push_back(viz::AnimationFrame{.label = label, .trace_values = {RoundedForDisplay(grids[1])}});
   }
 
   // The three grids the figures draw, all on the finer axis.
@@ -843,6 +998,45 @@ auto RunTwoDimensionalFittingExperiment(std::uint64_t seed) noexcept -> Result<V
                     .has_value(),
                 "RunTwoDimensionalFittingExperiment: the error heatmap could not be plotted.");
 
+  constexpr std::array<std::size_t, 1> kAnimatedGrid{0};
+
+  viz::PlotlyFigure approximation_animation("Approximation over training", "State x1", "State x2");
+  RESULT_ASSERT(approximation_animation
+                    .AddHeatmap(animation_axis,
+                                animation_axis,
+                                approximation_frames.back().trace_values[0],
+                                viz::HeatmapStyle{.name = "Approximation", .value_label = "Value"})
+                    .has_value(),
+                "RunTwoDimensionalFittingExperiment: the animated approximation heatmap could not be plotted.");
+  RESULT_ASSERT(approximation_animation
+                    .Animate(kAnimatedGrid,
+                             approximation_frames,
+                             viz::AnimationStyle{.frame_duration_ms = 140.0, .slider_prefix = "Fitted after "})
+                    .has_value(),
+                "RunTwoDimensionalFittingExperiment: the approximation animation could not be built.");
+
+  // The one to watch. With the color range pinned across every frame -- and pinned symmetrically,
+  // since the scale is centered on zero -- the error map literally drains of color as the fit
+  // converges. An unpinned scale would rescale to whatever error remained at each frame and show
+  // nothing happening at all.
+  viz::PlotlyFigure error_animation("Signed error over training", "State x1", "State x2");
+  RESULT_ASSERT(error_animation
+                    .AddHeatmap(animation_axis,
+                                animation_axis,
+                                error_frames.back().trace_values[0],
+                                viz::HeatmapStyle{.name = "Error",
+                                                  .colorscale_role = viz::PlotColorscaleRole::kDiverging,
+                                                  .value_label = "Error",
+                                                  .centered_on_zero = true})
+                    .has_value(),
+                "RunTwoDimensionalFittingExperiment: the animated error heatmap could not be plotted.");
+  RESULT_ASSERT(error_animation
+                    .Animate(kAnimatedGrid,
+                             error_frames,
+                             viz::AnimationStyle{.frame_duration_ms = 140.0, .slider_prefix = "Fitted after "})
+                    .has_value(),
+                "RunTwoDimensionalFittingExperiment: the error animation could not be built.");
+
   viz::PlotlyFigure residual("Fit residual", "Minibatch step", "RMS residual");
   residual.UseLogarithmicYAxis();
   RESULT_ASSERT(
@@ -862,10 +1056,17 @@ auto RunTwoDimensionalFittingExperiment(std::uint64_t seed) noexcept -> Result<V
           "several distinct basins in the plane. This is the case that exercises the parts a one-dimensional problem "
           "cannot reach -- the full state Hessian, and twelve soft-minimum components with somewhere separate to go. "
           "The components are started on two concentric rings, because components that start identical have "
-          "identical gradients and would stay identical forever. The error map is drawn on a diverging scale about "
-          "zero, so over-estimates and under-estimates read as the opposite things they are.",
+          "identical gradients and would stay identical forever. Press play on the first figure to watch the error "
+          "drain out of the plane; its color range is pinned across every frame, so what the color shows is the "
+          "error shrinking rather than the scale following it down. The error maps are drawn on a diverging scale "
+          "about zero, so over-estimates and under-estimates read as the opposite things they are.",
       .summary = "fitted a two-dimensional multi-basin target, exercising the full state Hessian",
-      .figures = {std::move(target_figure), std::move(fitted_figure), std::move(error_figure), std::move(residual)},
+      .figures = {std::move(error_animation),
+                  std::move(approximation_animation),
+                  std::move(target_figure),
+                  std::move(fitted_figure),
+                  std::move(error_figure),
+                  std::move(residual)},
       .final_root_mean_squared_residual = std::sqrt(squared_total / static_cast<double>(cell_count)),
       .worst_relative_error = worst_error / target_span});
 }

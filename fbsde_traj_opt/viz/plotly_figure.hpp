@@ -9,6 +9,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -123,6 +124,26 @@ struct HeatmapStyle {
   bool centered_on_zero = false;
 };
 
+// One step of an animation: what every animated trace holds at that step.
+struct AnimationFrame {
+  // Shown in the slider's readout. Short -- "450 epochs", "stage 7".
+  std::string label{};
+
+  // One entry per animated trace, in the order Animate() was given them. For a line this is the
+  // trace's y values; for a heatmap, its z values row-major. Each must be exactly as long as the
+  // data that trace already holds, since a frame replaces values and never reshapes.
+  std::vector<std::vector<double>> trace_values{};
+};
+
+// How an animation is played.
+struct AnimationStyle {
+  // Milliseconds per frame while playing.
+  double frame_duration_ms = 80.0;
+
+  // What the slider's readout prefixes the frame label with, e.g. "Fitted after ". May be empty.
+  std::string slider_prefix{};
+};
+
 class PlotlyFigure {
  public:
   // Builds an empty figure. `title` names it above the plot; the axis titles name the quantities.
@@ -154,6 +175,33 @@ class PlotlyFigure {
                   std::span<const double> z_values_row_major,
                   const HeatmapStyle& style) noexcept -> Result<>;
 
+  // Turns the traces at `trace_indices` into an animation over `frames`, giving the figure a play
+  // control and a slider.
+  //
+  // Two decisions here are what make an animation honest rather than merely pretty, and both are
+  // taken for the caller.
+  //
+  // The scale is pinned across every frame. An animation whose axis re-ranges each frame shows a
+  // shape that never seems to change, because the axis is chasing the data -- which is exactly
+  // backwards for a figure whose job is to show a quantity shrinking. So the y range of an
+  // animated line figure, and the color range of an animated heatmap, are computed over all the
+  // frames at once and fixed; a heatmap centered on zero is given a symmetric range, so that the
+  // neutral color keeps meaning zero from the first frame to the last.
+  //
+  // And the figure's resting state is the *last* frame, not the first. A reader who never presses
+  // play, a printed copy, and the table twin beneath the figure all then show the result rather
+  // than the starting guess; pressing play replays how it got there.
+  //
+  // Fails if `frames` is empty, if any index is not a trace of this figure, if a frame does not
+  // carry exactly one set of values per animated trace, or if any of those sets is not the length
+  // of the data the trace already holds.
+  auto Animate(std::span<const std::size_t> trace_indices,
+               std::span<const AnimationFrame> frames,
+               const AnimationStyle& style) noexcept -> Result<>;
+
+  // Whether this figure has been animated, and over how many frames.
+  [[nodiscard]] auto FrameCount() const noexcept -> std::size_t { return frames_.size(); }
+
   // Switches the y axis to a logarithmic scale and appends a note to its title saying so, since
   // a reader who misses that a scale is logarithmic misreads every distance on it.
   //
@@ -170,14 +218,15 @@ class PlotlyFigure {
   // Whether this figure holds a heatmap rather than lines.
   [[nodiscard]] auto HoldsHeatmap() const noexcept -> bool { return holds_heatmap_; }
 
-  // Returns the figure as `{"title": ..., "data": [...], "layout": {...}}`, the form the page's
-  // renderer expects.
+  // Returns the figure as `{"title": ..., "data": [...], "layout": {...}}`, plus `"frames"` when
+  // the figure has been animated -- the form the page's renderer expects.
   [[nodiscard]] auto ToJson() const noexcept -> nlohmann::json;
 
  private:
   std::string title_;
   nlohmann::json layout_;
   nlohmann::json traces_ = nlohmann::json::array();
+  nlohmann::json frames_ = nlohmann::json::array();
   bool holds_heatmap_ = false;
 };
 

@@ -57,7 +57,9 @@ Everything is fixed-size at compile time and allocates nothing on the sampling p
   the change the step makes to the function's own values, which means the same thing for every
   model.
 - **Visualization.** `//fbsde_traj_opt/viz` turns a batch into Plotly figures and writes them as a
-  self-contained HTML page, which the example binary opens for you.
+  self-contained HTML page, which the example binary opens for you. Figures can be lines, heatmaps
+  over a grid, or animated over a sequence of frames, with the axis or color range pinned across
+  the whole sequence so that what moves on screen is the data and not the scale.
 
 ## Worked examples
 
@@ -90,6 +92,13 @@ Noiseless estimator backward over an LQR problem, whose value function is known 
 takes the error apart into the estimator's own -- which comes out at the level of rounding -- and
 the regression's. The third fits a two-dimensional target and draws the target, the approximation,
 and the signed error as heatmaps over the state plane.
+
+Each report opens on an animation, because the thing being claimed in all three is a change over
+time and a still picture is the wrong medium for it. Press play to watch the approximation walk
+onto the one-dimensional target, the backward recursion march from the terminal stage to stage 0
+with the fitted curve tracking the exact one, and the error drain out of the state plane. Every
+animation rests on its last frame, so a reader who never presses play -- or who is reading a
+printout, or the table under the figure -- sees the result rather than the starting guess.
 
 It takes the same `--output-dir` and `--seed` flags.
 

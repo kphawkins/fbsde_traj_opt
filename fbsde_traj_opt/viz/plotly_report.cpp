@@ -252,7 +252,31 @@ td:first-child, th:first-child { text-align: left; }
       });
     }
 
-    return Object.assign({}, layout, {
+    // The animation controls are chrome, not data: they wear the page's ink and surface, never a
+    // series color, so that nothing on screen reads as a data color unless it is one.
+    function ThemedMenus(menus) {
+      return (menus || []).map(function (menu) {
+        return Object.assign({}, menu, {
+          bgcolor: surface, bordercolor: axis, borderwidth: 1,
+          font: { family: FONT, color: ink, size: 12 }
+        });
+      });
+    }
+
+    function ThemedSliders(sliders) {
+      return (sliders || []).map(function (slider) {
+        return Object.assign({}, slider, {
+          bgcolor: axis, bordercolor: axis, borderwidth: 1,
+          activebgcolor: ink, tickcolor: axis,
+          font: { family: FONT, color: secondary, size: 11 },
+          currentvalue: Object.assign({}, slider.currentvalue, {
+            font: { family: FONT, color: ink, size: 12 }
+          })
+        });
+      });
+    }
+
+    var themed = Object.assign({}, layout, {
       paper_bgcolor: surface,
       plot_bgcolor: surface,
       font: { family: FONT, size: 13, color: secondary },
@@ -261,6 +285,9 @@ td:first-child, th:first-child { text-align: left; }
       legend: Object.assign({}, layout.legend, { font: { color: ink, size: 12 } }),
       hoverlabel: { bgcolor: surface, bordercolor: axis, font: { family: FONT, color: ink, size: 12 } }
     });
+    if (layout.updatemenus) { themed.updatemenus = ThemedMenus(layout.updatemenus); }
+    if (layout.sliders) { themed.sliders = ThemedSliders(layout.sliders); }
+    return themed;
   }
 
   function FormatNumber(value) {
@@ -367,6 +394,19 @@ td:first-child, th:first-child { text-align: left; }
     return table;
   }
 
+  // What Plotly is handed, in the object form, so that an animated figure's frames travel with
+  // its data. Frames carry values only -- no colors -- so a theme change re-resolves the traces
+  // and the chrome and leaves the frames as they are.
+  function Spec(figure) {
+    var spec = {
+      data: ThemedData(figure.data),
+      layout: ThemedLayout(figure.layout),
+      config: PLOT_CONFIG
+    };
+    if (figure.frames) { spec.frames = figure.frames; }
+    return spec;
+  }
+
   var plotNodes = [];
 
   function Render() {
@@ -398,7 +438,7 @@ td:first-child, th:first-child { text-align: left; }
       }
 
       container.appendChild(card);
-      Plotly.newPlot(plot, ThemedData(figure.data), ThemedLayout(figure.layout), PLOT_CONFIG);
+      Plotly.newPlot(plot, Spec(figure));
       plotNodes.push(plot);
     });
   }
@@ -407,7 +447,7 @@ td:first-child, th:first-child { text-align: left; }
   // already drawn, so this recolors in place rather than rebuilding each figure.
   function Retheme() {
     plotNodes.forEach(function (plot, index) {
-      Plotly.react(plot, ThemedData(FIGURES[index].data), ThemedLayout(FIGURES[index].layout), PLOT_CONFIG);
+      Plotly.react(plot, Spec(FIGURES[index]));
     });
     document.querySelectorAll(".swatch").forEach(function (swatch) {
       swatch.style.background = ResolveToken(swatch.dataset.role);

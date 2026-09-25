@@ -3,6 +3,7 @@
 
 #include "examples/value_function_fitting.hpp"
 
+#include <cstddef>
 #include <cstdint>
 
 #include <gtest/gtest.h>
@@ -18,8 +19,15 @@ TEST(ValueFunctionFittingTest, TheGenericFitReachesTheTargetItIsShownReaching) {
   const auto experiment = RunGenericFunctionFittingExperiment(kSeed);
   ASSERT_TRUE(experiment.has_value()) << experiment.error();
 
-  EXPECT_EQ(experiment->figures.size(), 4U);
+  ASSERT_EQ(experiment->figures.size(), 5U);
   EXPECT_FALSE(experiment->summary.empty());
+
+  // The first figure animates the approximation over training. That is the figure that carries
+  // the experiment's claim -- that the fit is gradual -- so its frames are worth asserting on.
+  EXPECT_GT(experiment->figures[0].FrameCount(), 20U) << "the training animation lost its frames";
+  for (std::size_t index = 1; index < experiment->figures.size(); ++index) {
+    EXPECT_EQ(experiment->figures[index].FrameCount(), 0U) << experiment->figures[index].title();
+  }
 
   // The figures claim a fit to a fraction of a percent of the target's range. If the model, the
   // fitter, or the tuning regresses, the claim in the report's prose becomes false and this
@@ -39,7 +47,11 @@ TEST(ValueFunctionFittingTest, TheBackwardPassReproducesTheExactLqrValueFunction
   const auto experiment = RunLqrBackwardPassExperiment(kSeed);
   ASSERT_TRUE(experiment.has_value()) << experiment.error();
 
-  EXPECT_EQ(experiment->figures.size(), 4U);
+  ASSERT_EQ(experiment->figures.size(), 4U);
+
+  // The first figure animates the recursion, one frame per stage, ending on stage 0 -- the order
+  // the pass actually ran in.
+  EXPECT_EQ(experiment->figures[0].FrameCount(), 11U) << "the backward pass animation lost a stage";
 
   // The sharp claim: on an LQR problem the Taylor Noiseless estimator is exact, so reading an
   // exact next-stage value function it must return the exact stage value to rounding. This is the
@@ -56,15 +68,24 @@ TEST(ValueFunctionFittingTest, TheTwoDimensionalFitDrawsItsSurfacesAsHeatmaps) {
   const auto experiment = RunTwoDimensionalFittingExperiment(kSeed);
   ASSERT_TRUE(experiment.has_value()) << experiment.error();
 
-  ASSERT_EQ(experiment->figures.size(), 4U);
+  ASSERT_EQ(experiment->figures.size(), 6U);
   EXPECT_LT(experiment->worst_relative_error, 0.05)
       << "the two-dimensional fit no longer reaches the accuracy the report claims";
 
-  // The first three are the target, the approximation, and the signed error, over the plane.
+  // Two animated heatmaps -- the signed error and the approximation, over training -- then the
+  // three static ones, then the residual curve.
   EXPECT_TRUE(experiment->figures[0].HoldsHeatmap());
   EXPECT_TRUE(experiment->figures[1].HoldsHeatmap());
+  EXPECT_GT(experiment->figures[0].FrameCount(), 10U) << "the error animation lost its frames";
+  EXPECT_GT(experiment->figures[1].FrameCount(), 10U) << "the approximation animation lost its frames";
+
   EXPECT_TRUE(experiment->figures[2].HoldsHeatmap());
-  EXPECT_FALSE(experiment->figures[3].HoldsHeatmap());
+  EXPECT_TRUE(experiment->figures[3].HoldsHeatmap());
+  EXPECT_TRUE(experiment->figures[4].HoldsHeatmap());
+  EXPECT_FALSE(experiment->figures[5].HoldsHeatmap());
+  for (std::size_t index = 2; index < experiment->figures.size(); ++index) {
+    EXPECT_EQ(experiment->figures[index].FrameCount(), 0U) << experiment->figures[index].title();
+  }
 }
 
 TEST(ValueFunctionFittingTest, TheExperimentsAreReproducibleForAGivenSeed) {

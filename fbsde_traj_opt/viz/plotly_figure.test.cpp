@@ -234,5 +234,138 @@ TEST(PlotlyFigureTest, EveryColorscaleRoleHasADistinctName) {
             PlotColorscaleRoleName(PlotColorscaleRole::kDiverging));
 }
 
+TEST(PlotlyFigureTest, AnimatingALineRestsOnTheLastFrameAndPinsTheAxis) {
+  PlotlyFigure figure("Approach", "State", "Value");
+  ASSERT_TRUE(figure.AddLine(kStages, kValues, LineStyle{.name = "Target"}).has_value());
+  ASSERT_TRUE(figure
+                  .AddLine(kStages,
+                           std::array<double, 4>{0.0, 0.0, 0.0, 0.0},
+                           LineStyle{.name = "Fitted", .color_role = PlotColorRole::kSeries2})
+                  .has_value());
+
+  const std::array<AnimationFrame, 3> frames{
+      AnimationFrame{.label = "start", .trace_values = {{0.0, 0.0, 0.0, 0.0}}},
+      AnimationFrame{.label = "middle", .trace_values = {{0.5, 0.3, 0.2, 0.1}}},
+      AnimationFrame{.label = "end", .trace_values = {{1.0, 0.5, 0.25, 0.125}}},
+  };
+  const std::array<std::size_t, 1> animated{1};
+
+  ASSERT_TRUE(figure.Animate(animated, frames, AnimationStyle{.slider_prefix = "After "}).has_value());
+  EXPECT_EQ(figure.FrameCount(), 3U);
+
+  const nlohmann::json json = figure.ToJson();
+
+  // The figure rests on the last frame, so a reader who never presses play sees the result.
+  EXPECT_EQ(json.at("data").at(1).at("y"), nlohmann::json({1.0, 0.5, 0.25, 0.125}));
+
+  // Every frame is present, in order, and names the traces it replaces.
+  ASSERT_EQ(json.at("frames").size(), 3U);
+  EXPECT_EQ(json.at("frames").at(0).at("data").at(0).at("y"), nlohmann::json({0.0, 0.0, 0.0, 0.0}));
+  EXPECT_EQ(json.at("frames").at(0).at("traces"), nlohmann::json({1}));
+  EXPECT_EQ(json.at("frames").at(2).at("data").at(0).at("y"), nlohmann::json({1.0, 0.5, 0.25, 0.125}));
+
+  // The y range is pinned across the frames and the static trace, so the animation shows the
+  // curve moving rather than the axis chasing it.
+  const nlohmann::json range = json.at("layout").at("yaxis").at("range");
+  ASSERT_EQ(range.size(), 2U);
+  EXPECT_LE(range.at(0).get<double>(), 0.0);
+  EXPECT_GE(range.at(1).get<double>(), 1.0);
+
+  // The controls are there, and the slider rests at the end with the labels it was given.
+  const nlohmann::json slider = json.at("layout").at("sliders").at(0);
+  EXPECT_EQ(slider.at("active"), 2);
+  EXPECT_EQ(slider.at("currentvalue").at("prefix"), "After ");
+  ASSERT_EQ(slider.at("steps").size(), 3U);
+  EXPECT_EQ(slider.at("steps").at(1).at("label"), "middle");
+  EXPECT_EQ(json.at("layout").at("updatemenus").at(0).at("buttons").at(0).at("label"), "Play");
+}
+
+TEST(PlotlyFigureTest, AnimatingAHeatmapPinsTheColorRangeAndReNestsEachFrame) {
+  constexpr std::array<double, 3> kGridX{0.0, 1.0, 2.0};
+  constexpr std::array<double, 2> kGridY{0.0, 1.0};
+  constexpr std::array<double, 6> kGridZ{0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+  PlotlyFigure figure("Error", "x1", "x2");
+  ASSERT_TRUE(figure.AddHeatmap(kGridX, kGridY, kGridZ, HeatmapStyle{.name = "Error"}).has_value());
+
+  const std::array<AnimationFrame, 2> frames{
+      AnimationFrame{.label = "start", .trace_values = {{1.0, 2.0, 3.0, 4.0, 5.0, 9.0}}},
+      AnimationFrame{.label = "end", .trace_values = {{0.1, 0.2, 0.3, 0.4, 0.5, 0.6}}},
+  };
+  const std::array<std::size_t, 1> animated{0};
+
+  ASSERT_TRUE(figure.Animate(animated, frames, AnimationStyle{}).has_value());
+
+  const nlohmann::json json = figure.ToJson();
+  const nlohmann::json trace = json.at("data").at(0);
+
+  // Rests on the last frame, re-nested row by row.
+  EXPECT_EQ(trace.at("z"), nlohmann::json({{0.1, 0.2, 0.3}, {0.4, 0.5, 0.6}}));
+
+  // The color range spans every frame, so the first frame's 9 and the last frame's 0.1 are read
+  // against the same scale and the error is seen to shrink.
+  EXPECT_EQ(trace.at("zmin"), 0.1);
+  EXPECT_EQ(trace.at("zmax"), 9.0);
+
+  EXPECT_EQ(json.at("frames").at(0).at("data").at(0).at("z"), nlohmann::json({{1.0, 2.0, 3.0}, {4.0, 5.0, 9.0}}));
+}
+
+TEST(PlotlyFigureTest, AnimatingAHeatmapCenteredOnZeroKeepsTheRangeSymmetric) {
+  constexpr std::array<double, 2> kGridX{0.0, 1.0};
+  constexpr std::array<double, 2> kGridY{0.0, 1.0};
+  constexpr std::array<double, 4> kGridZ{0.0, 0.0, 0.0, 0.0};
+
+  PlotlyFigure figure("Error", "x1", "x2");
+  ASSERT_TRUE(figure
+                  .AddHeatmap(kGridX,
+                              kGridY,
+                              kGridZ,
+                              HeatmapStyle{.colorscale_role = PlotColorscaleRole::kDiverging, .centered_on_zero = true})
+                  .has_value());
+
+  const std::array<AnimationFrame, 1> frames{AnimationFrame{.label = "only", .trace_values = {{-1.0, 0.25, 4.0, 0.5}}}};
+  const std::array<std::size_t, 1> animated{0};
+
+  ASSERT_TRUE(figure.Animate(animated, frames, AnimationStyle{}).has_value());
+
+  // Symmetric, not [-1, 4]: the neutral color has to keep meaning zero.
+  const nlohmann::json trace = figure.ToJson().at("data").at(0);
+  EXPECT_EQ(trace.at("zmin"), -4.0);
+  EXPECT_EQ(trace.at("zmax"), 4.0);
+}
+
+TEST(PlotlyFigureTest, AnimateRejectsFramesThatDoNotMatchTheTracesTheyReplace) {
+  PlotlyFigure figure("Approach", "State", "Value");
+  ASSERT_TRUE(figure.AddLine(kStages, kValues, LineStyle{.name = "Fitted"}).has_value());
+
+  const std::array<std::size_t, 1> animated{0};
+  const std::array<std::size_t, 1> missing{3};
+  const std::array<AnimationFrame, 1> good{AnimationFrame{.label = "a", .trace_values = {{1.0, 2.0, 3.0, 4.0}}}};
+  const std::array<AnimationFrame, 1> wrong_length{AnimationFrame{.label = "a", .trace_values = {{1.0, 2.0}}}};
+  const std::array<AnimationFrame, 1> wrong_count{
+      AnimationFrame{.label = "a", .trace_values = {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}}}};
+  const std::array<AnimationFrame, 0> none{};
+
+  EXPECT_FALSE(figure.Animate(animated, none, AnimationStyle{}).has_value());
+  EXPECT_FALSE(figure.Animate(missing, good, AnimationStyle{}).has_value());
+  EXPECT_FALSE(figure.Animate(animated, wrong_length, AnimationStyle{}).has_value());
+  EXPECT_FALSE(figure.Animate(animated, wrong_count, AnimationStyle{}).has_value());
+  EXPECT_EQ(figure.FrameCount(), 0U);
+
+  // And a figure is animated once: its frames were sized against the traces it had at the time.
+  ASSERT_TRUE(figure.Animate(animated, good, AnimationStyle{}).has_value());
+  EXPECT_FALSE(figure.Animate(animated, good, AnimationStyle{}).has_value());
+  EXPECT_FALSE(figure.AddLine(kStages, kValues, LineStyle{.name = "Late"}).has_value());
+}
+
+TEST(PlotlyFigureTest, AnUnanimatedFigureCarriesNoFrames) {
+  PlotlyFigure figure("Plain", "State", "Value");
+  ASSERT_TRUE(figure.AddLine(kStages, kValues, LineStyle{.name = "a"}).has_value());
+
+  EXPECT_EQ(figure.FrameCount(), 0U);
+  EXPECT_FALSE(figure.ToJson().contains("frames"));
+  EXPECT_FALSE(figure.ToJson().at("layout").contains("sliders"));
+}
+
 }  // namespace
 }  // namespace fbsde_traj_opt::viz
