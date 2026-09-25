@@ -284,5 +284,85 @@ TEST(FiniteHorizonLqrTest, SolvedPolicySatisfiesTheControlPolicyConcept) {
   SUCCEED();
 }
 
+TEST(FiniteHorizonLqrTest, CostToGoHessiansAreTheDeterministicCostOfFollowingTheOptimalPolicy) {
+  // P_k is the exact Hessian of the stage-k cost-to-go, so x' P_k x is the noise-free closed-loop
+  // cost of starting at x in stage k and following the optimal gains from there. Checked against
+  // that cost, rolled out directly.
+  constexpr std::size_t kNumStages = 7;
+
+  Eigen::Matrix2d transition;
+  transition << 0.1, 0.4, -0.2, 0.05;
+  Eigen::Matrix<double, 2, 1> control_mat;
+  control_mat << 0.0, 0.7;
+
+  Eigen::Matrix2d state_cost;
+  state_cost << 2.0, 0.3, 0.3, 1.0;
+  const Eigen::Matrix<double, 1, 1> control_cost = Eigen::Matrix<double, 1, 1>::Constant(0.5);
+  const Eigen::Matrix<double, 2, 1> cross_cost = Eigen::Matrix<double, 2, 1>::Zero();
+  const Eigen::Matrix2d terminal_cost = 3.0 * Eigen::Matrix2d::Identity();
+
+  const auto model = MakeModel<2, 1>(transition, control_mat);
+  const auto cost_model = MakeCostModel<2, 1>(state_cost, control_cost, cross_cost, terminal_cost);
+
+  const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(model, cost_model);
+  ASSERT_TRUE(solution.has_value()) << solution.error();
+
+  // The terminal Hessian is the terminal cost itself.
+  EXPECT_LT((solution->cost_to_go_hessians[kNumStages - 1] - terminal_cost).norm(), 1e-12);
+
+  const Eigen::Matrix2d effective_transition = Eigen::Matrix2d::Identity() + transition;
+
+  for (std::size_t start = 0; start < kNumStages; ++start) {
+    for (const Eigen::Vector2d& initial : {Eigen::Vector2d(1.0, 0.0),
+                                           Eigen::Vector2d(0.0, 1.0),
+                                           Eigen::Vector2d(-2.0, 3.0),
+                                           Eigen::Vector2d(0.5, -0.25)}) {
+      Eigen::Vector2d state = initial;
+      double cost = 0.0;
+      for (std::size_t stage = start; stage + 1 < kNumStages; ++stage) {
+        const Eigen::Matrix<double, 1, 1> control = solution->policy.GainAtStage(stage) * state;
+        cost += state.dot(state_cost * state) + control.dot(control_cost * control) +
+                (2.0 * state.dot(cross_cost * control));
+        state = (effective_transition * state) + (control_mat * control);
+      }
+      cost += state.dot(terminal_cost * state);
+
+      EXPECT_NEAR(initial.dot(solution->cost_to_go_hessians[start] * initial), cost, 1e-9) << "from stage " << start;
+    }
+  }
+}
+
+TEST(FiniteHorizonLqrTest, ThePolicyOnlyOverloadReturnsTheSamePolicy) {
+  constexpr std::size_t kNumStages = 5;
+
+  const auto model = MakeModel<2, 1>(0.2 * Eigen::Matrix2d::Identity(), Eigen::Matrix<double, 2, 1>(0.3, 0.6));
+  const auto cost_model = MakeCostModel<2, 1>(Eigen::Matrix2d::Identity(),
+                                              Eigen::Matrix<double, 1, 1>::Constant(0.4),
+                                              Eigen::Matrix<double, 2, 1>::Zero(),
+                                              2.0 * Eigen::Matrix2d::Identity());
+
+  const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(model, cost_model);
+  ASSERT_TRUE(solution.has_value()) << solution.error();
+  const auto policy = SolveFiniteHorizonLqr<kNumStages>(model, cost_model);
+  ASSERT_TRUE(policy.has_value()) << policy.error();
+
+  for (std::size_t stage = 0; stage + 1 < kNumStages; ++stage) {
+    EXPECT_EQ(policy->GainAtStage(stage), solution->policy.GainAtStage(stage));
+  }
+}
+
+TEST(FiniteHorizonLqrTest, CostToGoFailsOnTheSameProblemsThePolicyDoes) {
+  constexpr std::size_t kNumStages = 4;
+
+  const auto model =
+      MakeModel<1, 1>(Eigen::Matrix<double, 1, 1>::Constant(0.1), Eigen::Matrix<double, 1, 1>::Constant(0.5));
+  const auto cost_model = MakeCostModel<1, 1>(Eigen::Matrix<double, 1, 1>::Constant(1.0),
+                                              Eigen::Matrix<double, 1, 1>::Zero(),
+                                              Eigen::Matrix<double, 1, 1>::Zero(),
+                                              Eigen::Matrix<double, 1, 1>::Zero());
+
+  EXPECT_FALSE(SolveFiniteHorizonLqrWithCostToGo<kNumStages>(model, cost_model).has_value());
+}
+
 }  // namespace
 }  // namespace fbsde_traj_opt

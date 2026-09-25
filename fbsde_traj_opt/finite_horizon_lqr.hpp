@@ -4,6 +4,7 @@
 #ifndef FBSDE_TRAJ_OPT_FINITE_HORIZON_LQR_HPP_
 #define FBSDE_TRAJ_OPT_FINITE_HORIZON_LQR_HPP_
 
+#include <array>
 #include <cstddef>
 #include <type_traits>
 
@@ -79,8 +80,41 @@ using FiniteHorizonLqrPolicy =
                                                    NumControlStages,
                                                    typename StateDriftMatOf<ForwardModelT>::Scalar>;
 
+// The square matrix type over `ForwardModelT`'s state.
+template <ConstLinearDriftForwardSdeModel ForwardModelT>
+using LqrStateMat = Eigen::Matrix<typename StateDriftMatOf<ForwardModelT>::Scalar,
+                                  StateDriftMatOf<ForwardModelT>::RowsAtCompileTime,
+                                  StateDriftMatOf<ForwardModelT>::RowsAtCompileTime>;
+
+// Everything the Riccati recursion produces: the optimal policy, and the cost-to-go Hessian `P_k`
+// at every stage including the terminal one, indexed by stage.
+//
+// `P_k` is the whole of the value function only in the deterministic problem. Under the additive
+// noise the forward SDE injects, the stage-k value function is
+//
+//   V_k(x) = x' P_k x + s_k,     s_K = 0,     s_k = s_{k+1} + tr(Sigma' P_{k+1} Sigma),
+//
+// where the constant `s_k` accumulates the noise the remaining stages will inject and `Sigma` is
+// the diffusion at stage k. That constant is left to the caller rather than returned here for the
+// same reason the recursion never reads the diffusion: `P_k` does not depend on it, and a
+// state-dependent `Sigma` would make `s_k` a function of the state rather than a constant, at
+// which point the value function is no longer quadratic and there is no single right answer to
+// return. For the common case of a constant `Sigma` the recursion above is two lines at the call
+// site.
+template <ConstLinearDriftForwardSdeModel ForwardModelT, std::size_t NumStages>
+struct FiniteHorizonLqrSolution {
+  FiniteHorizonLqrPolicy<ForwardModelT, NumStages - 1> policy;
+  std::array<LqrStateMat<ForwardModelT>, NumStages> cost_to_go_hessians;
+};
+
 // Solves the finite-horizon LQR problem posed by `forward_model` and `cost_model` over
-// `NumStages` stages, returning the optimal stage-varying feedback policy.
+// `NumStages` stages, returning both the optimal stage-varying feedback policy and the cost-to-go
+// Hessian at every stage.
+//
+// The Hessians are what make this problem a usable ground truth: they give the exact value
+// function -- see FiniteHorizonLqrSolution for the constant the noise adds to it -- against which
+// an approximation or an estimator can be checked at every stage rather than only compared with
+// another approximation.
 //
 // The returned policy has `NumStages - 1` gains, one per stage at which a control is applied, and
 // is directly consumable by TrajectoryBatch<..., NumStages, ...>::Make().
@@ -110,8 +144,8 @@ using FiniteHorizonLqrPolicy =
 template <std::size_t NumStages,
           ConstLinearDriftForwardSdeModel ForwardModelT,
           QuadraticRegulatorCostSdeModel CostModelT>
-auto SolveFiniteHorizonLqr(const ForwardModelT& forward_model, const CostModelT& cost_model) noexcept
-    -> Result<FiniteHorizonLqrPolicy<ForwardModelT, NumStages - 1>> {
+auto SolveFiniteHorizonLqrWithCostToGo(const ForwardModelT& forward_model, const CostModelT& cost_model) noexcept
+    -> Result<FiniteHorizonLqrSolution<ForwardModelT, NumStages>> {
   static_assert(NumStages >= 2, "An LQR horizon needs at least an initial and a terminal stage.");
 
   using StateDriftMat = StateDriftMatOf<ForwardModelT>;
@@ -147,6 +181,9 @@ auto SolveFiniteHorizonLqr(const ForwardModelT& forward_model, const CostModelT&
   // P, the Hessian of the cost-to-go, seeded at the terminal stage by the terminal cost.
   StateMat cost_to_go_hessian = symmetrized(cost_model.terminal_cost().terminal_cost_mat());
 
+  std::array<StateMat, NumStages> cost_to_go_hessians{};
+  cost_to_go_hessians[NumStages - 1] = cost_to_go_hessian;
+
   typename Policy::GainArray gains{};
   for (std::size_t stage = Policy::kNumControlStages; stage-- > 0;) {
     const CrossMat hessian_times_control_mat = cost_to_go_hessian * control_mat;
@@ -155,8 +192,8 @@ auto SolveFiniteHorizonLqr(const ForwardModelT& forward_model, const CostModelT&
     const ControlMat control_curvature = control_cost_mat + (control_mat.transpose() * hessian_times_control_mat);
     const Eigen::LLT<ControlMat> control_curvature_factorization(control_curvature);
     RESULT_ASSERT(control_curvature_factorization.info() == Eigen::Success,
-                  "SolveFiniteHorizonLqr: R + B' P B is not positive definite at some stage, so the problem has no "
-                  "unique finite minimizing control there.");
+                  "SolveFiniteHorizonLqrWithCostToGo: R + B' P B is not positive definite at some stage, so the "
+                  "problem has no unique finite minimizing control there.");
 
     // G_k, the mixed curvature in state and control.
     const Gain mixed_curvature = (hessian_times_control_mat.transpose() * transition_mat) + cross_cost_mat.transpose();
@@ -170,9 +207,29 @@ auto SolveFiniteHorizonLqr(const ForwardModelT& forward_model, const CostModelT&
                                              (transition_mat.transpose() * cost_to_go_hessian * transition_mat) -
                                              (mixed_curvature.transpose() * curvature_step);
     cost_to_go_hessian = symmetrized(next_cost_to_go_hessian);
+    cost_to_go_hessians[stage] = cost_to_go_hessian;
   }
 
-  return SuccessResult(Policy(gains));
+  return SuccessResult(FiniteHorizonLqrSolution<ForwardModelT, NumStages>{.policy = Policy(gains),
+                                                                          .cost_to_go_hessians = cost_to_go_hessians});
+}
+
+// Solves the same problem, returning only the optimal policy.
+//
+// The overwhelming majority of callers want the policy and nothing else -- to roll a trajectory
+// batch out under it, or to compare another policy against it -- and this spares them naming the
+// solution type and reaching into it.
+template <std::size_t NumStages,
+          ConstLinearDriftForwardSdeModel ForwardModelT,
+          QuadraticRegulatorCostSdeModel CostModelT>
+auto SolveFiniteHorizonLqr(const ForwardModelT& forward_model, const CostModelT& cost_model) noexcept
+    -> Result<FiniteHorizonLqrPolicy<ForwardModelT, NumStages - 1>> {
+  const Result<FiniteHorizonLqrSolution<ForwardModelT, NumStages>> solution =
+      SolveFiniteHorizonLqrWithCostToGo<NumStages>(forward_model, cost_model);
+  if (!solution.has_value()) {
+    return ErrorResult(solution.error().message, solution.error().location);
+  }
+  return SuccessResult(solution->policy);
 }
 
 }  // namespace fbsde_traj_opt
