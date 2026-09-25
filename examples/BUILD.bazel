@@ -89,3 +89,57 @@ cc_binary(
         "//fbsde_traj_opt/viz:plotly_report",
     ],
 )
+
+cc_library(
+    name = "value_function_fitting",
+    srcs = ["value_function_fitting.cpp"],
+    hdrs = ["value_function_fitting.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt:composed_cost_sde_model",
+        "//fbsde_traj_opt:composed_forward_sde_model",
+        "//fbsde_traj_opt:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt:const_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt:finite_horizon_lqr",
+        "//fbsde_traj_opt:quadratic_regulator_sde_running_cost_term",
+        "//fbsde_traj_opt:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt:soft_min_quadratic_value_function_approx",
+        "//fbsde_traj_opt:stage_varying_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt:taylor_noiseless_backward_step_estimator",
+        "//fbsde_traj_opt:trajectory_batch",
+        "//fbsde_traj_opt:value_function_approx_concepts",
+        "//fbsde_traj_opt:value_function_sgd_fitter",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "@eigen",
+    ],
+)
+
+# Large rather than medium: this is an end-to-end test, and every case in it runs a real fitting
+# job to completion so that the accuracy the reports claim is the accuracy CI checks.
+cc_test(
+    name = "value_function_fitting_test",
+    size = "large",
+    srcs = ["value_function_fitting.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":value_function_fitting",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_binary(
+    name = "value_function_fitting_experiments",
+    srcs = ["value_function_fitting_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":value_function_fitting",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/viz:plotly_report",
+    ],
+)

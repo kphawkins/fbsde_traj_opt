@@ -38,7 +38,24 @@ Everything is fixed-size at compile time and allocates nothing on the sampling p
   between them is a difference between the things that changed.
 - **Finite-horizon LQR.** `SolveFiniteHorizonLqr` runs the backward Riccati recursion over a
   linear model and a quadratic cost and returns the optimal stage-varying feedback policy, ready
-  to be handed straight back to the sampler.
+  to be handed straight back to the sampler. `SolveFiniteHorizonLqrWithCostToGo` also returns the
+  cost-to-go Hessian at every stage, which makes an LQR problem a ground truth an estimator can be
+  checked against rather than only compared with.
+- **Value function approximation.** A value function at one stage is anything that can report its
+  value, its state gradient, and its state Hessian -- stated as a concept, so models can be
+  swapped without touching the algorithms that use them. `SoftMinQuadraticValueFunctionApprox` is
+  the first: a smooth minimum over several convex quadratics, exact on the LQR case and able to
+  represent a multi-basin landscape. Every evaluation is batched over a compile-time number of
+  samples held one per column.
+- **Backward-step estimation.** `TaylorNoiselessBackwardStepEstimator` implements the off-policy
+  drifted Taylor noiseless estimator of the thesis: given a state, the drift the forward pass used
+  to leave it, and the next stage's value function, it estimates this stage's. It depends on no
+  noise realization, so its targets are fixed labels; and where the true value function is
+  quadratic it is exact.
+- **Fitting.** `ValueFunctionSgdFitter` drives a value function toward those targets by minibatch
+  Adam, damped so the representation improves without lurching -- principally by a trust region on
+  the change the step makes to the function's own values, which means the same thing for every
+  model.
 - **Visualization.** `//fbsde_traj_opt/viz` turns a batch into Plotly figures and writes them as a
   self-contained HTML page, which the example binary opens for you.
 
@@ -61,6 +78,20 @@ See [docs/screenshots](docs/screenshots/) for each one and for why its baseline 
 
 Pass `--output-dir` to put the reports somewhere other than `lqr_reports/`, and `--seed` to change
 the noise both policies share.
+
+```sh
+bazel run //examples:value_function_fitting_experiments
+```
+
+This runs the value function approximation suite and writes three more reports. The first fits the
+soft-minimum model to a one-dimensional target that is nowhere a quadratic, and charts the
+approach along with how often the trust region shortened a step. The second sweeps the Taylor
+Noiseless estimator backward over an LQR problem, whose value function is known in closed form, and
+takes the error apart into the estimator's own -- which comes out at the level of rounding -- and
+the regression's. The third fits a two-dimensional target and draws the target, the approximation,
+and the signed error as heatmaps over the state plane.
+
+It takes the same `--output-dir` and `--seed` flags.
 
 ## Prerequisites
 
