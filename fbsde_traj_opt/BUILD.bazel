@@ -468,3 +468,31 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "soft_min_quadratic_value_function_approx",
+    hdrs = ["soft_min_quadratic_value_function_approx.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        # Unlike the term implementations, this one depends on its concept header: the batch shape
+        # aliases it takes and returns are declared there, alongside the concepts that constrain
+        # them, and are shared vocabulary with the fitter and the estimators.
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "soft_min_quadratic_value_function_approx_test",
+    size = "small",
+    srcs = ["soft_min_quadratic_value_function_approx.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":soft_min_quadratic_value_function_approx",
+        ":value_function_approx_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
