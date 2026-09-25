@@ -546,3 +546,40 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "taylor_noiseless_backward_step_estimator",
+    hdrs = ["taylor_noiseless_backward_step_estimator.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":sde_term_concepts",
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "taylor_noiseless_backward_step_estimator_test",
+    size = "small",
+    srcs = ["taylor_noiseless_backward_step_estimator.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":composed_cost_sde_model",
+        ":composed_forward_sde_model",
+        ":const_diagonal_sde_diffusion_term",
+        ":const_linear_feedback_sde_control_policy_term",
+        ":const_linear_sde_control_drift_mat_term",
+        ":const_linear_sde_state_drift_term",
+        ":finite_horizon_lqr",
+        ":quadratic_regulator_sde_running_cost_term",
+        ":quadratic_regulator_sde_terminal_cost_term",
+        ":soft_min_quadratic_value_function_approx",
+        ":stage_varying_linear_feedback_sde_control_policy_term",
+        ":taylor_noiseless_backward_step_estimator",
+        ":value_function_approx_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
