@@ -519,3 +519,30 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "value_function_sgd_fitter",
+    hdrs = ["value_function_sgd_fitter.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":adam_optimizer",
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "value_function_sgd_fitter_test",
+    size = "small",
+    srcs = ["value_function_sgd_fitter.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":soft_min_quadratic_value_function_approx",
+        ":value_function_approx_concepts",
+        ":value_function_sgd_fitter",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
