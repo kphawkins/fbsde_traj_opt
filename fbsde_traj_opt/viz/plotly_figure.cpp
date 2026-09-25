@@ -3,6 +3,7 @@
 
 #include "fbsde_traj_opt/viz/plotly_figure.hpp"
 
+#include <cstddef>
 #include <span>
 #include <string>
 #include <string_view>
@@ -70,11 +71,24 @@ PlotlyFigure::PlotlyFigure(std::string title, std::string x_axis_title, std::str
   };
 }
 
+auto PlotColorscaleRoleName(PlotColorscaleRole role) -> std::string_view {
+  switch (role) {
+    case PlotColorscaleRole::kSequential:
+      return "scale-sequential";
+    case PlotColorscaleRole::kDiverging:
+      return "scale-diverging";
+  }
+  return "scale-sequential";
+}
+
 auto PlotlyFigure::AddLine(std::span<const double> x_values,
                            std::span<const double> y_values,
                            const LineStyle& style) noexcept -> Result<> {
   RESULT_ASSERT(x_values.size() == y_values.size(),
                 "PlotlyFigure::AddLine: the x and y value ranges must have the same length.");
+  RESULT_ASSERT(!holds_heatmap_,
+                "PlotlyFigure::AddLine: this figure already holds a heatmap, and a figure holds either lines or a "
+                "heatmap but not both.");
 
   traces_.push_back({
       // SVG traces, not WebGL: the figures here run to a few tens of thousands of points,
@@ -94,6 +108,54 @@ auto PlotlyFigure::AddLine(std::span<const double> x_values,
       // writes the result into `line.color` before plotting.
       {"colorRole", PlotColorRoleName(style.color_role)},
   });
+
+  return SuccessResult();
+}
+
+auto PlotlyFigure::AddHeatmap(std::span<const double> x_values,
+                              std::span<const double> y_values,
+                              std::span<const double> z_values_row_major,
+                              const HeatmapStyle& style) noexcept -> Result<> {
+  RESULT_ASSERT(!x_values.empty(), "PlotlyFigure::AddHeatmap: the grid's x axis may not be empty.");
+  RESULT_ASSERT(!y_values.empty(), "PlotlyFigure::AddHeatmap: the grid's y axis may not be empty.");
+  RESULT_ASSERT(z_values_row_major.size() == x_values.size() * y_values.size(),
+                "PlotlyFigure::AddHeatmap: the value range must hold exactly one value per grid cell, laid out row "
+                "by row.");
+  RESULT_ASSERT(traces_.empty(),
+                "PlotlyFigure::AddHeatmap: this figure already holds a trace, and a figure holds either lines or a "
+                "single heatmap.");
+
+  // Plotly wants `z` as an array of rows, each row running along x.
+  nlohmann::json rows = nlohmann::json::array();
+  for (std::size_t row = 0; row < y_values.size(); ++row) {
+    const std::span<const double> values = z_values_row_major.subspan(row * x_values.size(), x_values.size());
+    rows.push_back(std::vector<double>(values.begin(), values.end()));
+  }
+
+  nlohmann::json trace = {
+      {"type", "heatmap"},
+      {"x", std::vector<double>(x_values.begin(), x_values.end())},
+      {"y", std::vector<double>(y_values.begin(), y_values.end())},
+      {"z", std::move(rows)},
+      {"name", style.name},
+      // Cells, not an interpolated wash: the grid is what was actually evaluated, and smoothing
+      // it would show the reader detail between samples that was never computed.
+      {"zsmooth", false},
+      {"colorbar", {{"title", {{"text", style.value_label}}}}},
+      // Not a Plotly attribute: the page reads it, assembles the stops from its own palette, and
+      // writes the result into `colorscale` before plotting.
+      {"colorscaleRole", PlotColorscaleRoleName(style.colorscale_role)},
+  };
+  if (style.centered_on_zero) {
+    trace["zmid"] = 0.0;
+  }
+  traces_.push_back(std::move(trace));
+  holds_heatmap_ = true;
+
+  // The shared crosshair a line figure wants reads every series at one x. A heatmap has no
+  // series to read across, so it reports the cell under the pointer instead.
+  layout_["hovermode"] = "closest";
+  layout_["showlegend"] = false;
 
   return SuccessResult();
 }

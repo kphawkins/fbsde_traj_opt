@@ -140,5 +140,99 @@ TEST(PlotlyFigureTest, EveryColorRoleHasADistinctName) {
   EXPECT_EQ(names.size(), kRoles.size());
 }
 
+TEST(PlotlyFigureTest, AddHeatmapStoresTheGridRowByRow) {
+  constexpr std::array<double, 3> kGridX{0.0, 1.0, 2.0};
+  constexpr std::array<double, 2> kGridY{10.0, 20.0};
+  // Row-major: the first three values are the row at y = 10.
+  constexpr std::array<double, 6> kGridZ{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+
+  PlotlyFigure figure("Value function", "Position", "Velocity");
+  ASSERT_TRUE(
+      figure.AddHeatmap(kGridX, kGridY, kGridZ, HeatmapStyle{.name = "V", .value_label = "Cost-to-go"}).has_value());
+
+  EXPECT_TRUE(figure.HoldsHeatmap());
+  EXPECT_EQ(figure.LineCount(), 1U);
+
+  const nlohmann::json trace = figure.ToJson().at("data").at(0);
+  EXPECT_EQ(trace.at("type"), "heatmap");
+  EXPECT_EQ(trace.at("x"), nlohmann::json({0.0, 1.0, 2.0}));
+  EXPECT_EQ(trace.at("y"), nlohmann::json({10.0, 20.0}));
+  EXPECT_EQ(trace.at("z"), nlohmann::json({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}}));
+  EXPECT_EQ(trace.at("colorscaleRole"), "scale-sequential");
+  EXPECT_EQ(trace.at("colorbar").at("title").at("text"), "Cost-to-go");
+  EXPECT_FALSE(trace.contains("zmid"));
+
+  // A heatmap reports the cell under the pointer; the shared crosshair has no series to read.
+  EXPECT_EQ(figure.ToJson().at("layout").at("hovermode"), "closest");
+}
+
+TEST(PlotlyFigureTest, ADivergingHeatmapCanBePinnedToZero) {
+  constexpr std::array<double, 2> kGridX{0.0, 1.0};
+  constexpr std::array<double, 2> kGridY{0.0, 1.0};
+  constexpr std::array<double, 4> kGridZ{-1.0, 0.5, 2.0, -3.0};
+
+  PlotlyFigure figure("Error", "Position", "Velocity");
+  ASSERT_TRUE(figure
+                  .AddHeatmap(kGridX,
+                              kGridY,
+                              kGridZ,
+                              HeatmapStyle{.name = "error",
+                                           .colorscale_role = PlotColorscaleRole::kDiverging,
+                                           .value_label = "Signed error",
+                                           .centered_on_zero = true})
+                  .has_value());
+
+  const nlohmann::json trace = figure.ToJson().at("data").at(0);
+  EXPECT_EQ(trace.at("colorscaleRole"), "scale-diverging");
+  EXPECT_EQ(trace.at("zmid"), 0.0);
+}
+
+TEST(PlotlyFigureTest, AddHeatmapRejectsAGridThatDoesNotMatchItsAxes) {
+  constexpr std::array<double, 3> kGridX{0.0, 1.0, 2.0};
+  constexpr std::array<double, 2> kGridY{0.0, 1.0};
+  constexpr std::array<double, 5> kTooFew{1.0, 2.0, 3.0, 4.0, 5.0};
+  constexpr std::array<double, 0> kEmpty{};
+
+  PlotlyFigure figure("Value function", "Position", "Velocity");
+
+  EXPECT_FALSE(figure.AddHeatmap(kGridX, kGridY, kTooFew, HeatmapStyle{}).has_value());
+  EXPECT_FALSE(figure.AddHeatmap(kEmpty, kGridY, kEmpty, HeatmapStyle{}).has_value());
+  EXPECT_FALSE(figure.HoldsHeatmap());
+}
+
+TEST(PlotlyFigureTest, AFigureHoldsEitherLinesOrAHeatmapButNotBoth) {
+  constexpr std::array<double, 2> kGridX{0.0, 1.0};
+  constexpr std::array<double, 2> kGridY{0.0, 1.0};
+  constexpr std::array<double, 4> kGridZ{1.0, 2.0, 3.0, 4.0};
+
+  PlotlyFigure with_line("Mixed", "Stage", "Cost");
+  ASSERT_TRUE(with_line.AddLine(kStages, kValues, LineStyle{.name = "a"}).has_value());
+  EXPECT_FALSE(with_line.AddHeatmap(kGridX, kGridY, kGridZ, HeatmapStyle{}).has_value());
+
+  PlotlyFigure with_heatmap("Mixed", "Stage", "Cost");
+  ASSERT_TRUE(with_heatmap.AddHeatmap(kGridX, kGridY, kGridZ, HeatmapStyle{}).has_value());
+  EXPECT_FALSE(with_heatmap.AddLine(kStages, kValues, LineStyle{.name = "a"}).has_value());
+  EXPECT_EQ(with_heatmap.LineCount(), 1U);
+}
+
+TEST(PlotlyFigureTest, AHeatmapSpecCarriesNoConcreteColorsEither) {
+  constexpr std::array<double, 2> kGridX{0.0, 1.0};
+  constexpr std::array<double, 2> kGridY{0.0, 1.0};
+  constexpr std::array<double, 4> kGridZ{1.0, 2.0, 3.0, 4.0};
+
+  PlotlyFigure figure("Value function", "Position", "Velocity");
+  ASSERT_TRUE(figure.AddHeatmap(kGridX, kGridY, kGridZ, HeatmapStyle{.value_label = "Cost"}).has_value());
+
+  const std::string serialized = figure.ToJson().dump();
+
+  EXPECT_EQ(serialized.find('#'), std::string::npos) << "a hex color leaked into the figure spec";
+  EXPECT_EQ(serialized.find("colorscale\":"), std::string::npos) << "a resolved colorscale leaked into the spec";
+}
+
+TEST(PlotlyFigureTest, EveryColorscaleRoleHasADistinctName) {
+  EXPECT_NE(PlotColorscaleRoleName(PlotColorscaleRole::kSequential),
+            PlotColorscaleRoleName(PlotColorscaleRole::kDiverging));
+}
+
 }  // namespace
 }  // namespace fbsde_traj_opt::viz
