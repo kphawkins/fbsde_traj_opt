@@ -443,3 +443,28 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "value_function_approx_concepts",
+    hdrs = ["value_function_approx_concepts.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":eigen_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "value_function_approx_concepts_test",
+    size = "small",
+    srcs = ["value_function_approx_concepts.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
