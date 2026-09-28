@@ -32,3 +32,21 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "parallel_for",
+    hdrs = ["parallel_for.hpp"],
+    copts = FBSDE_COPTS,
+)
+
+cc_test(
+    name = "parallel_for_test",
+    size = "small",
+    srcs = ["parallel_for.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":parallel_for",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
