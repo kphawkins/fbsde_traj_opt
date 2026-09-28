@@ -3,7 +3,10 @@
 
 #include "fbsde_traj_opt/viz/plotly_figure.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
+#include <limits>
 #include <span>
 #include <string>
 #include <string_view>
@@ -98,7 +101,7 @@ auto PlotlyFigure::AddLine(std::span<const double> x_values,
       // which SVG renders comfortably, and the WebGL trace type does not support the shared
       // crosshair readout the layout asks for.
       {"type", "scatter"},
-      {"mode", "lines"},
+      {"mode", style.show_markers ? "lines+markers" : "lines"},
       {"x", std::vector<double>(x_values.begin(), x_values.end())},
       {"y", std::vector<double>(y_values.begin(), y_values.end())},
       {"name", style.name},
@@ -107,6 +110,7 @@ auto PlotlyFigure::AddLine(std::span<const double> x_values,
       {"legendgroup", style.legend_group},
       {"hoverinfo", style.show_on_hover ? "all" : "skip"},
       {"line", {{"width", style.width}}},
+      {"marker", {{"size", 3.0 * style.width}}},
       // Not a Plotly attribute: the page reads it, resolves it against its own palette, and
       // writes the result into `line.color` before plotting.
       {"colorRole", PlotColorRoleName(style.color_role)},
@@ -215,6 +219,16 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
                     "PlotlyFigure::Animate: a frame's values are not the length of the data the trace holds; a frame "
                     "replaces values and never reshapes a trace.");
     }
+    if (!frame.trace_x_values.empty()) {
+      RESULT_ASSERT(frame.trace_x_values.size() == trace_indices.size(),
+                    "PlotlyFigure::Animate: a frame that moves x values must carry one set per animated trace.");
+      for (std::size_t slot = 0; slot < trace_indices.size(); ++slot) {
+        const nlohmann::json& trace = traces_[trace_indices[slot]];
+        RESULT_ASSERT(trace.at("type") != "heatmap", "PlotlyFigure::Animate: a heatmap's x values cannot be animated.");
+        RESULT_ASSERT(frame.trace_x_values[slot].size() == trace.at("x").size(),
+                      "PlotlyFigure::Animate: a frame's x values are not the length of the data the trace holds.");
+      }
+    }
   }
 
   // The range every frame shares. Computed before anything is written, over the frames and over
@@ -249,11 +263,31 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
     highest = 1.0;
   }
 
+  // The x range, for frames that move x values: pinned over every frame and every trace, for the
+  // same reason as the y range.
+  double x_lowest = std::numeric_limits<double>::infinity();
+  double x_highest = -std::numeric_limits<double>::infinity();
+  bool moves_x = false;
+  for (const AnimationFrame& frame : frames) {
+    for (const std::vector<double>& values : frame.trace_x_values) {
+      moves_x = true;
+      for (const double value : values) {
+        if (std::isfinite(value)) {
+          x_lowest = std::min(x_lowest, value);
+          x_highest = std::max(x_highest, value);
+        }
+      }
+    }
+  }
+
   // The figure rests on the last frame; see the header for why.
   const AnimationFrame& resting = frames.back();
   for (std::size_t slot = 0; slot < trace_indices.size(); ++slot) {
     nlohmann::json& trace = traces_[trace_indices[slot]];
     AssignFrameValues(trace, resting.trace_values[slot], trace);
+    if (!resting.trace_x_values.empty()) {
+      trace["x"] = resting.trace_x_values[slot];
+    }
   }
 
   if (animating_heatmap) {
@@ -270,7 +304,11 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
         trace["zmax"] = highest;
       }
     }
-  } else {
+  } else if (!axis_ranges_fixed_) {
+    if (moves_x && std::isfinite(x_lowest) && std::isfinite(x_highest)) {
+      const double x_margin = 0.05 * std::max(x_highest - x_lowest, 1e-12);
+      layout_["xaxis"]["range"] = {x_lowest - x_margin, x_highest + x_margin};
+    }
     const double margin = 0.05 * std::max(highest - lowest, 1e-12);
     const bool logarithmic = layout_["yaxis"].contains("type") && layout_["yaxis"]["type"] == "log";
     if (logarithmic) {
@@ -291,6 +329,9 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
     for (std::size_t slot = 0; slot < trace_indices.size(); ++slot) {
       nlohmann::json frame_trace = nlohmann::json::object();
       AssignFrameValues(traces_[trace_indices[slot]], frames[index].trace_values[slot], frame_trace);
+      if (!frames[index].trace_x_values.empty()) {
+        frame_trace["x"] = frames[index].trace_x_values[slot];
+      }
       frame_traces.push_back(std::move(frame_trace));
     }
     frames_.push_back({{"name", name}, {"data", std::move(frame_traces)}, {"traces", trace_indices}});
@@ -348,6 +389,24 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
   layout_["margin"]["b"] = 128;
 
   return SuccessResult();
+}
+
+auto PlotlyFigure::SetAxisRanges(double x_min, double x_max, double y_min, double y_max) noexcept -> Result<> {
+  const bool valid_x_range = std::isfinite(x_min) && std::isfinite(x_max) && x_min < x_max;
+  const bool valid_y_range = std::isfinite(y_min) && std::isfinite(y_max) && y_min < y_max;
+  RESULT_ASSERT(valid_x_range,
+                "PlotlyFigure::SetAxisRanges: the x range must be finite with its lower bound below its upper.");
+  RESULT_ASSERT(valid_y_range,
+                "PlotlyFigure::SetAxisRanges: the y range must be finite with its lower bound below its upper.");
+  layout_["xaxis"]["range"] = {x_min, x_max};
+  layout_["yaxis"]["range"] = {y_min, y_max};
+  axis_ranges_fixed_ = true;
+  return SuccessResult();
+}
+
+auto PlotlyFigure::UseEqualAspect() noexcept -> void {
+  layout_["yaxis"]["scaleanchor"] = "x";
+  layout_["yaxis"]["scaleratio"] = 1;
 }
 
 auto PlotlyFigure::UseLogarithmicYAxis() noexcept -> void {

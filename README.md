@@ -72,7 +72,8 @@ Everything is fixed-size at compile time and allocates nothing on the sampling p
 - **Visualization.** `//fbsde_traj_opt/viz` turns a batch into Plotly figures and writes them as a
   self-contained HTML page, which the example binary opens for you. Figures can be lines, heatmaps
   over a grid, or animated over a sequence of frames, with the axis or color range pinned across
-  the whole sequence so that what moves on screen is the data and not the scale.
+  the whole sequence so that what moves on screen is the data and not the scale. An animation can
+  move points in both coordinates, which is how a mechanism is drawn moving in the plane.
 
 ## Worked examples
 

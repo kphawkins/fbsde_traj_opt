@@ -105,6 +105,10 @@ struct LineStyle {
   // Whether hovering reports this line. Off for the faint sample lines, whose individual values
   // are not what a reader is asking for when they hover over the cloud.
   bool show_on_hover = true;
+
+  // Whether each point also gets a marker. Off for data lines, where the points are samples of a
+  // curve; on for a drawing whose points are things -- the joints of a linkage, say.
+  bool show_markers = false;
 };
 
 // How one heatmap is drawn.
@@ -133,6 +137,11 @@ struct AnimationFrame {
   // trace's y values; for a heatmap, its z values row-major. Each must be exactly as long as the
   // data that trace already holds, since a frame replaces values and never reshapes.
   std::vector<std::vector<double>> trace_values{};
+
+  // Optionally, one entry per animated trace giving its x values at this step, for a line whose
+  // points move in both coordinates -- a mechanism drawn in the plane rather than a curve over a
+  // fixed axis. Empty means every trace keeps its x values. Line traces only.
+  std::vector<std::vector<double>> trace_x_values{};
 };
 
 // How an animation is played.
@@ -192,12 +201,30 @@ class PlotlyFigure {
   // play, a printed copy, and the table twin beneath the figure all then show the result rather
   // than the starting guess; pressing play replays how it got there.
   //
+  // Frames that also move x values have the x range pinned the same way. A figure whose ranges
+  // were fixed by SetAxisRanges() keeps them.
+  //
   // Fails if `frames` is empty, if any index is not a trace of this figure, if a frame does not
-  // carry exactly one set of values per animated trace, or if any of those sets is not the length
-  // of the data the trace already holds.
+  // carry exactly one set of values per animated trace, if any of those sets is not the length of
+  // the data the trace already holds, or if x values are given for a heatmap or in a number that
+  // does not match the animated traces.
   auto Animate(std::span<const std::size_t> trace_indices,
                std::span<const AnimationFrame> frames,
                const AnimationStyle& style) noexcept -> Result<>;
+
+  // Fixes both axis ranges, so that neither Plotly's autorange nor Animate() chooses them.
+  //
+  // For a figure that is a picture of something in the plane, where the frame of the picture is
+  // part of what is being shown: an autoranged drawing of a moving mechanism re-frames itself
+  // around the mechanism and so hides the motion it exists to show.
+  //
+  // Fails unless each range is finite and has its lower bound strictly below its upper.
+  auto SetAxisRanges(double x_min, double x_max, double y_min, double y_max) noexcept -> Result<>;
+
+  // Makes one unit on the y axis the same length on screen as one unit on the x axis, so that a
+  // drawing in physical coordinates is not stretched: a rod keeps its length whichever way it
+  // points.
+  auto UseEqualAspect() noexcept -> void;
 
   // Whether this figure has been animated, and over how many frames.
   [[nodiscard]] auto FrameCount() const noexcept -> std::size_t { return frames_.size(); }
@@ -228,6 +255,7 @@ class PlotlyFigure {
   nlohmann::json traces_ = nlohmann::json::array();
   nlohmann::json frames_ = nlohmann::json::array();
   bool holds_heatmap_ = false;
+  bool axis_ranges_fixed_ = false;
 };
 
 }  // namespace fbsde_traj_opt::viz

@@ -4,6 +4,7 @@
 #include "fbsde_traj_opt/viz/plotly_figure.hpp"
 
 #include <array>
+#include <limits>
 #include <set>
 #include <string>
 #include <string_view>
@@ -278,6 +279,68 @@ TEST(PlotlyFigureTest, AnimatingALineRestsOnTheLastFrameAndPinsTheAxis) {
   ASSERT_EQ(slider.at("steps").size(), 3U);
   EXPECT_EQ(slider.at("steps").at(1).at("label"), "middle");
   EXPECT_EQ(json.at("layout").at("updatemenus").at(0).at("buttons").at(0).at("label"), "Play");
+}
+
+TEST(PlotlyFigureTest, AnimatingXValuesMovesPointsInThePlaneAndPinsBothAxes) {
+  PlotlyFigure figure("Linkage", "x", "y");
+  ASSERT_TRUE(figure
+                  .AddLine(std::array<double, 3>{0.0, 0.0, 0.0},
+                           std::array<double, 3>{0.0, -1.0, -2.0},
+                           LineStyle{.name = "Links", .show_markers = true})
+                  .has_value());
+
+  const std::array<AnimationFrame, 2> frames{
+      AnimationFrame{.label = "hanging", .trace_values = {{0.0, -1.0, -2.0}}, .trace_x_values = {{0.0, 0.0, 0.0}}},
+      AnimationFrame{.label = "sideways", .trace_values = {{0.0, 0.0, 0.0}}, .trace_x_values = {{0.0, 1.0, 2.0}}},
+  };
+  const std::array<std::size_t, 1> animated{0};
+  ASSERT_TRUE(figure.Animate(animated, frames, AnimationStyle{}).has_value());
+
+  const nlohmann::json json = figure.ToJson();
+  EXPECT_EQ(json.at("data").at(0).at("mode"), "lines+markers");
+  // Resting on the last frame, in both coordinates.
+  EXPECT_EQ(json.at("data").at(0).at("x"), nlohmann::json({0.0, 1.0, 2.0}));
+  EXPECT_EQ(json.at("frames").at(0).at("data").at(0).at("x"), nlohmann::json({0.0, 0.0, 0.0}));
+  // Both ranges cover every frame.
+  const nlohmann::json x_range = json.at("layout").at("xaxis").at("range");
+  EXPECT_LE(x_range.at(0).get<double>(), 0.0);
+  EXPECT_GE(x_range.at(1).get<double>(), 2.0);
+  const nlohmann::json y_range = json.at("layout").at("yaxis").at("range");
+  EXPECT_LE(y_range.at(0).get<double>(), -2.0);
+}
+
+TEST(PlotlyFigureTest, FixedRangesSurviveAnimationAndEqualAspectAnchorsTheAxes) {
+  PlotlyFigure figure("Linkage", "x", "y");
+  ASSERT_TRUE(figure.SetAxisRanges(-3.0, 3.0, -2.5, 2.5).has_value());
+  figure.UseEqualAspect();
+  ASSERT_TRUE(
+      figure.AddLine(std::array<double, 2>{0.0, 1.0}, std::array<double, 2>{0.0, 1.0}, LineStyle{}).has_value());
+  const std::array<AnimationFrame, 1> frames{
+      AnimationFrame{.label = "only", .trace_values = {{0.0, 9.0}}, .trace_x_values = {{0.0, 9.0}}}};
+  const std::array<std::size_t, 1> animated{0};
+  ASSERT_TRUE(figure.Animate(animated, frames, AnimationStyle{}).has_value());
+
+  const nlohmann::json layout = figure.ToJson().at("layout");
+  EXPECT_EQ(layout.at("xaxis").at("range"), nlohmann::json({-3.0, 3.0}));
+  EXPECT_EQ(layout.at("yaxis").at("range"), nlohmann::json({-2.5, 2.5}));
+  EXPECT_EQ(layout.at("yaxis").at("scaleanchor"), "x");
+}
+
+TEST(PlotlyFigureTest, SetAxisRangesRejectsEmptyOrNonFiniteRanges) {
+  PlotlyFigure figure("f", "x", "y");
+  EXPECT_FALSE(figure.SetAxisRanges(1.0, 1.0, 0.0, 1.0).has_value());
+  EXPECT_FALSE(figure.SetAxisRanges(0.0, 1.0, 2.0, -2.0).has_value());
+  EXPECT_FALSE(figure.SetAxisRanges(0.0, std::numeric_limits<double>::infinity(), 0.0, 1.0).has_value());
+}
+
+TEST(PlotlyFigureTest, AnimateRejectsXValuesThatDoNotMatchTheTrace) {
+  PlotlyFigure figure("f", "x", "y");
+  ASSERT_TRUE(
+      figure.AddLine(std::array<double, 2>{0.0, 1.0}, std::array<double, 2>{0.0, 1.0}, LineStyle{}).has_value());
+  const std::array<std::size_t, 1> animated{0};
+  const std::array<AnimationFrame, 1> short_x{
+      AnimationFrame{.label = "bad", .trace_values = {{0.0, 1.0}}, .trace_x_values = {{0.0}}}};
+  EXPECT_FALSE(figure.Animate(animated, short_x, AnimationStyle{}).has_value());
 }
 
 TEST(PlotlyFigureTest, AnimatingAHeatmapPinsTheColorRangeAndReNestsEachFrame) {
