@@ -143,3 +143,80 @@ cc_binary(
         "//fbsde_traj_opt/viz:plotly_report",
     ],
 )
+
+cc_library(
+    name = "double_inverted_pendulum_model",
+    hdrs = ["double_inverted_pendulum_model.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_library(
+    name = "double_inverted_pendulum_experiment",
+    srcs = ["double_inverted_pendulum_experiment.cpp"],
+    hdrs = ["double_inverted_pendulum_experiment.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":double_inverted_pendulum_model",
+        "//fbsde_traj_opt:composed_cost_sde_model",
+        "//fbsde_traj_opt:composed_forward_sde_model",
+        "//fbsde_traj_opt:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt:polynomial_value_function_approx",
+        "//fbsde_traj_opt:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt:taylor_q_function_l1_policy",
+        "//fbsde_traj_opt:trajectory_batch",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "@eigen",
+    ],
+)
+
+cc_binary(
+    name = "double_inverted_pendulum",
+    srcs = ["double_inverted_pendulum_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":double_inverted_pendulum_experiment",
+        "//fbsde_traj_opt:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/viz:plotly_report",
+    ],
+)
+
+cc_test(
+    name = "double_inverted_pendulum_model_test",
+    size = "small",
+    srcs = ["double_inverted_pendulum_model.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":double_inverted_pendulum_model",
+        "//fbsde_traj_opt:sde_term_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+# Large: it runs the method for real, if only for two iterations.
+cc_test(
+    name = "double_inverted_pendulum_experiment_test",
+    size = "large",
+    srcs = ["double_inverted_pendulum_experiment.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":double_inverted_pendulum_experiment",
+        "//fbsde_traj_opt:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

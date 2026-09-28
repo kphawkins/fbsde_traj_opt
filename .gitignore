@@ -31,3 +31,7 @@ __pycache__/
 # HTML reports written by //examples:lqr_experiments when run with its default output
 # directory. The committed copies of these live in docs/screenshots as images.
 /lqr_reports/
+
+# The HTML report written by //examples:double_inverted_pendulum with its default output
+# directory.
+/double_inverted_pendulum_report/
