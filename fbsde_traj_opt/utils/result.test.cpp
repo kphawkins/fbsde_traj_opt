@@ -171,5 +171,67 @@ TEST(ResultReportResultMacroTest, BehavesLikeReportResult) {
   EXPECT_NE(printed.find("Macro-reported result error."), std::string::npos);
 }
 
+// Divides `a` by `b` and then by `c` through RESULT_ASSIGN_OR_RETURN, so that either division can
+// be the one that fails.
+auto DivideTwice(int a, int b, int c) noexcept -> Result<int> {
+  RESULT_ASSIGN_OR_RETURN(const int once, Divide(a, b));
+  RESULT_ASSIGN_OR_RETURN(const int twice, Divide(once, c));
+  return SuccessResult(twice);
+}
+
+TEST(ResultAssignOrReturnMacroTest, UnwrapsEachValueOnSuccess) {
+  const Result<int> result = DivideTwice(12, 3, 2);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(*result, 2);
+}
+
+TEST(ResultAssignOrReturnMacroTest, PropagatesTheFirstErrorUnchanged) {
+  const Result<int> direct = Divide(12, 0);
+  const Result<int> propagated = DivideTwice(12, 0, 2);
+
+  ASSERT_FALSE(propagated.has_value());
+  EXPECT_EQ(propagated.error().message, "Cannot divide by zero.");
+  // The location is the original failure's, not the macro's.
+  EXPECT_EQ(propagated.error().location.line(), direct.error().location.line());
+}
+
+TEST(ResultAssignOrReturnMacroTest, PropagatesALaterError) {
+  const Result<int> result = DivideTwice(12, 3, 0);
+
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().message, "Cannot divide by zero.");
+}
+
+TEST(ResultAssignOrReturnMacroTest, AssignsToAnExistingVariable) {
+  const auto divide_into = [](int& quotient_out) noexcept -> Result<> {
+    RESULT_ASSIGN_OR_RETURN(quotient_out, Divide(9, 3));
+    return SuccessResult();
+  };
+
+  int quotient = 0;
+  ASSERT_TRUE(divide_into(quotient).has_value());
+  EXPECT_EQ(quotient, 3);
+}
+
+// Divides `a` by `b` through RESULT_RETURN_IF_ERROR, discarding the quotient.
+auto CheckDivisible(int a, int b) noexcept -> Result<> {
+  int quotient = 0;
+  RESULT_RETURN_IF_ERROR(Divide(a, b, quotient));
+  RESULT_RETURN_IF_ERROR(Divide(quotient, b));
+  return SuccessResult();
+}
+
+TEST(ResultReturnIfErrorMacroTest, FallsThroughOnSuccess) {
+  EXPECT_TRUE(CheckDivisible(8, 2).has_value());
+}
+
+TEST(ResultReturnIfErrorMacroTest, PropagatesTheError) {
+  const Result<> result = CheckDivisible(8, 0);
+
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().message, "Cannot divide by zero.");
+}
+
 }  // namespace
 }  // namespace fbsde_traj_opt

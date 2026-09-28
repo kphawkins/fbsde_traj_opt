@@ -197,7 +197,7 @@ TEST(TrajectoryBatchTest, SameSeedGivesAnIdenticalBatch) {
     EXPECT_TRUE(first->StatesAtStage(stage).isApprox(second->StatesAtStage(stage)));
   }
   EXPECT_FALSE(first->StatesAtStage(1).isApprox(other_seed->StatesAtStage(1)));
-  EXPECT_EQ(first->Seed(), 42U);
+  EXPECT_EQ(first->seed(), 42U);
 }
 
 // The reproducibility guarantee that makes two batches comparable: with the same seed and the
@@ -263,7 +263,7 @@ TEST(TrajectoryBatchTest, ExpectedCostToGoAtTheTerminalStageIsTheMeanTerminalCos
 
   double expected_terminal_mean = 0.0;
   for (std::size_t trajectory = 0; trajectory < Batch::kNumTrajectories; ++trajectory) {
-    expected_terminal_mean += cost_model.TerminalCost()(batch->StateAt(trajectory, Batch::kNumStages - 1));
+    expected_terminal_mean += cost_model.terminal_cost()(batch->StateAt(trajectory, Batch::kNumStages - 1));
   }
   expected_terminal_mean /= static_cast<double>(Batch::kNumTrajectories);
 
@@ -293,7 +293,7 @@ TEST(TrajectoryBatchTest, ExpectedCostToGoSatisfiesTheBackwardRecursion) {
     double mean_running_cost = 0.0;
     for (std::size_t trajectory = 0; trajectory < Batch::kNumTrajectories; ++trajectory) {
       mean_running_cost +=
-          cost_model.RunningCost()(stage, batch->StateAt(trajectory, stage), batch->ControlAt(trajectory, stage));
+          cost_model.running_cost()(stage, batch->StateAt(trajectory, stage), batch->ControlAt(trajectory, stage));
     }
     mean_running_cost /= static_cast<double>(Batch::kNumTrajectories);
 

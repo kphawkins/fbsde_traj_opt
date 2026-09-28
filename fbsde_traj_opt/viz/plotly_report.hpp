@@ -19,8 +19,8 @@ namespace fbsde_traj_opt::viz {
 //
 // The file embeds every figure's JSON spec and loads plotly.js from a CDN, so viewing a report
 // needs nothing but a browser and a network connection -- no local server, no build step, no
-// notebook. That is the whole point: an experiment binary ends by writing one of these and
-// opening it (see open_in_browser.hpp), and the plots are on screen a moment later.
+// notebook. That is the whole point: an experiment binary ends by writing one of these, and the
+// plots are on screen as soon as the file is opened.
 //
 // The page owns everything about appearance that the figures deliberately leave out. It defines
 // the palette as CSS custom properties in both a light and a dark set, resolves each trace's

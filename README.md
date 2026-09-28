@@ -49,8 +49,8 @@ bazel run //examples:lqr_experiments
 ```
 
 This solves three LQR problems from the control literature, rolls out both the optimal policy and
-a plausible fixed-gain baseline over identical noise, writes one HTML report per model, and opens
-them in your browser. Each report shows the sampled state distributions with the mean trajectory
+a plausible fixed-gain baseline over identical noise, and writes one HTML report per model to open
+in your browser. Each report shows the sampled state distributions with the mean trajectory
 over them, a phase portrait, and the expected cost-to-go of both policies.
 
 [![The two-mass spring report](docs/screenshots/two-mass-spring.png)](docs/screenshots/)
@@ -59,8 +59,8 @@ The models are the double integrator, the inverted pendulum on a cart, and the W
 two-mass spring benchmark; the baselines cost between 7 and 36 times what the optimal policy does.
 See [docs/screenshots](docs/screenshots/) for each one and for why its baseline fails.
 
-Pass `--no-open` to write the reports without opening a browser, `--output-dir` to put them
-somewhere other than `lqr_reports/`, and `--seed` to change the noise both policies share.
+Pass `--output-dir` to put the reports somewhere other than `lqr_reports/`, and `--seed` to change
+the noise both policies share.
 
 ## Prerequisites
 

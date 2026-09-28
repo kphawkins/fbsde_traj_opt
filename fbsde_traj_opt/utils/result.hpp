@@ -105,6 +105,48 @@ auto ReportResult(const Result<T>& result) noexcept -> bool {
     }                                                \
   } while (false)
 
+// Propagates an error: evaluates the Result<T> produced by the expression argument and, if it
+// failed, returns its error unchanged from the enclosing function, which must return some
+// fbsde_traj_opt::Result<U>. On success, the value is discarded.
+//
+//   RESULT_RETURN_IF_ERROR(report.WriteHtml(path));
+//
+// The expression is taken as `...` so that commas inside it, such as those of a template argument
+// list, need no extra parentheses.
+#define RESULT_RETURN_IF_ERROR(...)                                                                           \
+  do {                                                                                                        \
+    if (auto result_return_if_error = (__VA_ARGS__); !result_return_if_error.has_value()) {                   \
+      return ::std::unexpected<::fbsde_traj_opt::ExpectedError>(::std::move(result_return_if_error).error()); \
+    }                                                                                                         \
+  } while (false)
+
+// Propagates an error or unwraps a value: evaluates the Result<T> produced by the expression
+// argument and, if it failed, returns its error unchanged from the enclosing function, which must
+// return some fbsde_traj_opt::Result<U>. On success, moves the value into `lhs`, which may be a
+// declaration:
+//
+//   RESULT_ASSIGN_OR_RETURN(const auto discretized, ZeroOrderHoldDiscretization<N, M>(a, b, dt));
+//
+// `lhs` may also declare a const reference, which binds to the value inside a hidden Result that
+// lives until the end of the enclosing scope, so a large value is never copied.
+//
+// This is a statement rather than an expression (`const auto x = RESULT_TRY(...);`) because
+// standard C++ has no expression that can return from its enclosing function; that would need GNU
+// statement expressions, which -Wpedantic rejects. Like RESULT_RETURN_IF_ERROR, the expression is
+// taken as `...` so that commas inside it need no extra parentheses.
+#define RESULT_ASSIGN_OR_RETURN(lhs, ...) \
+  RESULT_ASSIGN_OR_RETURN_IMPL_(RESULT_CONCAT_(result_assign_or_return_, __LINE__), lhs, __VA_ARGS__)
+
+#define RESULT_ASSIGN_OR_RETURN_IMPL_(result, lhs, ...)                                     \
+  auto result = (__VA_ARGS__);                                                              \
+  if (!result.has_value()) {                                                                \
+    return ::std::unexpected<::fbsde_traj_opt::ExpectedError>(::std::move(result).error()); \
+  }                                                                                         \
+  lhs = *::std::move(result)  // NOLINT(bugprone-macro-parentheses): `lhs` may be a declaration.
+
+#define RESULT_CONCAT_(a, b) RESULT_CONCAT_INNER_(a, b)
+#define RESULT_CONCAT_INNER_(a, b) a##b
+
 // Reports (pretty-prints to stderr) a standalone ExpectedError.
 #define RESULT_REPORT_ERROR(error) (::fbsde_traj_opt::ReportError(error))
 

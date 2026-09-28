@@ -114,48 +114,35 @@ template <int N, int M, std::size_t NumTrajectories, std::size_t NumStages>
   using Batch = TrajectoryBatch<N, M, NumTrajectories, NumStages>;
   using BaselinePolicy = ConstLinearFeedbackSdeControlPolicyTerm<N, M>;
 
-  const auto discretized =
-      ZeroOrderHoldDiscretization<N, M>(spec.continuous_state_mat, spec.continuous_control_mat, spec.time_step);
-  if (!discretized.has_value()) {
-    return std::unexpected(discretized.error());
-  }
+  RESULT_ASSIGN_OR_RETURN(
+      const auto discretized,
+      ZeroOrderHoldDiscretization<N, M>(spec.continuous_state_mat, spec.continuous_control_mat, spec.time_step));
 
-  const auto diffusion = ConstDiagonalSdeDiffusionTerm<N>::Make(spec.diffusion_diagonal);
-  if (!diffusion.has_value()) {
-    return std::unexpected(diffusion.error());
-  }
+  RESULT_ASSIGN_OR_RETURN(const auto diffusion, ConstDiagonalSdeDiffusionTerm<N>::Make(spec.diffusion_diagonal));
 
-  const ForwardModel forward_model(ConstLinearSdeStateDriftTerm<N>(discretized->state_drift_mat),
-                                   ConstLinearSdeControlDriftMatTerm<N, M>(discretized->control_drift_mat),
-                                   *diffusion);
+  const ForwardModel forward_model(ConstLinearSdeStateDriftTerm<N>(discretized.state_drift_mat),
+                                   ConstLinearSdeControlDriftMatTerm<N, M>(discretized.control_drift_mat),
+                                   diffusion);
 
   const CostModel cost_model(QuadraticRegulatorSdeRunningCostTerm<N, M>(
                                  spec.state_cost_mat, spec.control_cost_mat, Eigen::Matrix<double, N, M>::Zero()),
                              QuadraticRegulatorSdeTerminalCostTerm<N>(spec.terminal_cost_mat));
 
-  const auto initial_distribution =
-      DiagonalCovarianceNormalDistribution<N>::Make(spec.initial_mean, spec.initial_covariance_diagonal);
-  if (!initial_distribution.has_value()) {
-    return std::unexpected(initial_distribution.error());
-  }
+  RESULT_ASSIGN_OR_RETURN(
+      const auto initial_distribution,
+      DiagonalCovarianceNormalDistribution<N>::Make(spec.initial_mean, spec.initial_covariance_diagonal));
 
-  const auto optimal_policy = SolveFiniteHorizonLqr<NumStages>(forward_model, cost_model);
-  if (!optimal_policy.has_value()) {
-    return std::unexpected(optimal_policy.error());
-  }
+  RESULT_ASSIGN_OR_RETURN(const auto optimal_policy, SolveFiniteHorizonLqr<NumStages>(forward_model, cost_model));
 
   const BaselinePolicy baseline_policy(spec.baseline_gain, Eigen::Matrix<double, M, 1>::Zero());
 
   // Same model, same initial distribution, same seed: the two batches are the same experiment
-  // run twice with one thing changed.
-  const auto optimal_batch = Batch::Make(forward_model, *optimal_policy, *initial_distribution, seed);
-  if (!optimal_batch.has_value()) {
-    return std::unexpected(optimal_batch.error());
-  }
-  const auto baseline_batch = Batch::Make(forward_model, baseline_policy, *initial_distribution, seed);
-  if (!baseline_batch.has_value()) {
-    return std::unexpected(baseline_batch.error());
-  }
+  // run twice with one thing changed. Each batch is bound by reference rather than copied out of
+  // its Result, since a batch is large.
+  RESULT_ASSIGN_OR_RETURN(const Batch& optimal_batch,
+                          Batch::Make(forward_model, optimal_policy, initial_distribution, seed));
+  RESULT_ASSIGN_OR_RETURN(const Batch& baseline_batch,
+                          Batch::Make(forward_model, baseline_policy, initial_distribution, seed));
 
   constexpr viz::PlotColorRole kOptimalRole = viz::PlotColorRole::kSeries1;
   constexpr viz::PlotColorRole kBaselineRole = viz::PlotColorRole::kSeries2;
@@ -172,23 +159,17 @@ template <int N, int M, std::size_t NumTrajectories, std::size_t NumStages>
     viz::PlotlyFigure figure(
         spec.state_names.at(state_index) + " over the horizon", "Stage", spec.state_names.at(state_index));
 
-    const Result<> optimal_added =
+    RESULT_RETURN_IF_ERROR(
         viz::AddStateTrajectories(figure,
-                                  *optimal_batch,
+                                  optimal_batch,
                                   state_index,
-                                  {.series_name = optimal_name, .color_role = kOptimalRole, .sample_opacity = 0.10});
-    if (!optimal_added.has_value()) {
-      return std::unexpected(optimal_added.error());
-    }
+                                  {.series_name = optimal_name, .color_role = kOptimalRole, .sample_opacity = 0.10}));
 
-    const Result<> baseline_added = viz::AddStateTrajectories(
+    RESULT_RETURN_IF_ERROR(viz::AddStateTrajectories(
         figure,
-        *baseline_batch,
+        baseline_batch,
         state_index,
-        {.series_name = spec.baseline_name, .color_role = kBaselineRole, .sample_opacity = 0.10});
-    if (!baseline_added.has_value()) {
-      return std::unexpected(baseline_added.error());
-    }
+        {.series_name = spec.baseline_name, .color_role = kBaselineRole, .sample_opacity = 0.10}));
 
     report.figures.push_back(std::move(figure));
   }
@@ -199,31 +180,25 @@ template <int N, int M, std::size_t NumTrajectories, std::size_t NumStages>
                              spec.state_names.at(spec.phase_horizontal_index),
                              spec.state_names.at(spec.phase_vertical_index));
 
-    const Result<> optimal_added =
+    RESULT_RETURN_IF_ERROR(
         viz::AddPhasePortrait(figure,
-                              *optimal_batch,
+                              optimal_batch,
                               spec.phase_horizontal_index,
                               spec.phase_vertical_index,
-                              {.series_name = optimal_name, .color_role = kOptimalRole, .sample_opacity = 0.10});
-    if (!optimal_added.has_value()) {
-      return std::unexpected(optimal_added.error());
-    }
+                              {.series_name = optimal_name, .color_role = kOptimalRole, .sample_opacity = 0.10}));
 
-    const Result<> baseline_added =
-        viz::AddPhasePortrait(figure,
-                              *baseline_batch,
-                              spec.phase_horizontal_index,
-                              spec.phase_vertical_index,
-                              {.series_name = spec.baseline_name, .color_role = kBaselineRole, .sample_opacity = 0.10});
-    if (!baseline_added.has_value()) {
-      return std::unexpected(baseline_added.error());
-    }
+    RESULT_RETURN_IF_ERROR(viz::AddPhasePortrait(
+        figure,
+        baseline_batch,
+        spec.phase_horizontal_index,
+        spec.phase_vertical_index,
+        {.series_name = spec.baseline_name, .color_role = kBaselineRole, .sample_opacity = 0.10}));
 
     report.figures.push_back(std::move(figure));
   }
 
-  const typename Batch::StageValues optimal_cost_to_go = optimal_batch->ExpectedCostToGo(cost_model);
-  const typename Batch::StageValues baseline_cost_to_go = baseline_batch->ExpectedCostToGo(cost_model);
+  const typename Batch::StageValues optimal_cost_to_go = optimal_batch.ExpectedCostToGo(cost_model);
+  const typename Batch::StageValues baseline_cost_to_go = baseline_batch.ExpectedCostToGo(cost_model);
 
   const std::array<viz::CostToGoSeries, 2> cost_series{
       viz::CostToGoSeries{.name = optimal_name, .color_role = kOptimalRole, .expected_cost_to_go = optimal_cost_to_go},
@@ -231,11 +206,8 @@ template <int N, int M, std::size_t NumTrajectories, std::size_t NumStages>
           .name = spec.baseline_name, .color_role = kBaselineRole, .expected_cost_to_go = baseline_cost_to_go},
   };
 
-  auto cost_figure = viz::MakeCostToGoFigure("Expected cost-to-go", cost_series);
-  if (!cost_figure.has_value()) {
-    return std::unexpected(cost_figure.error());
-  }
-  report.figures.push_back(std::move(*cost_figure));
+  RESULT_ASSIGN_OR_RETURN(viz::PlotlyFigure cost_figure, viz::MakeCostToGoFigure("Expected cost-to-go", cost_series));
+  report.figures.push_back(std::move(cost_figure));
 
   report.optimal_initial_cost = optimal_cost_to_go.front();
   report.baseline_initial_cost = baseline_cost_to_go.front();

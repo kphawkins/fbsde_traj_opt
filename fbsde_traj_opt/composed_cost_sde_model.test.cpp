@@ -8,7 +8,6 @@
 
 #include "fbsde_traj_opt/quadratic_regulator_sde_running_cost_term.hpp"
 #include "fbsde_traj_opt/quadratic_regulator_sde_terminal_cost_term.hpp"
-#include "fbsde_traj_opt/sde_term_concepts.hpp"
 
 namespace fbsde_traj_opt {
 namespace {
@@ -16,8 +15,6 @@ namespace {
 using RunningCost3x2 = QuadraticRegulatorSdeRunningCostTerm<3, 2>;
 using TerminalCost3 = QuadraticRegulatorSdeTerminalCostTerm<3>;
 using CostModel3x2 = ComposedCostSdeModel<3, 2, RunningCost3x2, TerminalCost3>;
-
-static_assert(CostSdeModel<CostModel3x2, Eigen::Vector3d, Eigen::Vector2d>);
 
 // Builds a cost model with Q = I, R = 2 I, N = 0, and F = 10 I.
 auto MakeTestCostModel() noexcept -> CostModel3x2 {
@@ -34,7 +31,7 @@ TEST(ComposedCostSdeModelTest, RunningCostAccessorEvaluatesTheRunningCost) {
   const Eigen::Vector2d control(1.0, 1.0);
 
   // x^T x = 14; u^T (2 I) u = 4; cross term is zero.
-  EXPECT_DOUBLE_EQ(cost_model.RunningCost()(0, state, control), 18.0);
+  EXPECT_DOUBLE_EQ(cost_model.running_cost()(0, state, control), 18.0);
 }
 
 TEST(ComposedCostSdeModelTest, TerminalCostAccessorEvaluatesTheTerminalCost) {
@@ -43,15 +40,15 @@ TEST(ComposedCostSdeModelTest, TerminalCostAccessorEvaluatesTheTerminalCost) {
   const Eigen::Vector3d state(1.0, 2.0, 3.0);
 
   // x^T (10 I) x = 140.
-  EXPECT_DOUBLE_EQ(cost_model.TerminalCost()(state), 140.0);
+  EXPECT_DOUBLE_EQ(cost_model.terminal_cost()(state), 140.0);
 }
 
 TEST(ComposedCostSdeModelTest, AccessorsExposeTheUnderlyingTermMatrices) {
   const CostModel3x2 cost_model = MakeTestCostModel();
 
-  EXPECT_TRUE(cost_model.RunningCost().StateCostMat().isApprox(Eigen::Matrix3d::Identity()));
-  EXPECT_TRUE(cost_model.RunningCost().ControlCostMat().isApprox(Eigen::Matrix2d::Identity() * 2.0));
-  EXPECT_TRUE(cost_model.TerminalCost().TerminalCostMat().isApprox(Eigen::Matrix3d::Identity() * 10.0));
+  EXPECT_TRUE(cost_model.running_cost().state_cost_mat().isApprox(Eigen::Matrix3d::Identity()));
+  EXPECT_TRUE(cost_model.running_cost().control_cost_mat().isApprox(Eigen::Matrix2d::Identity() * 2.0));
+  EXPECT_TRUE(cost_model.terminal_cost().terminal_cost_mat().isApprox(Eigen::Matrix3d::Identity() * 10.0));
 }
 
 }  // namespace

@@ -39,20 +39,22 @@ class QuadraticRegulatorSdeRunningCostTerm {
     return state.dot(q_ * state) + control.dot(r_ * control) + static_cast<Scalar>(2) * state.dot(n_ * control);
   }
 
-  // Returns `Q`, the state cost matrix.
+  // Returns `Q`, the state cost matrix of
   //
-  // The three matrices are exposed so that algorithms which specialize to quadratic costs -- the
-  // Riccati recursion of finite_horizon_lqr.hpp, for one -- can recover them from an assembled
-  // cost model rather than requiring the caller to thread them through separately. They are named
-  // for their role rather than for their symbol because `N` and `R` already name template
-  // parameters and type aliases in this header's scope.
-  [[nodiscard]] auto StateCostMat() const noexcept -> const Eigen::Matrix<Scalar, N, N>& { return q_; }
+  //   l(k, x_k, u_k) = x_k^T Q x_k + u_k^T R u_k + 2 x_k^T N u_k.
+  //
+  // The three matrices are exposed so that algorithms which specialize to quadratic costs can
+  // recover them from an assembled cost model rather than requiring the caller to thread them
+  // through separately. They are named for their role rather than for their symbol because `N`
+  // and `R` already name template parameters and type aliases in this header's scope.
+  [[nodiscard]] auto state_cost_mat() const noexcept -> const Eigen::Matrix<Scalar, N, N>& { return q_; }
 
-  // Returns `R`, the control cost matrix.
-  [[nodiscard]] auto ControlCostMat() const noexcept -> const Eigen::Matrix<Scalar, M, M>& { return r_; }
+  // Returns `R`, the control cost matrix: the `u_k^T R u_k` term of the running cost.
+  [[nodiscard]] auto control_cost_mat() const noexcept -> const Eigen::Matrix<Scalar, M, M>& { return r_; }
 
-  // Returns `N`, the state-control cross cost matrix.
-  [[nodiscard]] auto CrossCostMat() const noexcept -> const Eigen::Matrix<Scalar, N, M>& { return n_; }
+  // Returns `N`, the state-control cross cost matrix: the `2 x_k^T N u_k` term of the running
+  // cost.
+  [[nodiscard]] auto cross_cost_mat() const noexcept -> const Eigen::Matrix<Scalar, N, M>& { return n_; }
 
  private:
   Eigen::Matrix<Scalar, N, N> q_;

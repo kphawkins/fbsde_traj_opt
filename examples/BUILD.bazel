@@ -86,7 +86,6 @@ cc_binary(
         ":lqr_experiment",
         ":lqr_models",
         "//fbsde_traj_opt/utils:result",
-        "//fbsde_traj_opt/viz:open_in_browser",
         "//fbsde_traj_opt/viz:plotly_report",
     ],
 )

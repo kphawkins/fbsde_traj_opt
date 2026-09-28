@@ -22,10 +22,9 @@ namespace fbsde_traj_opt {
 // early stages and then swings away near the terminal stage, where there is no longer enough time
 // left to recover the control effort an aggressive correction would cost.
 //
-// The policy is linear rather than affine, unlike ConstLinearFeedbackSdeControlPolicyTerm. A
-// quadratic regulator cost has no linear term, so its optimal policy has no offset; adding one
-// that every producer would set to zero would be dead weight. An affine stage-varying policy
-// belongs with the affine cost that would motivate it.
+// The policy is linear rather than affine. A quadratic regulator cost has no linear term, so its optimal policy has no
+// offset; adding one that every producer would set to zero would be dead weight. An affine stage-varying policy belongs
+// with the affine cost that would motivate it.
 //
 // `N` is the compile-time state dimension, `M` the compile-time control dimension,
 // `NumControlStages` the number of stages at which a control is applied, and `Scalar` defaults to

@@ -54,7 +54,7 @@ TEST(ConstLinearSdeStateDriftTermTest, DriftMatReturnsConstructorMatrix) {
       7.0, 8.0, 9.0;
   const ConstLinearSdeStateDriftTerm<3> term(a);
 
-  EXPECT_TRUE(term.DriftMat().isApprox(a));
+  EXPECT_TRUE(term.drift_mat().isApprox(a));
 }
 
 }  // namespace

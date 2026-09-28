@@ -74,6 +74,14 @@ CheckOptions:
     value: CamelCase
   - key: readability-identifier-naming.FunctionCase
     value: CamelCase
+  # Google names accessors like variables (cppguide.html#Function_Names): a method that just
+  # returns a member, such as `seed()` for `seed_`, is snake_case. clang-tidy cannot tell an
+  # accessor from any other method, so a public method may be either CamelCase or lower_case; which
+  # one is right is left to review.
+  - key: readability-identifier-naming.PublicMethodCase
+    value: CamelCase
+  - key: readability-identifier-naming.PublicMethodIgnoredRegexp
+    value: '^[a-z][a-z0-9_]*$'
   - key: readability-identifier-naming.VariableCase
     value: lower_case
   - key: readability-identifier-naming.ParameterCase

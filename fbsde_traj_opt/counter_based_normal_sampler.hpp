@@ -76,7 +76,7 @@ class CounterBasedNormalSampler {
   }
 
   // Returns the seed this sampler was built with.
-  [[nodiscard]] constexpr auto Seed() const noexcept -> std::uint64_t { return seed_; }
+  [[nodiscard]] constexpr auto seed() const noexcept -> std::uint64_t { return seed_; }
 
  private:
   // Stream constants distinguishing the two uniforms drawn per coordinate. The values are

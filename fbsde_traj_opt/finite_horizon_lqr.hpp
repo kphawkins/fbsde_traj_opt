@@ -41,34 +41,34 @@ namespace fbsde_traj_opt {
 // that a state-dependent Sigma breaks the guarantee: the gain returned here remains a reasonable
 // policy but is no longer the optimal one.
 
-// Concept for a ForwardSdeModel whose drift terms expose their constant matrices -- that is, one
+// Concept for a ComposedForwardSdeModel whose drift terms expose their constant matrices -- that is, one
 // built from ConstLinearSdeStateDriftTerm and ConstLinearSdeControlDriftMatTerm, or from any
-// other terms that offer the same `DriftMat()` accessors.
+// other terms that offer the same `drift_mat()` accessors.
 template <typename T>
 concept ConstLinearDriftForwardSdeModel = requires(const T& forward_model) {
-  { forward_model.StateDrift().DriftMat() } -> DecaysToEigenExpressionWithCompileTimeShape;
-  { forward_model.ControlDriftMat().DriftMat() } -> DecaysToEigenExpressionWithCompileTimeShape;
+  { forward_model.state_drift().drift_mat() } -> DecaysToEigenExpressionWithCompileTimeShape;
+  { forward_model.control_drift_mat().drift_mat() } -> DecaysToEigenExpressionWithCompileTimeShape;
 };
 
-// Concept for a CostSdeModel whose terms expose their constant quadratic forms -- that is, one
+// Concept for a ComposedCostSdeModel whose terms expose their constant quadratic forms -- that is, one
 // built from QuadraticRegulatorSdeRunningCostTerm and QuadraticRegulatorSdeTerminalCostTerm.
 template <typename T>
 concept QuadraticRegulatorCostSdeModel = requires(const T& cost_model) {
-  { cost_model.RunningCost().StateCostMat() } -> DecaysToEigenExpressionWithCompileTimeShape;
-  { cost_model.RunningCost().ControlCostMat() } -> DecaysToEigenExpressionWithCompileTimeShape;
-  { cost_model.RunningCost().CrossCostMat() } -> DecaysToEigenExpressionWithCompileTimeShape;
-  { cost_model.TerminalCost().TerminalCostMat() } -> DecaysToEigenExpressionWithCompileTimeShape;
+  { cost_model.running_cost().state_cost_mat() } -> DecaysToEigenExpressionWithCompileTimeShape;
+  { cost_model.running_cost().control_cost_mat() } -> DecaysToEigenExpressionWithCompileTimeShape;
+  { cost_model.running_cost().cross_cost_mat() } -> DecaysToEigenExpressionWithCompileTimeShape;
+  { cost_model.terminal_cost().terminal_cost_mat() } -> DecaysToEigenExpressionWithCompileTimeShape;
 };
 
 // The type of `A`, the constant state drift matrix of `ForwardModelT`. Exists so the state
 // dimension and scalar type can be recovered from the model rather than restated by the caller.
 template <ConstLinearDriftForwardSdeModel ForwardModelT>
-using StateDriftMatOf = std::remove_cvref_t<decltype(std::declval<const ForwardModelT&>().StateDrift().DriftMat())>;
+using StateDriftMatOf = std::remove_cvref_t<decltype(std::declval<const ForwardModelT&>().state_drift().drift_mat())>;
 
 // The type of `B`, the constant control drift matrix of `ForwardModelT`.
 template <ConstLinearDriftForwardSdeModel ForwardModelT>
 using ControlDriftMatOf =
-    std::remove_cvref_t<decltype(std::declval<const ForwardModelT&>().ControlDriftMat().DriftMat())>;
+    std::remove_cvref_t<decltype(std::declval<const ForwardModelT&>().control_drift_mat().drift_mat())>;
 
 // The policy type SolveFiniteHorizonLqr() returns for `ForwardModelT` over `NumControlStages`
 // control stages: a stage-varying linear feedback whose dimensions are those of the model.
@@ -137,15 +137,15 @@ auto SolveFiniteHorizonLqr(const ForwardModelT& forward_model, const CostModelT&
     return static_cast<Scalar>(0.5) * (matrix + matrix.transpose());
   };
 
-  const StateMat transition_mat = StateMat::Identity() + forward_model.StateDrift().DriftMat();
-  const CrossMat control_mat = forward_model.ControlDriftMat().DriftMat();
+  const StateMat transition_mat = StateMat::Identity() + forward_model.state_drift().drift_mat();
+  const CrossMat control_mat = forward_model.control_drift_mat().drift_mat();
 
-  const StateMat state_cost_mat = symmetrized(cost_model.RunningCost().StateCostMat());
-  const ControlMat control_cost_mat = symmetrized(cost_model.RunningCost().ControlCostMat());
-  const CrossMat cross_cost_mat = cost_model.RunningCost().CrossCostMat();
+  const StateMat state_cost_mat = symmetrized(cost_model.running_cost().state_cost_mat());
+  const ControlMat control_cost_mat = symmetrized(cost_model.running_cost().control_cost_mat());
+  const CrossMat cross_cost_mat = cost_model.running_cost().cross_cost_mat();
 
   // P, the Hessian of the cost-to-go, seeded at the terminal stage by the terminal cost.
-  StateMat cost_to_go_hessian = symmetrized(cost_model.TerminalCost().TerminalCostMat());
+  StateMat cost_to_go_hessian = symmetrized(cost_model.terminal_cost().terminal_cost_mat());
 
   typename Policy::GainArray gains{};
   for (std::size_t stage = Policy::kNumControlStages; stage-- > 0;) {

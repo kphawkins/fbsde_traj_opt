@@ -1,10 +1,10 @@
 // Copyright 2026 Kelsey P. Hawkins.
 // SPDX-License-Identifier: MIT
 
-// Runs every LQR experiment in lqr_models.hpp, writes one HTML report per model, and opens them.
+// Runs every LQR experiment in lqr_models.hpp and writes one HTML report per model.
 //
 //   bazel run //examples:lqr_experiments
-//   bazel run //examples:lqr_experiments -- --output-dir /tmp/lqr --no-open --seed 9
+//   bazel run //examples:lqr_experiments -- --output-dir /tmp/lqr --seed 9
 //
 // Each report holds, for one model, the sampled state distributions under the optimal policy and
 // under the baseline, a phase portrait where one is informative, and the expected cost-to-go of
@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "fbsde_traj_opt/utils/result.hpp"
-#include "fbsde_traj_opt/viz/open_in_browser.hpp"
 #include "fbsde_traj_opt/viz/plotly_report.hpp"
 #include "examples/lqr_experiment.hpp"
 #include "examples/lqr_models.hpp"
@@ -33,23 +32,19 @@ namespace {
 struct Options {
   std::filesystem::path output_dir = "lqr_reports";
   std::uint64_t seed = 20260918;
-  bool open = true;
 };
 
 auto PrintUsage() noexcept -> void {
-  std::cout << "usage: lqr_experiments [--output-dir DIR] [--seed N] [--no-open]\n"
+  std::cout << "usage: lqr_experiments [--output-dir DIR] [--seed N]\n"
             << "  --output-dir DIR  where the HTML reports are written (default: lqr_reports)\n"
-            << "  --seed N          the RNG seed every model's rollouts share (default: 20260918)\n"
-            << "  --no-open         write the reports without opening them in a browser\n";
+            << "  --seed N          the RNG seed every model's rollouts share (default: 20260918)\n";
 }
 
 auto ParseOptions(int argc, char** argv, Options& options_out) noexcept -> Result<> {
   const std::vector<std::string_view> arguments(argv + 1, argv + argc);
   for (std::size_t index = 0; index < arguments.size(); ++index) {
     const std::string_view argument = arguments[index];
-    if (argument == "--no-open") {
-      options_out.open = false;
-    } else if (argument == "--output-dir") {
+    if (argument == "--output-dir") {
       RESULT_ASSERT(index + 1 < arguments.size(), "--output-dir needs a directory.");
       options_out.output_dir = arguments[++index];
     } else if (argument == "--seed") {
@@ -81,7 +76,7 @@ auto FileSlug(std::string_view name) noexcept -> std::string {
   return slug;
 }
 
-// Writes one experiment's figures as a report, opens it if asked, and prints its headline numbers.
+// Writes one experiment's figures as a report and prints its headline numbers.
 auto PublishReport(const LqrExperimentReport& experiment, const Options& options) noexcept -> Result<> {
   viz::PlotlyReport report(experiment.name, experiment.description);
   for (const viz::PlotlyFigure& figure : experiment.figures) {
@@ -89,10 +84,7 @@ auto PublishReport(const LqrExperimentReport& experiment, const Options& options
   }
 
   const std::filesystem::path path = options.output_dir / (FileSlug(experiment.name) + ".html");
-  const Result<> written = report.WriteHtml(path);
-  if (!written.has_value()) {
-    return written;
-  }
+  RESULT_RETURN_IF_ERROR(report.WriteHtml(path));
 
   const double ratio =
       experiment.optimal_initial_cost > 0.0 ? experiment.baseline_initial_cost / experiment.optimal_initial_cost : 0.0;
@@ -102,15 +94,6 @@ auto PublishReport(const LqrExperimentReport& experiment, const Options& options
             << "  the baseline costs " << ratio << " times as much\n"
             << "  report: " << std::filesystem::absolute(path).string() << '\n';
 
-  if (options.open) {
-    // A browser that refuses to open is not a reason to fail the run: the report is written and
-    // its path is on screen either way.
-    const Result<> opened = viz::OpenInBrowser(path);
-    if (!opened.has_value()) {
-      RESULT_REPORT_RESULT(opened);
-    }
-  }
-
   return SuccessResult();
 }
 
@@ -118,11 +101,9 @@ auto PublishReport(const LqrExperimentReport& experiment, const Options& options
 // compile-time throughout the library.
 template <int N, int M, std::size_t NumStages>
 auto RunAndPublish(const LqrExperimentSpec<N, M>& spec, const Options& options) noexcept -> Result<> {
-  const auto experiment = RunLqrExperiment<N, M, kNumTrajectories, NumStages>(spec, options.seed);
-  if (!experiment.has_value()) {
-    return std::unexpected(experiment.error());
-  }
-  return PublishReport(*experiment, options);
+  RESULT_ASSIGN_OR_RETURN(const LqrExperimentReport experiment,
+                          RunLqrExperiment<N, M, kNumTrajectories, NumStages>(spec, options.seed));
+  return PublishReport(experiment, options);
 }
 
 auto Run(int argc, char** argv) noexcept -> Result<> {
@@ -133,22 +114,9 @@ auto Run(int argc, char** argv) noexcept -> Result<> {
     return parsed;
   }
 
-  const Result<> double_integrator =
-      RunAndPublish<2, 1, kDoubleIntegratorNumStages>(MakeDoubleIntegratorSpec(), options);
-  if (!double_integrator.has_value()) {
-    return double_integrator;
-  }
-
-  const Result<> cart_pole = RunAndPublish<4, 1, kCartPoleNumStages>(MakeCartPoleSpec(), options);
-  if (!cart_pole.has_value()) {
-    return cart_pole;
-  }
-
-  const Result<> two_mass_spring = RunAndPublish<4, 1, kTwoMassSpringNumStages>(MakeTwoMassSpringSpec(), options);
-  if (!two_mass_spring.has_value()) {
-    return two_mass_spring;
-  }
-
+  RESULT_RETURN_IF_ERROR(RunAndPublish<2, 1, kDoubleIntegratorNumStages>(MakeDoubleIntegratorSpec(), options));
+  RESULT_RETURN_IF_ERROR(RunAndPublish<4, 1, kCartPoleNumStages>(MakeCartPoleSpec(), options));
+  RESULT_RETURN_IF_ERROR(RunAndPublish<4, 1, kTwoMassSpringNumStages>(MakeTwoMassSpringSpec(), options));
   return SuccessResult();
 }
 

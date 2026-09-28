@@ -49,7 +49,7 @@ TEST(QuadraticRegulatorSdeTerminalCostTermTest, TerminalCostMatReturnsConstructo
       1.0, 0.0, 4.0;
   const QuadraticRegulatorSdeTerminalCostTerm<3> term(f);
 
-  EXPECT_TRUE(term.TerminalCostMat().isApprox(f));
+  EXPECT_TRUE(term.terminal_cost_mat().isApprox(f));
 }
 
 }  // namespace
