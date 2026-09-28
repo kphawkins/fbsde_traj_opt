@@ -583,3 +583,28 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "l1_control_sde_running_cost_term",
+    hdrs = ["l1_control_sde_running_cost_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "l1_control_sde_running_cost_term_test",
+    size = "small",
+    srcs = ["l1_control_sde_running_cost_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":l1_control_sde_running_cost_term",
+        ":sde_term_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
