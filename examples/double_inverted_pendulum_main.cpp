@@ -20,7 +20,7 @@
 #include <string_view>
 #include <vector>
 
-#include "fbsde_traj_opt/dt_fbsde_iterative_solver.hpp"
+#include "fbsde_traj_opt/solvers/dt_fbsde_iterative_solver.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/viz/plotly_report.hpp"
 #include "examples/double_inverted_pendulum_experiment.hpp"

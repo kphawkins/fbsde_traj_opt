@@ -1,0 +1,144 @@
+"""Value function approximators and the SGD machinery that fits them to sampled targets.
+
+Follows the layout convention described in the README: headers, sources, and unit tests live
+together, and a test for `foo.cpp` is named `foo.test.cpp`.
+"""
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//bazel:copts.bzl", "FBSDE_COPTS", "FBSDE_TEST_COPTS")
+
+package(
+    default_visibility = ["//visibility:public"],
+    # Compile every header standalone to catch missing includes.
+    features = ["parse_headers"],
+)
+
+cc_library(
+    name = "value_function_approx_concepts",
+    hdrs = ["value_function_approx_concepts.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:eigen_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "value_function_approx_concepts_test",
+    size = "small",
+    srcs = ["value_function_approx_concepts.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "soft_min_quadratic_value_function_approx",
+    hdrs = ["soft_min_quadratic_value_function_approx.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        # Unlike the term implementations, this one depends on its concept header: the batch shape
+        # aliases it takes and returns are declared there, alongside the concepts that constrain
+        # them, and are shared vocabulary with the fitter and the estimators.
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "soft_min_quadratic_value_function_approx_test",
+    size = "small",
+    srcs = ["soft_min_quadratic_value_function_approx.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":soft_min_quadratic_value_function_approx",
+        ":value_function_approx_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "adam_optimizer",
+    hdrs = ["adam_optimizer.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "adam_optimizer_test",
+    size = "small",
+    srcs = ["adam_optimizer.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":adam_optimizer",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "value_function_sgd_fitter",
+    hdrs = ["value_function_sgd_fitter.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":adam_optimizer",
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "value_function_sgd_fitter_test",
+    size = "small",
+    srcs = ["value_function_sgd_fitter.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":soft_min_quadratic_value_function_approx",
+        ":value_function_approx_concepts",
+        ":value_function_sgd_fitter",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "polynomial_value_function_approx",
+    hdrs = ["polynomial_value_function_approx.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "polynomial_value_function_approx_test",
+    size = "small",
+    srcs = ["polynomial_value_function_approx.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":polynomial_value_function_approx",
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

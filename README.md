@@ -75,6 +75,28 @@ Everything is fixed-size at compile time and allocates nothing on the sampling p
   the whole sequence so that what moves on screen is the data and not the scale. An animation can
   move points in both coordinates, which is how a mechanism is drawn moving in the plane.
 
+## Source layout
+
+The library lives under `fbsde_traj_opt/`, one Bazel package per topic:
+
+| Package | Contents |
+| --- | --- |
+| `utils/` | `Result`, `ParallelFor`, and the Eigen concepts everything else builds on |
+| `sde/` | the SDE term concepts, the composed forward and cost models, and `TrajectoryBatch` |
+| `dynamics/` | drift and diffusion terms, and zero-order-hold discretization |
+| `costs/` | quadratic-regulator and L1 running and terminal cost terms |
+| `policies/` | linear feedback policy terms and `TaylorQFunctionL1Policy` |
+| `sampling/` | normal distributions and the counter-based sampler |
+| `value_function/` | value function approximators, their SGD fitter, and Adam |
+| `solvers/` | `DtFbsdeIterativeSolver`, its backward-step estimator, and finite-horizon LQR |
+| `viz/` | Plotly figures and HTML reports; nothing else in the library depends on it |
+
+Everything is in the `fbsde_traj_opt` namespace (`fbsde_traj_opt::viz` for visualization), whatever
+its folder. Following P1204R0, headers, sources, and unit tests sit together, and the test for
+`foo.hpp` is `foo.test.cpp`. First-party headers are included with quoted, workspace-relative paths
+(`#include "fbsde_traj_opt/sde/sde_term_concepts.hpp"`). This differs from P1204R0's angle brackets
+because Bazel 9 refuses `includes = ["."]` at the workspace root.
+
 ## Worked examples
 
 ```sh

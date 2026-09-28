@@ -18,18 +18,18 @@
 
 #include <Eigen/Core>
 
-#include "fbsde_traj_opt/composed_cost_sde_model.hpp"
-#include "fbsde_traj_opt/composed_forward_sde_model.hpp"
-#include "fbsde_traj_opt/const_diagonal_sde_diffusion_term.hpp"
-#include "fbsde_traj_opt/diagonal_covariance_normal_distribution.hpp"
-#include "fbsde_traj_opt/dt_fbsde_iterative_solver.hpp"
-#include "fbsde_traj_opt/l1_control_sde_running_cost_term.hpp"
-#include "fbsde_traj_opt/polynomial_value_function_approx.hpp"
-#include "fbsde_traj_opt/quadratic_regulator_sde_terminal_cost_term.hpp"
-#include "fbsde_traj_opt/taylor_q_function_l1_policy.hpp"
-#include "fbsde_traj_opt/trajectory_batch.hpp"
+#include "fbsde_traj_opt/costs/l1_control_sde_running_cost_term.hpp"
+#include "fbsde_traj_opt/costs/quadratic_regulator_sde_terminal_cost_term.hpp"
+#include "fbsde_traj_opt/dynamics/const_diagonal_sde_diffusion_term.hpp"
+#include "fbsde_traj_opt/policies/taylor_q_function_l1_policy.hpp"
+#include "fbsde_traj_opt/sampling/diagonal_covariance_normal_distribution.hpp"
+#include "fbsde_traj_opt/sde/composed_cost_sde_model.hpp"
+#include "fbsde_traj_opt/sde/composed_forward_sde_model.hpp"
+#include "fbsde_traj_opt/sde/trajectory_batch.hpp"
+#include "fbsde_traj_opt/solvers/dt_fbsde_iterative_solver.hpp"
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
+#include "fbsde_traj_opt/value_function/polynomial_value_function_approx.hpp"
 #include "fbsde_traj_opt/viz/plotly_figure.hpp"
 #include "examples/double_inverted_pendulum_model.hpp"
 

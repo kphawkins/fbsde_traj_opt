@@ -1,0 +1,86 @@
+"""Running and terminal cost terms.
+
+Follows the layout convention described in the README: headers, sources, and unit tests live
+together, and a test for `foo.cpp` is named `foo.test.cpp`.
+"""
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//bazel:copts.bzl", "FBSDE_COPTS", "FBSDE_TEST_COPTS")
+
+package(
+    default_visibility = ["//visibility:public"],
+    # Compile every header standalone to catch missing includes.
+    features = ["parse_headers"],
+)
+
+cc_library(
+    name = "quadratic_regulator_sde_running_cost_term",
+    hdrs = ["quadratic_regulator_sde_running_cost_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "quadratic_regulator_sde_running_cost_term_test",
+    size = "small",
+    srcs = ["quadratic_regulator_sde_running_cost_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":quadratic_regulator_sde_running_cost_term",
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "quadratic_regulator_sde_terminal_cost_term",
+    hdrs = ["quadratic_regulator_sde_terminal_cost_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "quadratic_regulator_sde_terminal_cost_term_test",
+    size = "small",
+    srcs = ["quadratic_regulator_sde_terminal_cost_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "l1_control_sde_running_cost_term",
+    hdrs = ["l1_control_sde_running_cost_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "l1_control_sde_running_cost_term_test",
+    size = "small",
+    srcs = ["l1_control_sde_running_cost_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

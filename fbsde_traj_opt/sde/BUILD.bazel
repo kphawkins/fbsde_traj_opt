@@ -1,0 +1,126 @@
+"""SDE model concepts, the composed forward and cost models built from terms, and batched forward simulation.
+
+Follows the layout convention described in the README: headers, sources, and unit tests live
+together, and a test for `foo.cpp` is named `foo.test.cpp`.
+"""
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//bazel:copts.bzl", "FBSDE_COPTS", "FBSDE_TEST_COPTS")
+
+package(
+    default_visibility = ["//visibility:public"],
+    # Compile every header standalone to catch missing includes.
+    features = ["parse_headers"],
+)
+
+cc_library(
+    name = "sde_term_concepts",
+    hdrs = ["sde_term_concepts.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:eigen_concepts",
+    ],
+)
+
+cc_test(
+    name = "sde_term_concepts_test",
+    size = "small",
+    srcs = ["sde_term_concepts.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "composed_forward_sde_model",
+    hdrs = ["composed_forward_sde_model.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":sde_term_concepts",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "composed_forward_sde_model_test",
+    size = "small",
+    srcs = ["composed_forward_sde_model.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":composed_forward_sde_model",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "composed_cost_sde_model",
+    hdrs = ["composed_cost_sde_model.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":sde_term_concepts",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "composed_cost_sde_model_test",
+    size = "small",
+    srcs = ["composed_cost_sde_model.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":composed_cost_sde_model",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "trajectory_batch",
+    hdrs = ["trajectory_batch.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":composed_cost_sde_model",
+        ":composed_forward_sde_model",
+        ":sde_term_concepts",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:normal_distribution_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "trajectory_batch_test",
+    size = "small",
+    srcs = ["trajectory_batch.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":composed_cost_sde_model",
+        ":composed_forward_sde_model",
+        ":trajectory_batch",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/policies:const_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt/sampling:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt/sampling:normal_distribution_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

@@ -11,7 +11,7 @@
 #include <Eigen/LU>
 #include <gtest/gtest.h>
 
-#include "fbsde_traj_opt/sde_term_concepts.hpp"
+#include "fbsde_traj_opt/sde/sde_term_concepts.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 
 namespace fbsde_traj_opt::examples {

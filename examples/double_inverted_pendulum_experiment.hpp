@@ -12,7 +12,7 @@
 
 #include <Eigen/Core>
 
-#include "fbsde_traj_opt/dt_fbsde_iterative_solver.hpp"
+#include "fbsde_traj_opt/solvers/dt_fbsde_iterative_solver.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/viz/plotly_figure.hpp"
 
