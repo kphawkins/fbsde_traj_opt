@@ -60,6 +60,10 @@ Everything is fixed-size at compile time and allocates nothing on the sampling p
   model of the thesis: every monomial up to a fixed degree in a state normalized over a fixed
   region of interest, fitted in closed form by weighted least squares. The fixed normalization is
   what lets two fitted models be blended coefficient by coefficient.
+- **Policy improvement.** `TaylorQFunctionL1Policy` is the Section 4.4 policy: the control that
+  minimizes the Taylor Q-function -- the next stage's value function where the step actually lands,
+  plus the noise's curvature correction -- for an L1 running cost and a box-bounded control, whose
+  minimizers are bang-off-bang.
 - **Visualization.** `//fbsde_traj_opt/viz` turns a batch into Plotly figures and writes them as a
   self-contained HTML page, which the example binary opens for you. Figures can be lines, heatmaps
   over a grid, or animated over a sequence of frames, with the axis or color range pinned across

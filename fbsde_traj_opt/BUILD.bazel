@@ -634,3 +634,35 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "taylor_q_function_l1_policy",
+    hdrs = ["taylor_q_function_l1_policy.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":sde_term_concepts",
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "taylor_q_function_l1_policy_test",
+    size = "small",
+    srcs = ["taylor_q_function_l1_policy.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":composed_forward_sde_model",
+        ":const_diagonal_sde_diffusion_term",
+        ":const_linear_sde_control_drift_mat_term",
+        ":const_linear_sde_state_drift_term",
+        ":polynomial_value_function_approx",
+        ":sde_term_concepts",
+        ":taylor_q_function_l1_policy",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
