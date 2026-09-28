@@ -666,3 +666,42 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "dt_fbsde_iterative_solver",
+    hdrs = ["dt_fbsde_iterative_solver.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":counter_based_normal_sampler",
+        ":l1_control_sde_running_cost_term",
+        ":normal_distribution_concepts",
+        ":sde_term_concepts",
+        ":taylor_q_function_l1_policy",
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "dt_fbsde_iterative_solver_test",
+    size = "medium",
+    srcs = ["dt_fbsde_iterative_solver.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":composed_forward_sde_model",
+        ":const_diagonal_sde_diffusion_term",
+        ":const_linear_sde_control_drift_mat_term",
+        ":const_linear_sde_state_drift_term",
+        ":diagonal_covariance_normal_distribution",
+        ":dt_fbsde_iterative_solver",
+        ":l1_control_sde_running_cost_term",
+        ":polynomial_value_function_approx",
+        ":quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

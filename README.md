@@ -64,6 +64,11 @@ Everything is fixed-size at compile time and allocates nothing on the sampling p
   minimizes the Taylor Q-function -- the next stage's value function where the step actually lands,
   plus the noise's curvature correction -- for an L1 running cost and a box-bounded control, whose
   minimizers are bang-off-bang.
+- **The iterative method.** `DtFbsdeIterativeSolver` is the DT-FBSDE iterative method of Section
+  4.6: sample parallel trajectories, fit a value function at every stage by a backward pass,
+  improve the policy through the Q-function, resample. It explores with the thesis's `{-1, 0, 1}`
+  controls, fits one-step probe branches alongside the paths, and damps every update by a line
+  search checked on rollouts; its header explains each choice and what goes wrong without it.
 - **Visualization.** `//fbsde_traj_opt/viz` turns a batch into Plotly figures and writes them as a
   self-contained HTML page, which the example binary opens for you. Figures can be lines, heatmaps
   over a grid, or animated over a sequence of frames, with the axis or color range pinned across
