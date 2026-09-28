@@ -195,6 +195,9 @@ bazel build //...
 bazel test //...
 ```
 
+`bazel test //...` skips the tests tagged `slow`, which take more than a minute each. They are the
+end-to-end runs of the worked examples. Add `--config=slow` to include them. CI always runs them.
+
 ## Contributing
 
 Install the hooks once after cloning:

@@ -119,12 +119,14 @@ cc_library(
 )
 
 # Large rather than medium: this is an end-to-end test, and every case in it runs a real fitting
-# job to completion so that the accuracy the reports claim is the accuracy CI checks.
+# job to completion so that the accuracy the reports claim is the accuracy CI checks. Slow (about
+# two minutes), so it runs under --config=slow and in CI but not by default.
 cc_test(
     name = "value_function_fitting_test",
     size = "large",
     srcs = ["value_function_fitting.test.cpp"],
     copts = FBSDE_TEST_COPTS,
+    tags = ["slow"],
     deps = [
         ":value_function_fitting",
         "//fbsde_traj_opt/viz:plotly_figure",
@@ -205,12 +207,14 @@ cc_test(
     ],
 )
 
-# Large: it runs the method for real, if only for two iterations.
+# Large: it runs the method for real, if only for two iterations. Slow (about six minutes), so it
+# runs under --config=slow and in CI but not by default.
 cc_test(
     name = "double_inverted_pendulum_experiment_test",
     size = "large",
     srcs = ["double_inverted_pendulum_experiment.test.cpp"],
     copts = FBSDE_TEST_COPTS,
+    tags = ["slow"],
     deps = [
         ":double_inverted_pendulum_experiment",
         "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
