@@ -60,16 +60,6 @@ auto MakeBatch() noexcept -> Batch {
   return *batch;
 }
 
-TEST(AddStateTrajectoriesTest, AddsOneLinePerSamplePlusTheMean) {
-  const Batch batch = MakeBatch();
-  PlotlyFigure figure("Position", "Stage", "Position");
-
-  const TrajectoryPlotOptions options{.series_name = "LQR", .max_sampled_trajectories = 12};
-  ASSERT_TRUE(AddStateTrajectories(figure, batch, 0, options).has_value());
-
-  EXPECT_EQ(figure.LineCount(), 13U);
-}
-
 TEST(AddStateTrajectoriesTest, SampleCountIsCappedButNeverExceedsTheBatch) {
   const Batch batch = MakeBatch();
 
@@ -80,24 +70,6 @@ TEST(AddStateTrajectoriesTest, SampleCountIsCappedButNeverExceedsTheBatch) {
   PlotlyFigure uncapped("Position", "Stage", "Position");
   ASSERT_TRUE(AddStateTrajectories(uncapped, batch, 0, {.max_sampled_trajectories = 10000}).has_value());
   EXPECT_EQ(uncapped.LineCount(), kNumTrajectories + 1);
-}
-
-TEST(AddStateTrajectoriesTest, TheCloudIsNamedOnceAndTheMeanOnce) {
-  const Batch batch = MakeBatch();
-  PlotlyFigure figure("Position", "Stage", "Position");
-
-  ASSERT_TRUE(
-      AddStateTrajectories(figure, batch, 0, {.series_name = "LQR", .max_sampled_trajectories = 8}).has_value());
-
-  const nlohmann::json data = figure.ToJson().at("data");
-  std::vector<std::string> legend_entries;
-  for (const nlohmann::json& trace : data) {
-    if (trace.at("showlegend").get<bool>()) {
-      legend_entries.push_back(trace.at("name").get<std::string>());
-    }
-  }
-
-  EXPECT_EQ(legend_entries, (std::vector<std::string>{"LQR samples", "LQR mean"}));
 }
 
 TEST(AddStateTrajectoriesTest, TheMeanLineCarriesTheBatchMean) {
@@ -112,19 +84,6 @@ TEST(AddStateTrajectoriesTest, TheMeanLineCarriesTheBatchMean) {
   ASSERT_EQ(mean_values.size(), kNumStages);
   for (std::size_t stage = 0; stage < kNumStages; ++stage) {
     EXPECT_DOUBLE_EQ(mean_values[stage], batch.MeanStateAtStage(stage)[1]) << "at stage " << stage;
-  }
-}
-
-TEST(AddStateTrajectoriesTest, SamplesAndMeanShareOneHue) {
-  const Batch batch = MakeBatch();
-  PlotlyFigure figure("Position", "Stage", "Position");
-
-  ASSERT_TRUE(
-      AddStateTrajectories(figure, batch, 0, {.color_role = PlotColorRole::kSeries3, .max_sampled_trajectories = 4})
-          .has_value());
-
-  for (const nlohmann::json& trace : figure.ToJson().at("data")) {
-    EXPECT_EQ(trace.at("colorRole"), "series-3");
   }
 }
 

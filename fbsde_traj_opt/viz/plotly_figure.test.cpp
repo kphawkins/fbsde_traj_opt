@@ -21,7 +21,7 @@ constexpr std::array<double, 4> kValues{1.0, 0.5, 0.25, 0.125};
 TEST(PlotlyFigureTest, NewFigureHasNoLinesAndKeepsItsTitles) {
   const PlotlyFigure figure("Expected cost-to-go", "Stage", "Cost");
 
-  EXPECT_EQ(figure.Title(), "Expected cost-to-go");
+  EXPECT_EQ(figure.title(), "Expected cost-to-go");
   EXPECT_EQ(figure.LineCount(), 0U);
 
   const nlohmann::json json = figure.ToJson();

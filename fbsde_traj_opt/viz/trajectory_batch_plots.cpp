@@ -42,10 +42,7 @@ auto MakeCostToGoFigure(std::string title,
         .legend_group = one.name,
         .show_on_hover = true,
     };
-    const Result<> added = figure.AddLine(stages, one.expected_cost_to_go, style);
-    if (!added.has_value()) {
-      return std::unexpected(added.error());
-    }
+    RESULT_RETURN_IF_ERROR(figure.AddLine(stages, one.expected_cost_to_go, style));
   }
 
   if (axis_scale == CostToGoAxisScale::kLogarithmicWhenPositive) {

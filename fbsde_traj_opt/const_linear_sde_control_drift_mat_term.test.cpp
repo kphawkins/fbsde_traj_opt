@@ -47,7 +47,7 @@ TEST(ConstLinearSdeControlDriftMatTermTest, DriftMatReturnsConstructorMatrix) {
       5.0, 6.0;
   const ConstLinearSdeControlDriftMatTerm<3, 2> term(b);
 
-  EXPECT_TRUE(term.DriftMat().isApprox(b));
+  EXPECT_TRUE(term.drift_mat().isApprox(b));
 }
 
 }  // namespace

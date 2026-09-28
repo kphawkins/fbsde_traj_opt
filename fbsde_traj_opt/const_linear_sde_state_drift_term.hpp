@@ -26,12 +26,13 @@ class ConstLinearSdeStateDriftTerm {
   // Returns `A * state`, independent of `stage`.
   auto operator()([[maybe_unused]] std::size_t stage, const State& state) const noexcept -> State { return a_ * state; }
 
-  // Returns `A`, the constant matrix of the drift map `f(k, x_k) = A * x_k`.
+  // Returns `A`, the constant matrix of the drift map
   //
-  // Exposed so that algorithms which specialize to linear dynamics -- the Riccati recursion of
-  // finite_horizon_lqr.hpp, for one -- can recover `A` from an assembled model rather than
-  // requiring the caller to thread it through separately.
-  [[nodiscard]] auto DriftMat() const noexcept -> const Eigen::Matrix<Scalar, N, N>& { return a_; }
+  //   f(k, x_k) = A * x_k.
+  //
+  // Exposed so that algorithms which specialize to linear dynamics can recover `A` itself, not
+  // just its action on a state.
+  [[nodiscard]] auto drift_mat() const noexcept -> const Eigen::Matrix<Scalar, N, N>& { return a_; }
 
  private:
   Eigen::Matrix<Scalar, N, N> a_;

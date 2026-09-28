@@ -143,7 +143,7 @@ TEST(CounterBasedNormalSamplerTest, EveryVariateIsFinite) {
 TEST(CounterBasedNormalSamplerTest, SeedAccessorReturnsTheConstructorSeed) {
   const CounterBasedNormalSampler sampler(8675309);
 
-  EXPECT_EQ(sampler.Seed(), 8675309U);
+  EXPECT_EQ(sampler.seed(), 8675309U);
 }
 
 }  // namespace

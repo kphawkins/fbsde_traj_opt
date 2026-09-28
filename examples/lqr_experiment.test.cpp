@@ -51,10 +51,10 @@ TEST(RunLqrExperimentTest, ProducesOneFigurePerPlottedStatePlusPhaseAndCost) {
 
   // Two state figures, one phase portrait, one cost-to-go.
   ASSERT_EQ(report->figures.size(), 4U);
-  EXPECT_EQ(report->figures.at(0).Title(), "Position over the horizon");
-  EXPECT_EQ(report->figures.at(1).Title(), "Velocity over the horizon");
-  EXPECT_EQ(report->figures.at(2).Title(), "Phase portrait: Velocity against Position");
-  EXPECT_EQ(report->figures.at(3).Title(), "Expected cost-to-go");
+  EXPECT_EQ(report->figures.at(0).title(), "Position over the horizon");
+  EXPECT_EQ(report->figures.at(1).title(), "Velocity over the horizon");
+  EXPECT_EQ(report->figures.at(2).title(), "Phase portrait: Velocity against Position");
+  EXPECT_EQ(report->figures.at(3).title(), "Expected cost-to-go");
   EXPECT_EQ(report->name, "Test system");
 }
 

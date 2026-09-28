@@ -19,7 +19,7 @@ because the two policies differ by more than an order of magnitude at every stag
 Write the reports, then capture each page at a height that fits all of its figures:
 
 ```sh
-bazel run //examples:lqr_experiments -- --output-dir /tmp/lqr_reports --no-open
+bazel run //examples:lqr_experiments -- --output-dir /tmp/lqr_reports
 
 chrome --headless --disable-gpu --hide-scrollbars --virtual-time-budget=15000 \
   --window-size=1180,2520 \

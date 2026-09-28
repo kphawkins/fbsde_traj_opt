@@ -19,11 +19,6 @@ namespace fbsde_traj_opt {
 // (SdeControlDriftMatTerm), and `Sigma` shapes the injected Brownian noise (SdeDiffusionTerm).
 // `State` is the fixed-size Eigen column vector type of `x_k`.
 //
-// Also included is ForwardSdeModel, which composes SdeStateDriftTerm, SdeControlDriftMatTerm, and
-// SdeDiffusionTerm into a single functor that both computes the forward step `x_{k+1}` above and
-// exposes its three component terms, so that other algorithms (e.g. linearization or covariance
-// propagation) can access `f`, `B`, and `Sigma` directly rather than only the assembled step.
-//
 // Also included is the concept for a feedback control policy `u_k = pi(k, x_k)`
 // (SdeControlPolicyTerm) that closes the loop by choosing the control applied at each stage from
 // the current stage and state, and the concepts for the cost terms of the associated trajectory
@@ -32,9 +27,6 @@ namespace fbsde_traj_opt {
 // `phi(x_K)` (SdeTerminalCostTerm) charged only at the terminal stage. The value function of the
 // problem is the expected value, under the SDE dynamics above, of the sum of the running costs
 // over stages 0..K-1 plus the terminal cost at stage K.
-
-// CostSdeModel bundles those two cost terms the way ForwardSdeModel bundles the three dynamics
-// terms, so that an algorithm which needs the whole objective takes one argument rather than two.
 
 // Concept for a functor type `T` that supplies the uncontrolled drift `f(k, x_k)` of the forward
 // SDE -- the component of the drift that is independent of both the control `u_k` and the noise
@@ -129,67 +121,6 @@ concept SdeTerminalCostTerm =
     EigenFixedSizeColumnVector<State> && requires(const T& terminal_cost_term, const State& state) {
       { terminal_cost_term(state) } -> std::same_as<typename State::Scalar>;
     };
-
-// Concept for a functor type `T` that assembles the terms of a discrete-time, control-affine
-// forward SDE
-//
-//   x_{k+1} = x_k + f(k, x_k) + B(k, x_k) * u_k + Sigma(k, x_k) * z_k,     z_k ~ N(0, I),
-//
-// into the single forward step above, while also exposing its three component terms so that other
-// algorithms can access `f`, `B`, and `Sigma` directly instead of only the assembled step.
-//
-// A conforming `T` is callable as `model(stage, state, control, noise)`, where `stage` is a
-// `std::size_t`, `state` is a `State`, `control` is a `Control`, and `noise` is a `State`
-// representing the noise increment `z_k` (dimensioned to match Sigma's N x N shape), and returns
-// the next state `x_{k+1}` as a fixed-size Eigen column vector of the same compile-time size as
-// `State`.
-//
-// `T` must also define member type aliases `StateDriftTerm`, `ControlDriftMatTerm`, and
-// `DiffusionTerm` that conform, respectively, to SdeStateDriftTerm, SdeControlDriftMatTerm, and
-// SdeDiffusionTerm for `State`, and expose them through const accessors `StateDrift()`,
-// `ControlDriftMat()`, and `Diffusion()`.
-template <typename T, typename State, typename Control>
-concept ForwardSdeModel =
-    EigenFixedSizeColumnVector<State> && EigenFixedSizeColumnVector<Control> &&
-    std::same_as<typename State::Scalar, typename Control::Scalar> &&
-    requires {
-      typename T::StateDriftTerm;
-      typename T::ControlDriftMatTerm;
-      typename T::DiffusionTerm;
-    } && SdeStateDriftTerm<typename T::StateDriftTerm, State> &&
-    SdeControlDriftMatTerm<typename T::ControlDriftMatTerm, State> &&
-    SdeDiffusionTerm<typename T::DiffusionTerm, State> &&
-    requires(const T& model, std::size_t stage, const State& state, const Control& control, const State& noise) {
-      { model(stage, state, control, noise) } -> EigenFixedSizeColumnVectorOfDimension<State::RowsAtCompileTime>;
-      { model.StateDrift() } -> std::convertible_to<const typename T::StateDriftTerm&>;
-      { model.ControlDriftMat() } -> std::convertible_to<const typename T::ControlDriftMatTerm&>;
-      { model.Diffusion() } -> std::convertible_to<const typename T::DiffusionTerm&>;
-    };
-
-// Concept for a type `T` that bundles the two cost terms of a discrete-time trajectory
-// optimization problem over stages 0..K: the running cost `l(k, x_k, u_k)` charged at stages
-// 0..K-1 and the terminal cost `phi(x_K)` charged at stage K.
-//
-// `T` must define member type aliases `RunningCostTerm` and `TerminalCostTerm` that conform,
-// respectively, to SdeRunningCostTerm and SdeTerminalCostTerm, and expose them through const
-// accessors `RunningCost()` and `TerminalCost()`.
-//
-// Unlike ForwardSdeModel, a conforming `T` is not itself callable. ForwardSdeModel has an
-// assembled call operator because its three terms combine into exactly one meaningful quantity,
-// the forward step. The two cost terms do not: they are evaluated at different stages and with
-// different arguments, so any single call operator here would have to pick one of them
-// arbitrarily. Callers reach the term they want through the accessor instead.
-template <typename T, typename State, typename Control>
-concept CostSdeModel = EigenFixedSizeColumnVector<State> && EigenFixedSizeColumnVector<Control> &&
-                       std::same_as<typename State::Scalar, typename Control::Scalar> &&
-                       requires {
-                         typename T::RunningCostTerm;
-                         typename T::TerminalCostTerm;
-                       } && SdeRunningCostTerm<typename T::RunningCostTerm, State, Control> &&
-                       SdeTerminalCostTerm<typename T::TerminalCostTerm, State> && requires(const T& cost_model) {
-                         { cost_model.RunningCost() } -> std::convertible_to<const typename T::RunningCostTerm&>;
-                         { cost_model.TerminalCost() } -> std::convertible_to<const typename T::TerminalCostTerm&>;
-                       };
 
 }  // namespace fbsde_traj_opt
 

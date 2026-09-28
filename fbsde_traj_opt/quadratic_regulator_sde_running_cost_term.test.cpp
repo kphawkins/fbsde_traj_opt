@@ -72,9 +72,9 @@ TEST(QuadraticRegulatorSdeRunningCostTermTest, CostMatAccessorsReturnConstructor
       2.5, -2.5;
   const QuadraticRegulatorSdeRunningCostTerm<3, 2> term(q, r, n);
 
-  EXPECT_TRUE(term.StateCostMat().isApprox(q));
-  EXPECT_TRUE(term.ControlCostMat().isApprox(r));
-  EXPECT_TRUE(term.CrossCostMat().isApprox(n));
+  EXPECT_TRUE(term.state_cost_mat().isApprox(q));
+  EXPECT_TRUE(term.control_cost_mat().isApprox(r));
+  EXPECT_TRUE(term.cross_cost_mat().isApprox(n));
 }
 
 }  // namespace

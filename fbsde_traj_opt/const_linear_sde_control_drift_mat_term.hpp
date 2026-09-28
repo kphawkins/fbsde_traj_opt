@@ -30,11 +30,14 @@ class ConstLinearSdeControlDriftMatTerm {
     return b_;
   }
 
-  // Returns `B`, the constant control drift matrix.
+  // Returns `B`, the constant control drift matrix, which enters the forward step through the
+  // control-affine drift term
   //
-  // Exposed for the same reason as ConstLinearSdeStateDriftTerm::DriftMat(): algorithms that
-  // specialize to linear dynamics need `B` itself, not just its action on a control.
-  [[nodiscard]] auto DriftMat() const noexcept -> const Eigen::Matrix<Scalar, N, M>& { return b_; }
+  //   B(k, x_k) * u_k = B * u_k.
+  //
+  // Exposed so that algorithms which specialize to linear dynamics can recover `B` itself, not
+  // just its action on a control.
+  [[nodiscard]] auto drift_mat() const noexcept -> const Eigen::Matrix<Scalar, N, M>& { return b_; }
 
  private:
   Eigen::Matrix<Scalar, N, M> b_;

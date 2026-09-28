@@ -332,6 +332,8 @@ cc_library(
     hdrs = ["trajectory_batch.hpp"],
     copts = FBSDE_COPTS,
     deps = [
+        ":composed_cost_sde_model",
+        ":composed_forward_sde_model",
         ":counter_based_normal_sampler",
         ":normal_distribution_concepts",
         ":sde_term_concepts",

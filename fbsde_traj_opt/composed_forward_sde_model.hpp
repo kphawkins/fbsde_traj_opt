@@ -13,7 +13,7 @@
 
 namespace fbsde_traj_opt {
 
-// A ForwardSdeModel (see sde_term_concepts.hpp) that owns one term of each kind and assembles
+// A forward SDE model that owns one term of each kind (see sde_term_concepts.hpp) and assembles
 // them into the forward step
 //
 //   x_{k+1} = x_k + f(k, x_k) + B(k, x_k) * u_k + Sigma(k, x_k) * z_k,     z_k ~ N(0, I).
@@ -45,11 +45,6 @@ class ComposedForwardSdeModel {
   using DiffusionTerm = DiffusionTermT;
 
   // Builds a ComposedForwardSdeModel from the three terms of the forward SDE.
-  //
-  // There is no Make() factory returning a Result here, unlike elsewhere in this codebase: the
-  // composition itself has no invariant to enforce beyond the compile-time ones in the requires
-  // clause above. Every runtime invariant belongs to an individual term (for instance, that Sigma
-  // is nonsingular) and is enforced by that term's own factory.
   ComposedForwardSdeModel(StateDriftTerm state_drift_term,
                           ControlDriftMatTerm control_drift_mat_term,
                           DiffusionTerm diffusion_term) noexcept
@@ -68,11 +63,13 @@ class ComposedForwardSdeModel {
            (diffusion_term_(stage, state) * noise);
   }
 
-  [[nodiscard]] auto StateDrift() const noexcept -> const StateDriftTerm& { return state_drift_term_; }
+  [[nodiscard]] auto state_drift() const noexcept -> const StateDriftTerm& { return state_drift_term_; }
 
-  [[nodiscard]] auto ControlDriftMat() const noexcept -> const ControlDriftMatTerm& { return control_drift_mat_term_; }
+  [[nodiscard]] auto control_drift_mat() const noexcept -> const ControlDriftMatTerm& {
+    return control_drift_mat_term_;
+  }
 
-  [[nodiscard]] auto Diffusion() const noexcept -> const DiffusionTerm& { return diffusion_term_; }
+  [[nodiscard]] auto diffusion() const noexcept -> const DiffusionTerm& { return diffusion_term_; }
 
  private:
   StateDriftTerm state_drift_term_;

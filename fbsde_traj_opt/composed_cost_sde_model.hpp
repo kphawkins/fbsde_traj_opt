@@ -12,14 +12,14 @@
 
 namespace fbsde_traj_opt {
 
-// A CostSdeModel (see sde_term_concepts.hpp) that owns a running cost term and a terminal cost
-// term, together forming the objective of a discrete-time trajectory optimization problem over
+// A cost model that owns a running cost term and a terminal cost term (see sde_term_concepts.hpp),
+// together forming the objective of a discrete-time trajectory optimization problem over
 // stages 0..K:
 //
 //   sum_{k=0}^{K-1} l(k, x_k, u_k) + phi(x_K).
 //
-// This is the cost-side counterpart of ComposedForwardSdeModel, and holds its terms by value as
-// template parameters for the same reason: evaluating a batch's cost-to-go calls them once per
+// The two term types are template parameters held by value, so that evaluating them inlines and
+// allocates nothing, which matters because evaluating a batch's cost-to-go calls them once per
 // trajectory per stage.
 //
 // `N` is the compile-time state dimension, `M` is the compile-time control dimension, and
@@ -36,15 +36,12 @@ class ComposedCostSdeModel {
   using TerminalCostTerm = TerminalCostTermT;
 
   // Builds a ComposedCostSdeModel from the two cost terms.
-  //
-  // As with ComposedForwardSdeModel, there is no Make() factory returning a Result: the
-  // composition has no invariant of its own to enforce, and each term enforces its own.
   ComposedCostSdeModel(RunningCostTerm running_cost_term, TerminalCostTerm terminal_cost_term) noexcept
       : running_cost_term_(std::move(running_cost_term)), terminal_cost_term_(std::move(terminal_cost_term)) {}
 
-  [[nodiscard]] auto RunningCost() const noexcept -> const RunningCostTerm& { return running_cost_term_; }
+  [[nodiscard]] auto running_cost() const noexcept -> const RunningCostTerm& { return running_cost_term_; }
 
-  [[nodiscard]] auto TerminalCost() const noexcept -> const TerminalCostTerm& { return terminal_cost_term_; }
+  [[nodiscard]] auto terminal_cost() const noexcept -> const TerminalCostTerm& { return terminal_cost_term_; }
 
  private:
   RunningCostTerm running_cost_term_;

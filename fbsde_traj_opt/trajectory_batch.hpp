@@ -11,6 +11,8 @@
 #include <Eigen/Cholesky>
 #include <Eigen/Core>
 
+#include "fbsde_traj_opt/composed_cost_sde_model.hpp"
+#include "fbsde_traj_opt/composed_forward_sde_model.hpp"
 #include "fbsde_traj_opt/counter_based_normal_sampler.hpp"
 #include "fbsde_traj_opt/normal_distribution_concepts.hpp"
 #include "fbsde_traj_opt/sde_term_concepts.hpp"
@@ -84,13 +86,17 @@ class TrajectoryBatch {
   //
   // The returned batch is moved out of the factory once. For a batch large enough for that to
   // matter, the move is still cheap next to the sampling that filled it.
-  template <typename ForwardModelT, typename ControlPolicyT, typename InitialDistributionT>
-    requires ForwardSdeModel<ForwardModelT, State, Control> && SdeControlPolicyTerm<ControlPolicyT, State, Control> &&
-             NormalDistribution<InitialDistributionT, State>
-  static auto Make(const ForwardModelT& forward_model,
-                   const ControlPolicyT& control_policy,
-                   const InitialDistributionT& initial_distribution,
-                   std::uint64_t seed) noexcept -> Result<TrajectoryBatch> {
+  template <typename StateDriftTermT,
+            typename ControlDriftMatTermT,
+            typename DiffusionTermT,
+            typename ControlPolicyT,
+            typename InitialDistributionT>
+    requires SdeControlPolicyTerm<ControlPolicyT, State, Control> && NormalDistribution<InitialDistributionT, State>
+  static auto Make(
+      const ComposedForwardSdeModel<N, M, StateDriftTermT, ControlDriftMatTermT, DiffusionTermT, Scalar>& forward_model,
+      const ControlPolicyT& control_policy,
+      const InitialDistributionT& initial_distribution,
+      std::uint64_t seed) noexcept -> Result<TrajectoryBatch> {
     // Eigen's fixed-size LLT keeps the factorization allocation-free.
     const Eigen::Matrix<Scalar, N, N> covariance = initial_distribution.Covariance();
     const Eigen::LLT<Eigen::Matrix<Scalar, N, N>> covariance_factorization(covariance);
@@ -146,7 +152,7 @@ class TrajectoryBatch {
   }
 
   // Returns the seed the batch was sampled with.
-  [[nodiscard]] auto Seed() const noexcept -> std::uint64_t { return seed_; }
+  [[nodiscard]] auto seed() const noexcept -> std::uint64_t { return seed_; }
 
   // Returns the expected cost-to-go at every stage under `cost_model`.
   //
@@ -165,13 +171,15 @@ class TrajectoryBatch {
   // Computed by one backward sweep -- each trajectory's c_k is its own c_{k+1} plus one running
   // cost -- so the whole array costs one running-cost evaluation per trajectory per stage rather
   // than the quadratic count a forward re-summation from every stage would need.
-  template <typename CostModelT>
-    requires CostSdeModel<CostModelT, State, Control>
-  [[nodiscard]] auto ExpectedCostToGo(const CostModelT& cost_model) const noexcept -> StageValues {
+  template <typename RunningCostTermT, typename TerminalCostTermT>
+  [[nodiscard]] auto ExpectedCostToGo(
+      const ComposedCostSdeModel<N, M, RunningCostTermT, TerminalCostTermT, Scalar>& cost_model) const noexcept
+      -> StageValues {
     // The cost-to-go of each trajectory from the stage currently being visited, carried backwards.
     Eigen::Matrix<Scalar, static_cast<int>(NumTrajectories), 1> cost_to_go;
     for (std::size_t trajectory = 0; trajectory < NumTrajectories; ++trajectory) {
-      cost_to_go[static_cast<Eigen::Index>(trajectory)] = cost_model.TerminalCost()(StateAt(trajectory, NumStages - 1));
+      cost_to_go[static_cast<Eigen::Index>(trajectory)] =
+          cost_model.terminal_cost()(StateAt(trajectory, NumStages - 1));
     }
 
     StageValues expected_cost_to_go{};
@@ -180,7 +188,7 @@ class TrajectoryBatch {
     for (std::size_t stage = kNumControlStages; stage-- > 0;) {
       for (std::size_t trajectory = 0; trajectory < NumTrajectories; ++trajectory) {
         cost_to_go[static_cast<Eigen::Index>(trajectory)] +=
-            cost_model.RunningCost()(stage, StateAt(trajectory, stage), ControlAt(trajectory, stage));
+            cost_model.running_cost()(stage, StateAt(trajectory, stage), ControlAt(trajectory, stage));
       }
       expected_cost_to_go[stage] = cost_to_go.mean();
     }

@@ -104,7 +104,7 @@ class PlotlyFigure {
   auto UseLogarithmicYAxis() noexcept -> void;
 
   // Returns the figure's title.
-  [[nodiscard]] auto Title() const noexcept -> const std::string& { return title_; }
+  [[nodiscard]] auto title() const noexcept -> const std::string& { return title_; }
 
   // Returns the number of lines added so far.
   [[nodiscard]] auto LineCount() const noexcept -> std::size_t { return traces_.size(); }
