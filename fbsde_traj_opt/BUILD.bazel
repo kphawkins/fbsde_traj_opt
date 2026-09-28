@@ -608,3 +608,29 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "polynomial_value_function_approx",
+    hdrs = ["polynomial_value_function_approx.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "polynomial_value_function_approx_test",
+    size = "small",
+    srcs = ["polynomial_value_function_approx.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":polynomial_value_function_approx",
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

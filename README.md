@@ -56,6 +56,10 @@ Everything is fixed-size at compile time and allocates nothing on the sampling p
   Adam, damped so the representation improves without lurching -- principally by a trust region on
   the change the step makes to the function's own values, which means the same thing for every
   model.
+- **Polynomial value functions.** `PolynomialValueFunctionApprox` is the least-squares Monte Carlo
+  model of the thesis: every monomial up to a fixed degree in a state normalized over a fixed
+  region of interest, fitted in closed form by weighted least squares. The fixed normalization is
+  what lets two fitted models be blended coefficient by coefficient.
 - **Visualization.** `//fbsde_traj_opt/viz` turns a batch into Plotly figures and writes them as a
   self-contained HTML page, which the example binary opens for you. Figures can be lines, heatmaps
   over a grid, or animated over a sequence of frames, with the axis or color range pinned across
