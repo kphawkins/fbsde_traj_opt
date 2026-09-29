@@ -148,3 +148,41 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "sgd_taylor_backward_pass",
+    hdrs = ["sgd_taylor_backward_pass.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/solvers:taylor_noiseless_backward_step_estimator",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:value_function_approx_concepts",
+        "//fbsde_traj_opt/value_function:value_function_sgd_fitter",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "sgd_taylor_backward_pass_test",
+    size = "medium",
+    srcs = ["sgd_taylor_backward_pass.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":fbrrt_particle_set",
+        ":sgd_taylor_backward_pass",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sde:composed_cost_sde_model",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/solvers:finite_horizon_lqr",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
