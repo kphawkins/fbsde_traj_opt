@@ -149,3 +149,47 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "fbrrt_solver",
+    hdrs = ["fbrrt_solver.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":policy_rollout_evaluation",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/fbrrt:brute_force_nearest_neighbor",
+        "//fbsde_traj_opt/fbrrt:epsilon_greedy_l1_control_sampler",
+        "//fbsde_traj_opt/fbrrt:fbrrt_particle_set",
+        "//fbsde_traj_opt/fbrrt:noiseless_forward_expansion",
+        "//fbsde_traj_opt/fbrrt:path_integral_erode",
+        "//fbsde_traj_opt/fbrrt:rrt_expansion_selector",
+        "//fbsde_traj_opt/fbrrt:sgd_taylor_backward_pass",
+        "//fbsde_traj_opt/policies:taylor_q_function_l1_policy",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:normal_distribution_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "fbrrt_solver_test",
+    size = "medium",
+    srcs = ["fbrrt_solver.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":fbrrt_solver",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sampling:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
