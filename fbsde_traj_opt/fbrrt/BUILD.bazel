@@ -37,3 +37,54 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "brute_force_nearest_neighbor",
+    hdrs = ["brute_force_nearest_neighbor.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "brute_force_nearest_neighbor_test",
+    size = "small",
+    srcs = ["brute_force_nearest_neighbor.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":brute_force_nearest_neighbor",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "rrt_expansion_selector",
+    hdrs = ["rrt_expansion_selector.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":brute_force_nearest_neighbor",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:l1_exploratory_control",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "rrt_expansion_selector_test",
+    size = "small",
+    srcs = ["rrt_expansion_selector.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":brute_force_nearest_neighbor",
+        ":rrt_expansion_selector",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
