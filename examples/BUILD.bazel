@@ -224,3 +224,36 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "l1_benchmark_models",
+    hdrs = ["l1_benchmark_models.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":double_inverted_pendulum_model",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/dynamics:zero_order_hold_discretization",
+        "//fbsde_traj_opt/sampling:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "l1_benchmark_models_test",
+    size = "small",
+    srcs = ["l1_benchmark_models.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":l1_benchmark_models",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
