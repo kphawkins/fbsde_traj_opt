@@ -186,3 +186,28 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "path_integral_erode",
+    hdrs = ["path_integral_erode.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+    ],
+)
+
+cc_test(
+    name = "path_integral_erode_test",
+    size = "small",
+    srcs = ["path_integral_erode.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":fbrrt_particle_set",
+        ":path_integral_erode",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
