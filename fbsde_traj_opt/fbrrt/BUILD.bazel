@@ -88,3 +88,63 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "epsilon_greedy_l1_control_sampler",
+    hdrs = ["epsilon_greedy_l1_control_sampler.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:l1_exploratory_control",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "epsilon_greedy_l1_control_sampler_test",
+    size = "small",
+    srcs = ["epsilon_greedy_l1_control_sampler.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":epsilon_greedy_l1_control_sampler",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "noiseless_forward_expansion",
+    hdrs = ["noiseless_forward_expansion.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "noiseless_forward_expansion_test",
+    size = "small",
+    srcs = ["noiseless_forward_expansion.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":epsilon_greedy_l1_control_sampler",
+        ":fbrrt_particle_set",
+        ":noiseless_forward_expansion",
+        ":rrt_expansion_selector",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
