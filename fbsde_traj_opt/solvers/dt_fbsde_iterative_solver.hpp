@@ -10,7 +10,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <numbers>
 #include <span>
 #include <utility>
 #include <vector>
@@ -21,8 +20,10 @@
 #include "fbsde_traj_opt/costs/l1_control_sde_running_cost_term.hpp"
 #include "fbsde_traj_opt/policies/taylor_q_function_l1_policy.hpp"
 #include "fbsde_traj_opt/sampling/counter_based_normal_sampler.hpp"
+#include "fbsde_traj_opt/sampling/l1_exploratory_control.hpp"
 #include "fbsde_traj_opt/sampling/normal_distribution_concepts.hpp"
 #include "fbsde_traj_opt/sde/sde_term_concepts.hpp"
+#include "fbsde_traj_opt/solvers/policy_rollout_evaluation.hpp"
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/value_function_approx_concepts.hpp"
@@ -317,15 +318,7 @@ class DtFbsdeIterativeSolver {
   [[nodiscard]] auto SampledControls() const noexcept -> std::span<const ControlBlock> { return controls_; }
 
  private:
-  struct Costs {
-    Scalar total = Scalar{0};
-    Scalar running = Scalar{0};
-    Scalar terminal = Scalar{0};
-  };
-
-  // Seeds for the forward passes and the evaluation rollouts, kept apart so that no forward pass
-  // ever reuses the evaluation's noise and the evaluation's noise never changes.
-  static constexpr std::uint64_t kEvaluationStream = 0xD1B54A32D192ED03ULL;
+  using Costs = PolicyRolloutCosts<Scalar>;
 
   // The sampler components the forward pass draws its non-noise randomness from, past the N used
   // for the state noise.
@@ -386,32 +379,6 @@ class DtFbsdeIterativeSolver {
     return *Policy::Make(forward_model_, running_cost_.L1Weight(), lower_bounds_, upper_bounds_, table);
   }
 
-  // A standard normal variate mapped to a uniform on (0, 1) through the normal CDF, so that the
-  // one coordinate-addressed sampler supplies both kinds of randomness.
-  [[nodiscard]] static auto UniformFromNormal(Scalar normal) noexcept -> Scalar {
-    return Scalar{0.5} * std::erfc(-normal / std::numbers::sqrt2_v<Scalar>);
-  }
-
-  // One exploratory control: each coordinate drawn uniformly from {lower, 0, upper}, the set an
-  // L1-optimal policy's values lie in.
-  [[nodiscard]] auto ExploratoryControl(const CounterBasedNormalSampler& sampler,
-                                        std::size_t sample,
-                                        std::size_t stage) const noexcept -> Control {
-    Control control;
-    for (std::size_t coordinate = 0; coordinate < kControlDim; ++coordinate) {
-      const auto index = static_cast<Eigen::Index>(coordinate);
-      const Scalar pick = UniformFromNormal(sampler.Sample(sample, stage, kControlPickComponent + coordinate));
-      if (pick < Scalar{1} / Scalar{3}) {
-        control[index] = lower_bounds_[index];
-      } else if (pick < Scalar{2} / Scalar{3}) {
-        control[index] = Scalar{0};
-      } else {
-        control[index] = upper_bounds_[index];
-      }
-    }
-    return control;
-  }
-
   // The forward pass. Returns the mean cost the path columns incurred.
   //
   // The batch's columns are of two kinds. The first `PathCount()` are *paths*: trajectories from
@@ -453,14 +420,17 @@ class DtFbsdeIterativeSolver {
         // A path steps from its own state; a probe from a path's.
         std::size_t parent = sample;
         if (!is_path) {
-          const Scalar pick = UniformFromNormal(sampler.Sample(sample, stage + 1, kParentPickComponent));
+          const Scalar pick = SampleUniform<Scalar>(sampler, sample, stage + 1, kParentPickComponent);
           parent = std::min(static_cast<std::size_t>(pick * static_cast<Scalar>(path_count)), path_count - 1);
         }
         const State state = states_[stage].col(static_cast<Eigen::Index>(parent));
 
         const bool explore =
-            !is_path || UniformFromNormal(sampler.Sample(sample, stage + 1, kExploreComponent)) < exploration;
-        const Control control = explore ? ExploratoryControl(sampler, sample, stage + 1) : policy(stage, state);
+            !is_path || SampleUniform<Scalar>(sampler, sample, stage + 1, kExploreComponent) < exploration;
+        const Control control =
+            explore ? ExploratoryL1Control<M>(
+                          sampler, sample, stage + 1, kControlPickComponent, lower_bounds_, upper_bounds_)
+                    : policy(stage, state);
 
         State noise;
         sampler.FillNoise(sample, stage + 1, noise);
@@ -615,33 +585,15 @@ class DtFbsdeIterativeSolver {
   // The mean cost of the policy over `table`, on NumEvaluationSamples rollouts with no exploration
   // and a fixed noise seed.
   [[nodiscard]] auto Evaluate(const std::vector<ValueFunctionT>& table) const noexcept -> Costs {
-    const CounterBasedNormalSampler sampler(seed_ ^ kEvaluationStream);
-    const Policy policy = MakePolicy(table);
-
-    std::vector<Scalar> running(NumEvaluationSamples, Scalar{0});
-    std::vector<Scalar> terminal(NumEvaluationSamples, Scalar{0});
-    ParallelFor(NumEvaluationSamples, [&](std::size_t sample) noexcept {
-      State noise;
-      sampler.FillNoise(sample, 0, noise);
-      State state = initial_mean_ + (initial_covariance_factor_ * noise);
-      for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
-        const Control control = policy(stage, state);
-        running[sample] += running_cost_(stage, state, control);
-        sampler.FillNoise(sample, stage + 1, noise);
-        state = forward_model_(stage, state, control, noise);
-      }
-      terminal[sample] = terminal_cost_(state);
-    });
-
-    Costs costs;
-    for (std::size_t sample = 0; sample < NumEvaluationSamples; ++sample) {
-      costs.running += running[sample];
-      costs.terminal += terminal[sample];
-    }
-    costs.running /= static_cast<Scalar>(NumEvaluationSamples);
-    costs.terminal /= static_cast<Scalar>(NumEvaluationSamples);
-    costs.total = costs.running + costs.terminal;
-    return costs;
+    return EvaluatePolicyByRollouts(forward_model_,
+                                    MakePolicy(table),
+                                    running_cost_,
+                                    terminal_cost_,
+                                    initial_mean_,
+                                    initial_covariance_factor_,
+                                    NumEvaluationSamples,
+                                    kNumControlStages,
+                                    seed_ ^ kPolicyEvaluationStream);
   }
 
   ForwardModelT forward_model_;

@@ -86,13 +86,39 @@ cc_test(
 )
 
 cc_library(
+    name = "policy_rollout_evaluation",
+    hdrs = ["policy_rollout_evaluation.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "policy_rollout_evaluation_test",
+    size = "small",
+    srcs = ["policy_rollout_evaluation.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":policy_rollout_evaluation",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "dt_fbsde_iterative_solver",
     hdrs = ["dt_fbsde_iterative_solver.hpp"],
     copts = FBSDE_COPTS,
     deps = [
+        ":policy_rollout_evaluation",
         "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
         "//fbsde_traj_opt/policies:taylor_q_function_l1_policy",
         "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:l1_exploratory_control",
         "//fbsde_traj_opt/sampling:normal_distribution_concepts",
         "//fbsde_traj_opt/sde:sde_term_concepts",
         "//fbsde_traj_opt/utils:parallel_for",
