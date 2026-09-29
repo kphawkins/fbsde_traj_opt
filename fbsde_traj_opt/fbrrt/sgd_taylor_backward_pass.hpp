@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -29,6 +30,12 @@ struct SgdTaylorBackwardPassOptions {
   // Passes over a stage's samples per backward pass. Few, on purpose: each backward pass is meant
   // to move a value function part of the way toward its targets, not all of it.
   std::size_t epochs_per_stage = 2;
+
+  // A floor under every target. The true value function of a problem whose costs are all
+  // non-negative is itself non-negative, so a target below zero is extrapolation error by
+  // construction; flooring it stops a value function from learning a basin that does not exist and
+  // the policy from steering into it. Negative infinity disables the floor.
+  Scalar target_floor = -std::numeric_limits<Scalar>::infinity();
 
   // Whether each stage's Adam moments are forgotten at the start of every backward pass. The
   // targets change between passes -- they are computed from a next-stage function that has itself
@@ -155,7 +162,7 @@ class SgdTaylorBackwardPass {
                                                             drifts.template middleCols<TargetBatchSize>(first),
                                                             table[stage + 1],
                                                             block_targets);
-        targets.template middleCols<TargetBatchSize>(first) = block_targets;
+        targets.template middleCols<TargetBatchSize>(first) = block_targets.cwiseMax(options_.target_floor);
       });
 
       Fitter& fitter = fitters_[stage];

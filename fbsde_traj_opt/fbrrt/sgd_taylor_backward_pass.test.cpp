@@ -161,6 +161,24 @@ TEST(SgdTaylorBackwardPassTest, EachPassMovesTheValueFunctionsOnlyPartWay) {
   EXPECT_EQ(table.back().Parameters(), before.back().Parameters());
 }
 
+TEST(SgdTaylorBackwardPassTest, TheTargetFloorLiftsEveryTargetBelowIt) {
+  // Every exact target here is well under 1000; with the floor there, every stage is pulled up.
+  const ForwardModel forward_model = MakeForwardModel();
+  const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(forward_model, MakeCostModel());
+  ASSERT_TRUE(solution.has_value());
+  SgdTaylorBackwardPassOptions<double> options;
+  options.sgd.learning_rate = 0.5;
+  options.target_floor = 1000.0;
+  std::vector<ValueFunction> table = MakeTable(kTerminalCost);
+  const std::vector<ValueFunction> before = table;
+  Result<BackwardPass> pass = BackwardPass::Make(forward_model, MakeRunningCost(), options, table);
+  ASSERT_TRUE(pass.has_value());
+  ASSERT_TRUE((*pass)(table, MakeEdges(), solution->policy, 0).has_value());
+  for (std::size_t stage = 0; stage + 1 < kNumStages; ++stage) {
+    EXPECT_GT(table[stage](State::Zero()), before[stage](State::Zero()) + 1.0) << "stage " << stage;
+  }
+}
+
 TEST(SgdTaylorBackwardPassTest, RejectsAStageThatIsNotFull) {
   const ForwardModel forward_model = MakeForwardModel();
   const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(forward_model, MakeCostModel());
