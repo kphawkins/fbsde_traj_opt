@@ -21,18 +21,18 @@ cc_library(
     hdrs = ["lqr_experiment.hpp"],
     copts = FBSDE_COPTS,
     deps = [
-        "//fbsde_traj_opt:composed_cost_sde_model",
-        "//fbsde_traj_opt:composed_forward_sde_model",
-        "//fbsde_traj_opt:const_diagonal_sde_diffusion_term",
-        "//fbsde_traj_opt:const_linear_feedback_sde_control_policy_term",
-        "//fbsde_traj_opt:const_linear_sde_control_drift_mat_term",
-        "//fbsde_traj_opt:const_linear_sde_state_drift_term",
-        "//fbsde_traj_opt:diagonal_covariance_normal_distribution",
-        "//fbsde_traj_opt:finite_horizon_lqr",
-        "//fbsde_traj_opt:quadratic_regulator_sde_running_cost_term",
-        "//fbsde_traj_opt:quadratic_regulator_sde_terminal_cost_term",
-        "//fbsde_traj_opt:trajectory_batch",
-        "//fbsde_traj_opt:zero_order_hold_discretization",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/dynamics:zero_order_hold_discretization",
+        "//fbsde_traj_opt/policies:const_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt/sampling:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt/sde:composed_cost_sde_model",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/sde:trajectory_batch",
+        "//fbsde_traj_opt/solvers:finite_horizon_lqr",
         "//fbsde_traj_opt/utils:result",
         "//fbsde_traj_opt/viz:plotly_figure",
         "//fbsde_traj_opt/viz:trajectory_batch_plots",
@@ -87,5 +87,140 @@ cc_binary(
         ":lqr_models",
         "//fbsde_traj_opt/utils:result",
         "//fbsde_traj_opt/viz:plotly_report",
+    ],
+)
+
+cc_library(
+    name = "value_function_fitting",
+    srcs = ["value_function_fitting.cpp"],
+    hdrs = ["value_function_fitting.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/policies:const_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt/policies:stage_varying_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt/sampling:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt/sde:composed_cost_sde_model",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/sde:trajectory_batch",
+        "//fbsde_traj_opt/solvers:finite_horizon_lqr",
+        "//fbsde_traj_opt/solvers:taylor_noiseless_backward_step_estimator",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "//fbsde_traj_opt/value_function:value_function_approx_concepts",
+        "//fbsde_traj_opt/value_function:value_function_sgd_fitter",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "@eigen",
+    ],
+)
+
+# Large rather than medium: this is an end-to-end test, and every case in it runs a real fitting
+# job to completion so that the accuracy the reports claim is the accuracy CI checks. Slow (about
+# two minutes), so it runs under --config=slow and in CI but not by default.
+cc_test(
+    name = "value_function_fitting_test",
+    size = "large",
+    srcs = ["value_function_fitting.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    tags = ["slow"],
+    deps = [
+        ":value_function_fitting",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_binary(
+    name = "value_function_fitting_experiments",
+    srcs = ["value_function_fitting_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":value_function_fitting",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/viz:plotly_report",
+    ],
+)
+
+cc_library(
+    name = "double_inverted_pendulum_model",
+    hdrs = ["double_inverted_pendulum_model.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_library(
+    name = "double_inverted_pendulum_experiment",
+    srcs = ["double_inverted_pendulum_experiment.cpp"],
+    hdrs = ["double_inverted_pendulum_experiment.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":double_inverted_pendulum_model",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/policies:taylor_q_function_l1_policy",
+        "//fbsde_traj_opt/sampling:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt/sde:composed_cost_sde_model",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/sde:trajectory_batch",
+        "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "@eigen",
+    ],
+)
+
+cc_binary(
+    name = "double_inverted_pendulum",
+    srcs = ["double_inverted_pendulum_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":double_inverted_pendulum_experiment",
+        "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/viz:plotly_report",
+    ],
+)
+
+cc_test(
+    name = "double_inverted_pendulum_model_test",
+    size = "small",
+    srcs = ["double_inverted_pendulum_model.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":double_inverted_pendulum_model",
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+# Large: it runs the method for real, if only for two iterations. Slow (about six minutes), so it
+# runs under --config=slow and in CI but not by default.
+cc_test(
+    name = "double_inverted_pendulum_experiment_test",
+    size = "large",
+    srcs = ["double_inverted_pendulum_experiment.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    tags = ["slow"],
+    deps = [
+        ":double_inverted_pendulum_experiment",
+        "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )

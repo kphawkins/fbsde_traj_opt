@@ -1,0 +1,93 @@
+"""Control policy terms: fixed and stage-varying linear feedback, and the Taylor Q-function L1 policy.
+
+Follows the layout convention described in the README: headers, sources, and unit tests live
+together, and a test for `foo.cpp` is named `foo.test.cpp`.
+"""
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//bazel:copts.bzl", "FBSDE_COPTS", "FBSDE_TEST_COPTS")
+
+package(
+    default_visibility = ["//visibility:public"],
+    # Compile every header standalone to catch missing includes.
+    features = ["parse_headers"],
+)
+
+cc_library(
+    name = "const_linear_feedback_sde_control_policy_term",
+    hdrs = ["const_linear_feedback_sde_control_policy_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "const_linear_feedback_sde_control_policy_term_test",
+    size = "small",
+    srcs = ["const_linear_feedback_sde_control_policy_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":const_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "stage_varying_linear_feedback_sde_control_policy_term",
+    hdrs = ["stage_varying_linear_feedback_sde_control_policy_term.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "stage_varying_linear_feedback_sde_control_policy_term_test",
+    size = "small",
+    srcs = ["stage_varying_linear_feedback_sde_control_policy_term.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":stage_varying_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "taylor_q_function_l1_policy",
+    hdrs = ["taylor_q_function_l1_policy.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:value_function_approx_concepts",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "taylor_q_function_l1_policy_test",
+    size = "small",
+    srcs = ["taylor_q_function_l1_policy.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":taylor_q_function_l1_policy",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

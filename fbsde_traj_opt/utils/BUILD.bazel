@@ -1,6 +1,6 @@
-"""General-purpose, dependency-free utilities shared across the project.
+"""General-purpose utilities shared across the project: error handling, parallelism, and Eigen concepts.
 
-Follows the same layout convention as //fbsde_traj_opt: headers, sources, and unit tests live
+Follows the layout convention described in the README: headers, sources, and unit tests live
 together, and a test for `foo.cpp` is named `foo.test.cpp`.
 """
 
@@ -28,6 +28,46 @@ cc_test(
     copts = FBSDE_TEST_COPTS,
     deps = [
         ":result",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "parallel_for",
+    hdrs = ["parallel_for.hpp"],
+    copts = FBSDE_COPTS,
+)
+
+cc_test(
+    name = "parallel_for_test",
+    size = "small",
+    srcs = ["parallel_for.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":parallel_for",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "eigen_concepts",
+    hdrs = ["eigen_concepts.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "eigen_concepts_test",
+    size = "small",
+    srcs = ["eigen_concepts.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":eigen_concepts",
+        "@eigen",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],

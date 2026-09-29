@@ -13,21 +13,21 @@
 
 #include <Eigen/Core>
 
-#include "fbsde_traj_opt/composed_cost_sde_model.hpp"
-#include "fbsde_traj_opt/composed_forward_sde_model.hpp"
-#include "fbsde_traj_opt/const_diagonal_sde_diffusion_term.hpp"
-#include "fbsde_traj_opt/const_linear_feedback_sde_control_policy_term.hpp"
-#include "fbsde_traj_opt/const_linear_sde_control_drift_mat_term.hpp"
-#include "fbsde_traj_opt/const_linear_sde_state_drift_term.hpp"
-#include "fbsde_traj_opt/diagonal_covariance_normal_distribution.hpp"
-#include "fbsde_traj_opt/finite_horizon_lqr.hpp"
-#include "fbsde_traj_opt/quadratic_regulator_sde_running_cost_term.hpp"
-#include "fbsde_traj_opt/quadratic_regulator_sde_terminal_cost_term.hpp"
-#include "fbsde_traj_opt/trajectory_batch.hpp"
+#include "fbsde_traj_opt/costs/quadratic_regulator_sde_running_cost_term.hpp"
+#include "fbsde_traj_opt/costs/quadratic_regulator_sde_terminal_cost_term.hpp"
+#include "fbsde_traj_opt/dynamics/const_diagonal_sde_diffusion_term.hpp"
+#include "fbsde_traj_opt/dynamics/const_linear_sde_control_drift_mat_term.hpp"
+#include "fbsde_traj_opt/dynamics/const_linear_sde_state_drift_term.hpp"
+#include "fbsde_traj_opt/dynamics/zero_order_hold_discretization.hpp"
+#include "fbsde_traj_opt/policies/const_linear_feedback_sde_control_policy_term.hpp"
+#include "fbsde_traj_opt/sampling/diagonal_covariance_normal_distribution.hpp"
+#include "fbsde_traj_opt/sde/composed_cost_sde_model.hpp"
+#include "fbsde_traj_opt/sde/composed_forward_sde_model.hpp"
+#include "fbsde_traj_opt/sde/trajectory_batch.hpp"
+#include "fbsde_traj_opt/solvers/finite_horizon_lqr.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/viz/plotly_figure.hpp"
 #include "fbsde_traj_opt/viz/trajectory_batch_plots.hpp"
-#include "fbsde_traj_opt/zero_order_hold_discretization.hpp"
 
 namespace fbsde_traj_opt::examples {
 

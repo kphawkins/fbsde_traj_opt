@@ -12,13 +12,13 @@
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 
-#include "fbsde_traj_opt/composed_forward_sde_model.hpp"
-#include "fbsde_traj_opt/const_diagonal_sde_diffusion_term.hpp"
-#include "fbsde_traj_opt/const_linear_feedback_sde_control_policy_term.hpp"
-#include "fbsde_traj_opt/const_linear_sde_control_drift_mat_term.hpp"
-#include "fbsde_traj_opt/const_linear_sde_state_drift_term.hpp"
-#include "fbsde_traj_opt/diagonal_covariance_normal_distribution.hpp"
-#include "fbsde_traj_opt/trajectory_batch.hpp"
+#include "fbsde_traj_opt/dynamics/const_diagonal_sde_diffusion_term.hpp"
+#include "fbsde_traj_opt/dynamics/const_linear_sde_control_drift_mat_term.hpp"
+#include "fbsde_traj_opt/dynamics/const_linear_sde_state_drift_term.hpp"
+#include "fbsde_traj_opt/policies/const_linear_feedback_sde_control_policy_term.hpp"
+#include "fbsde_traj_opt/sampling/diagonal_covariance_normal_distribution.hpp"
+#include "fbsde_traj_opt/sde/composed_forward_sde_model.hpp"
+#include "fbsde_traj_opt/sde/trajectory_batch.hpp"
 #include "fbsde_traj_opt/viz/plotly_figure.hpp"
 
 namespace fbsde_traj_opt::viz {

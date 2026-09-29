@@ -9,6 +9,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -23,11 +24,15 @@ namespace fbsde_traj_opt::viz {
 // plotly_report.hpp for how one or more figures become a page.
 //
 // Colors are deliberately absent from the JSON this class produces. A trace carries a
-// PlotColorRole instead, and the page resolves that role to a concrete color at render time by
-// reading a CSS custom property. That indirection is what lets the page have a real dark mode:
-// the dark palette is a separate set of colors selected for a dark surface, not a programmatic
-// inversion of the light one, and switching between them re-resolves every role rather than
-// rewriting every figure.
+// PlotColorRole -- or, for a heatmap, a PlotColorscaleRole -- instead, and the page resolves that
+// role to a concrete color at render time by reading a CSS custom property. That indirection is
+// what lets the page have a real dark mode: the dark palette is a separate set of colors selected
+// for a dark surface, not a programmatic inversion of the light one, and switching between them
+// re-resolves every role rather than rewriting every figure.
+//
+// A figure holds either lines or a single heatmap, never both. The two want different hover
+// behavior, different axis treatment and different table twins, and a figure that mixed them
+// would have to compromise on all three; two figures side by side do not.
 //
 // Allocation: these operations allocate, and are `noexcept` per this project's convention, so an
 // allocation failure terminates rather than unwinding. For a tool whose job is to write a plot
@@ -56,6 +61,24 @@ enum class PlotColorRole : std::uint8_t {
 // view points at a string literal and outlives any caller.
 auto PlotColorRoleName(PlotColorRole role) -> std::string_view;
 
+// The job a continuous color scale does, resolved by the page to an ordered set of stops.
+//
+// The two jobs are not interchangeable. A sequential scale encodes magnitude and is a single hue
+// running from near the surface to far from it -- which means its direction flips between light
+// and dark mode, since "near the surface" is the light end on one and the dark end on the other.
+// A diverging scale encodes polarity about a baseline and is two hues either side of a neutral
+// gray midpoint, so that zero reads as nothing rather than as a color. Using a sequential scale
+// for a signed quantity hides the sign; using a diverging one for an unsigned quantity invents a
+// midpoint the data does not have.
+enum class PlotColorscaleRole : std::uint8_t {
+  kSequential,
+  kDiverging,
+};
+
+// Returns the CSS custom property prefix `role` resolves to, without the leading `--`. The page
+// appends `-0`, `-1`, ... for the individual stops. The returned view points at a string literal.
+auto PlotColorscaleRoleName(PlotColorscaleRole role) -> std::string_view;
+
 // How one line is drawn.
 struct LineStyle {
   // The name shown in the legend and the hover label.
@@ -82,6 +105,52 @@ struct LineStyle {
   // Whether hovering reports this line. Off for the faint sample lines, whose individual values
   // are not what a reader is asking for when they hover over the cloud.
   bool show_on_hover = true;
+
+  // Whether each point also gets a marker. Off for data lines, where the points are samples of a
+  // curve; on for a drawing whose points are things -- the joints of a linkage, say.
+  bool show_markers = false;
+};
+
+// How one heatmap is drawn.
+struct HeatmapStyle {
+  // The name shown in the hover label and the table twin.
+  std::string name{};
+
+  PlotColorscaleRole colorscale_role = PlotColorscaleRole::kSequential;
+
+  // What the color encodes, named on the colorbar. A colorbar without it is a ramp of numbers
+  // with no unit attached.
+  std::string value_label{};
+
+  // Whether to pin the scale's midpoint at zero. Meaningful only for a diverging scale, and
+  // essentially always wanted there: a diverging scale whose midpoint floats with the data's
+  // range puts the neutral color somewhere other than the baseline it is supposed to mark.
+  bool centered_on_zero = false;
+};
+
+// One step of an animation: what every animated trace holds at that step.
+struct AnimationFrame {
+  // Shown in the slider's readout. Short -- "450 epochs", "stage 7".
+  std::string label{};
+
+  // One entry per animated trace, in the order Animate() was given them. For a line this is the
+  // trace's y values; for a heatmap, its z values row-major. Each must be exactly as long as the
+  // data that trace already holds, since a frame replaces values and never reshapes.
+  std::vector<std::vector<double>> trace_values{};
+
+  // Optionally, one entry per animated trace giving its x values at this step, for a line whose
+  // points move in both coordinates -- a mechanism drawn in the plane rather than a curve over a
+  // fixed axis. Empty means every trace keeps its x values. Line traces only.
+  std::vector<std::vector<double>> trace_x_values{};
+};
+
+// How an animation is played.
+struct AnimationStyle {
+  // Milliseconds per frame while playing.
+  double frame_duration_ms = 80.0;
+
+  // What the slider's readout prefixes the frame label with, e.g. "Fitted after ". May be empty.
+  std::string slider_prefix{};
 };
 
 class PlotlyFigure {
@@ -92,9 +161,73 @@ class PlotlyFigure {
   // Adds a line through the given points.
   //
   // Fails if `x_values` and `y_values` differ in length, which would otherwise produce a figure
-  // that plots the shorter of the two and silently discards the rest.
+  // that plots the shorter of the two and silently discards the rest, or if this figure already
+  // holds a heatmap.
   auto AddLine(std::span<const double> x_values, std::span<const double> y_values, const LineStyle& style) noexcept
       -> Result<>;
+
+  // Adds a heatmap over the grid `x_values` by `y_values`.
+  //
+  // `z_values_row_major` holds one value per grid cell, row by row: the value at
+  // (`x_values[column]`, `y_values[row]`) is `z_values_row_major[row * x_values.size() + column]`.
+  // A flat span rather than nested containers because that is the layout a caller sweeping a
+  // function over a grid produces anyway, and it keeps the shape a single explicit statement
+  // rather than an invariant across a container of containers.
+  //
+  // Adding a heatmap also switches the figure's hover mode from the shared crosshair the line
+  // figures use to per-cell, since there is no column of series to read across.
+  //
+  // Fails if either axis is empty, if `z_values_row_major` is not exactly as long as the grid, or
+  // if this figure already holds a line or a heatmap.
+  auto AddHeatmap(std::span<const double> x_values,
+                  std::span<const double> y_values,
+                  std::span<const double> z_values_row_major,
+                  const HeatmapStyle& style) noexcept -> Result<>;
+
+  // Turns the traces at `trace_indices` into an animation over `frames`, giving the figure a play
+  // control and a slider.
+  //
+  // Two decisions here are what make an animation honest rather than merely pretty, and both are
+  // taken for the caller.
+  //
+  // The scale is pinned across every frame. An animation whose axis re-ranges each frame shows a
+  // shape that never seems to change, because the axis is chasing the data -- which is exactly
+  // backwards for a figure whose job is to show a quantity shrinking. So the y range of an
+  // animated line figure, and the color range of an animated heatmap, are computed over all the
+  // frames at once and fixed; a heatmap centered on zero is given a symmetric range, so that the
+  // neutral color keeps meaning zero from the first frame to the last.
+  //
+  // And the figure's resting state is the *last* frame, not the first. A reader who never presses
+  // play, a printed copy, and the table twin beneath the figure all then show the result rather
+  // than the starting guess; pressing play replays how it got there.
+  //
+  // Frames that also move x values have the x range pinned the same way. A figure whose ranges
+  // were fixed by SetAxisRanges() keeps them.
+  //
+  // Fails if `frames` is empty, if any index is not a trace of this figure, if a frame does not
+  // carry exactly one set of values per animated trace, if any of those sets is not the length of
+  // the data the trace already holds, or if x values are given for a heatmap or in a number that
+  // does not match the animated traces.
+  auto Animate(std::span<const std::size_t> trace_indices,
+               std::span<const AnimationFrame> frames,
+               const AnimationStyle& style) noexcept -> Result<>;
+
+  // Fixes both axis ranges, so that neither Plotly's autorange nor Animate() chooses them.
+  //
+  // For a figure that is a picture of something in the plane, where the frame of the picture is
+  // part of what is being shown: an autoranged drawing of a moving mechanism re-frames itself
+  // around the mechanism and so hides the motion it exists to show.
+  //
+  // Fails unless each range is finite and has its lower bound strictly below its upper.
+  auto SetAxisRanges(double x_min, double x_max, double y_min, double y_max) noexcept -> Result<>;
+
+  // Makes one unit on the y axis the same length on screen as one unit on the x axis, so that a
+  // drawing in physical coordinates is not stretched: a rod keeps its length whichever way it
+  // points.
+  auto UseEqualAspect() noexcept -> void;
+
+  // Whether this figure has been animated, and over how many frames.
+  [[nodiscard]] auto FrameCount() const noexcept -> std::size_t { return frames_.size(); }
 
   // Switches the y axis to a logarithmic scale and appends a note to its title saying so, since
   // a reader who misses that a scale is logarithmic misreads every distance on it.
@@ -106,17 +239,23 @@ class PlotlyFigure {
   // Returns the figure's title.
   [[nodiscard]] auto title() const noexcept -> const std::string& { return title_; }
 
-  // Returns the number of lines added so far.
+  // Returns the number of traces added so far: the line count, or one for a heatmap figure.
   [[nodiscard]] auto LineCount() const noexcept -> std::size_t { return traces_.size(); }
 
-  // Returns the figure as `{"title": ..., "data": [...], "layout": {...}}`, the form the page's
-  // renderer expects.
+  // Whether this figure holds a heatmap rather than lines.
+  [[nodiscard]] auto HoldsHeatmap() const noexcept -> bool { return holds_heatmap_; }
+
+  // Returns the figure as `{"title": ..., "data": [...], "layout": {...}}`, plus `"frames"` when
+  // the figure has been animated -- the form the page's renderer expects.
   [[nodiscard]] auto ToJson() const noexcept -> nlohmann::json;
 
  private:
   std::string title_;
   nlohmann::json layout_;
   nlohmann::json traces_ = nlohmann::json::array();
+  nlohmann::json frames_ = nlohmann::json::array();
+  bool holds_heatmap_ = false;
+  bool axis_ranges_fixed_ = false;
 };
 
 }  // namespace fbsde_traj_opt::viz
