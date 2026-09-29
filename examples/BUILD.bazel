@@ -257,3 +257,47 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "fbrrt_comparison_experiment",
+    srcs = ["fbrrt_comparison_experiment.cpp"],
+    hdrs = ["fbrrt_comparison_experiment.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":l1_benchmark_models",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/fbrrt:sgd_taylor_backward_pass",
+        "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/solvers:fbrrt_solver",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "@eigen",
+    ],
+)
+
+# Large and slow: even a short comparison runs both solvers on two benchmarks, which an
+# unoptimized build takes minutes over.
+cc_test(
+    name = "fbrrt_comparison_experiment_test",
+    size = "large",
+    srcs = ["fbrrt_comparison_experiment.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    tags = ["slow"],
+    deps = [
+        ":fbrrt_comparison_experiment",
+        "//fbsde_traj_opt/utils:result",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_binary(
+    name = "fbrrt_comparison",
+    srcs = ["fbrrt_comparison_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":fbrrt_comparison_experiment",
+        "//fbsde_traj_opt/utils:result",
+    ],
+)
