@@ -78,6 +78,17 @@ struct FbrrtOptions {
   // equally, the accepted costs are optimistic about that one noise draw.
   bool line_search = false;
   std::size_t max_step_halvings = 7;
+
+  // With the line search, whether the value functions the backward pass trains are kept apart from
+  // the ones the reported policy uses. The line search as above discards a rejected update, and the
+  // next backward pass starts over from the same value functions -- so if a few SGD steps are never
+  // enough to lower the cost, nothing accumulates and the method stalls. With a working copy, the
+  // backward pass trains its own table every iteration and never has an update taken back; that
+  // table's policy drives the expansion and the targets, and its value functions the erosion. The
+  // *deployed* table, whose policy is reported, returned, and evaluated, moves toward the working
+  // one -- `deployed + step (working - deployed)`, `step` halving from one -- only when that rolls
+  // out cheaper. Learning never stalls, and the reported policy changes only when it improves.
+  bool keep_working_copy = false;
 };
 
 // What one iteration did.
@@ -236,6 +247,8 @@ class FbrrtSolver {
     table.back() = terminal_value_function;
     RESULT_RETURN_IF_ERROR(
         Policy::Make(forward_model, running_cost.L1Weight(), lower_bounds, upper_bounds, std::span(table)));
+    RESULT_ASSERT(!options.keep_working_copy || options.line_search,
+                  "FbrrtSolver::Make: a working copy only has a meaning with the line search on.");
 
     FbrrtSolver solver(std::move(forward_model),
                        std::move(running_cost),
@@ -264,7 +277,7 @@ class FbrrtSolver {
     report.iteration = iteration_;
     report.rrt_probability = iteration_ == 0 ? Scalar{1} : options_.rrt_probability;
     report.exploit_probability = iteration_ == 0 ? Scalar{0} : options_.exploit_probability;
-    const Policy policy = CurrentPolicy();
+    const Policy policy = MakePolicy(table_);
     const std::uint64_t iteration_seed =
         seed_ + (0x9E3779B97F4A7C15ULL * (static_cast<std::uint64_t>(iteration_) + 1U));
 
@@ -287,7 +300,7 @@ class FbrrtSolver {
                                              iteration_seed));
     report.expand_seconds = lap();
 
-    if (options_.line_search) {
+    if (options_.line_search && !options_.keep_working_copy) {
       SaveParameters(previous_parameters_);
     }
     RESULT_ASSIGN_OR_RETURN(const auto backward, components_.backward_pass(table_, particles_, policy, iteration_seed));
@@ -295,7 +308,9 @@ class FbrrtSolver {
     report.backward_seconds = lap();
 
     PolicyRolloutCosts<Scalar> costs;
-    if (options_.line_search) {
+    if (options_.keep_working_copy) {
+      RESULT_ASSIGN_OR_RETURN(costs, WorkingCopyLineSearch(report));
+    } else if (options_.line_search) {
       RESULT_ASSIGN_OR_RETURN(costs, LineSearch(report));
     } else {
       costs = Evaluate();
@@ -304,7 +319,7 @@ class FbrrtSolver {
     report.mean_cost = costs.total;
     report.mean_running_cost = costs.running;
     report.mean_terminal_cost = costs.terminal;
-    report.predicted_cost = table_.front()(initial_mean_);
+    report.predicted_cost = DeployedTable().front()(initial_mean_);
     report.evaluate_seconds = lap();
 
     if (options_.keep_pre_erosion_snapshot) {
@@ -317,28 +332,20 @@ class FbrrtSolver {
     return SuccessResult(report);
   }
 
-  // The current policy: the Taylor Q-function minimizer over the current value functions. It
-  // reads them by reference, so it tracks every later iteration and must not outlive the solver.
-  [[nodiscard]] auto CurrentPolicy() const noexcept -> Policy {
-    // Cannot fail: Make() built one over the same bounds and table.
-    return *Policy::Make(forward_model_, running_cost_.L1Weight(), lower_bounds_, upper_bounds_, std::span(table_));
-  }
+  // The current policy: the Taylor Q-function minimizer over the current value functions -- the
+  // deployed ones, with a working copy. It reads them by reference, so it tracks every later
+  // iteration and must not outlive the solver.
+  [[nodiscard]] auto CurrentPolicy() const noexcept -> Policy { return MakePolicy(DeployedTable()); }
 
   // The mean cost of the current policy on the evaluation rollouts.
-  [[nodiscard]] auto Evaluate() const noexcept -> PolicyRolloutCosts<Scalar> {
-    return EvaluatePolicyByRollouts(forward_model_,
-                                    CurrentPolicy(),
-                                    running_cost_,
-                                    terminal_cost_,
-                                    initial_mean_,
-                                    initial_covariance_factor_,
-                                    NumEvaluationSamples,
-                                    kNumControlStages,
-                                    seed_ ^ kPolicyEvaluationStream);
-  }
+  [[nodiscard]] auto Evaluate() const noexcept -> PolicyRolloutCosts<Scalar> { return Evaluate(DeployedTable()); }
 
-  // The value functions, one per stage 0..K.
-  [[nodiscard]] auto value_functions() const noexcept -> std::span<const ValueFunctionT> { return table_; }
+  // The value functions of the current policy, one per stage 0..K.
+  [[nodiscard]] auto value_functions() const noexcept -> std::span<const ValueFunctionT> { return DeployedTable(); }
+
+  // The value functions the backward pass trains: the same as value_functions() unless the solver
+  // keeps a working copy.
+  [[nodiscard]] auto working_value_functions() const noexcept -> std::span<const ValueFunctionT> { return table_; }
 
   // The particle set as the last iteration left it, after erosion.
   [[nodiscard]] auto particles() const noexcept -> const Particles& { return particles_; }
@@ -374,9 +381,57 @@ class FbrrtSolver {
         table_(std::move(table)),
         components_(std::move(components)),
         options_(options),
-        seed_(seed) {}
+        seed_(seed),
+        deployed_(table_),
+        trial_(table_) {}
 
   using ParameterVector = typename ValueFunctionT::ParameterVector;
+
+  [[nodiscard]] auto DeployedTable() const noexcept -> const std::vector<ValueFunctionT>& {
+    return options_.keep_working_copy ? deployed_ : table_;
+  }
+
+  [[nodiscard]] auto MakePolicy(const std::vector<ValueFunctionT>& table) const noexcept -> Policy {
+    // Cannot fail: Make() built one over the same bounds and a table of the same size.
+    return *Policy::Make(forward_model_, running_cost_.L1Weight(), lower_bounds_, upper_bounds_, std::span(table));
+  }
+
+  [[nodiscard]] auto Evaluate(const std::vector<ValueFunctionT>& table) const noexcept -> PolicyRolloutCosts<Scalar> {
+    return EvaluatePolicyByRollouts(forward_model_,
+                                    MakePolicy(table),
+                                    running_cost_,
+                                    terminal_cost_,
+                                    initial_mean_,
+                                    initial_covariance_factor_,
+                                    NumEvaluationSamples,
+                                    kNumControlStages,
+                                    seed_ ^ kPolicyEvaluationStream);
+  }
+
+  // Scores `deployed + step (working - deployed)`, halving `step` from one, and deploys the first
+  // that improves on the deployed cost. The working table is left as the backward pass left it.
+  auto WorkingCopyLineSearch(IterationReport& report) noexcept -> Result<PolicyRolloutCosts<Scalar>> {
+    auto step = Scalar{1};
+    for (std::size_t halving = 0; halving <= options_.max_step_halvings; ++halving, step *= Scalar{0.5}) {
+      for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
+        const ParameterVector& deployed = deployed_[stage].Parameters();
+        RESULT_RETURN_IF_ERROR(
+            trial_[stage].SetParameters(deployed + (step * (table_[stage].Parameters() - deployed))));
+      }
+      ++report.candidates_tried;
+      const PolicyRolloutCosts<Scalar> costs = Evaluate(trial_);
+      if (costs.total < current_costs_.total) {
+        for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
+          RESULT_RETURN_IF_ERROR(deployed_[stage].SetParameters(trial_[stage].Parameters()));
+        }
+        current_costs_ = costs;
+        report.accepted_step = step;
+        return SuccessResult(costs);
+      }
+    }
+    report.accepted_step = Scalar{0};
+    return SuccessResult(current_costs_);
+  }
 
   // Copies every stage's parameters but the terminal one's, which never changes.
   auto SaveParameters(std::vector<ParameterVector>& parameters_out) const noexcept -> void {
@@ -449,6 +504,11 @@ class FbrrtSolver {
   // The line search's state: the cost of the current policy, and the parameters the backward pass
   // started from.
   PolicyRolloutCosts<Scalar> current_costs_{.total = std::numeric_limits<Scalar>::infinity()};
+
+  // With a working copy: the deployed table, and the candidate the line search is scoring. Never
+  // resized, like `table_`.
+  std::vector<ValueFunctionT> deployed_;
+  std::vector<ValueFunctionT> trial_;
   std::vector<ParameterVector> previous_parameters_;
 };
 

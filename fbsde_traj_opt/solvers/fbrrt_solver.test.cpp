@@ -152,6 +152,39 @@ TEST(FbrrtSolverTest, WithTheLineSearchTheCostNeverIncreases) {
   }
 }
 
+TEST(FbrrtSolverTest, WithAWorkingCopyTheCostNeverIncreasesAndLearningNeverStops) {
+  const Fixture fixture = MakeFixture();
+  FbrrtOptions<double> options;
+  options.line_search = true;
+  options.keep_working_copy = true;
+  Result<Solver> solver = MakeSolver(fixture, options, kCapacity / 2);
+  ASSERT_TRUE(solver.has_value()) << solver.error();
+
+  double previous = solver->Evaluate().total;
+  bool diverged = false;
+  for (std::size_t iteration = 0; iteration < 10; ++iteration) {
+    const Result<FbrrtIterationReport<double>> report = solver->Iterate();
+    ASSERT_TRUE(report.has_value()) << report.error();
+    EXPECT_LE(report->mean_cost, previous);
+    EXPECT_DOUBLE_EQ(report->mean_cost, solver->Evaluate().total);
+    previous = report->mean_cost;
+    // The working table keeps its own update whether or not the deployed one took it.
+    for (std::size_t stage = 0; stage + 1 < kStages; ++stage) {
+      diverged = diverged ||
+                 solver->working_value_functions()[stage].Parameters() != solver->value_functions()[stage].Parameters();
+    }
+  }
+  EXPECT_TRUE(diverged);
+  EXPECT_EQ(solver->working_value_functions().back().Parameters(), solver->value_functions().back().Parameters());
+}
+
+TEST(FbrrtSolverTest, MakeRejectsAWorkingCopyWithoutTheLineSearch) {
+  const Fixture fixture = MakeFixture();
+  FbrrtOptions<double> options;
+  options.keep_working_copy = true;
+  EXPECT_FALSE(MakeSolver(fixture, options, kCapacity / 2).has_value());
+}
+
 TEST(FbrrtSolverTest, ErodesToTheKeepCountAndRefillsToCapacity) {
   const Fixture fixture = MakeFixture();
   FbrrtOptions<double> options;
