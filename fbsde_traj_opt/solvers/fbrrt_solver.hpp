@@ -66,6 +66,18 @@ struct FbrrtOptions {
 
   // Whether to copy the particle set just before erosion, for plotting what the heuristic saw.
   bool keep_pre_erosion_snapshot = false;
+
+  // Whether the backward pass's update must pay for itself. With the line search on, the update
+  // the SGD steps proposed is scored by rolling out its policy, and adopted only if that costs less
+  // than the current policy; otherwise it is shortened -- the parameters blended as
+  // `theta_old + step (theta_new - theta_old)` -- halving `step` from one up to
+  // `max_step_halvings` times, and if no step improves, the value functions are left as they were.
+  // This is DtFbsdeIterativeSolver's safeguard against a jump that carries the policy into states
+  // the value functions were never fitted in. The rollouts reuse the evaluation's fixed noise, so
+  // a difference in cost is a difference between policies and not between noise draws -- and so,
+  // equally, the accepted costs are optimistic about that one noise draw.
+  bool line_search = false;
+  std::size_t max_step_halvings = 7;
 };
 
 // What one iteration did.
@@ -79,6 +91,11 @@ struct FbrrtIterationReport {
   Scalar mean_running_cost = Scalar{0};
   Scalar mean_terminal_cost = Scalar{0};
 
+  // The step of the backward pass's update that was adopted: one without the line search, and with
+  // it the accepted fraction, or zero if no candidate improved. And how many candidates were scored.
+  Scalar accepted_step = Scalar{1};
+  std::size_t candidates_tried = 0;
+
   // The value function's own estimate of that cost, V~_0 at the initial mean.
   Scalar predicted_cost = Scalar{0};
 
@@ -89,7 +106,8 @@ struct FbrrtIterationReport {
   Scalar rrt_probability = Scalar{0};
   Scalar exploit_probability = Scalar{0};
 
-  // Wall-clock time spent in each phase, in seconds.
+  // Wall-clock time spent in each phase, in seconds. With the line search on, the evaluation is part
+  // of the algorithm and includes every candidate scored.
   double expand_seconds = 0.0;
   double backward_seconds = 0.0;
   double evaluate_seconds = 0.0;
@@ -231,6 +249,9 @@ class FbrrtSolver {
                        options,
                        seed);
     solver.SampleInitialParticles();
+    if (options.line_search) {
+      solver.current_costs_ = solver.Evaluate();
+    }
     return SuccessResult(std::move(solver));
   }
 
@@ -266,11 +287,20 @@ class FbrrtSolver {
                                              iteration_seed));
     report.expand_seconds = lap();
 
+    if (options_.line_search) {
+      SaveParameters(previous_parameters_);
+    }
     RESULT_ASSIGN_OR_RETURN(const auto backward, components_.backward_pass(table_, particles_, policy, iteration_seed));
     report.rms_residual = backward.rms_residual;
     report.backward_seconds = lap();
 
-    const PolicyRolloutCosts<Scalar> costs = Evaluate();
+    PolicyRolloutCosts<Scalar> costs;
+    if (options_.line_search) {
+      RESULT_ASSIGN_OR_RETURN(costs, LineSearch(report));
+    } else {
+      costs = Evaluate();
+      report.candidates_tried = 1;
+    }
     report.mean_cost = costs.total;
     report.mean_running_cost = costs.running;
     report.mean_terminal_cost = costs.terminal;
@@ -346,6 +376,48 @@ class FbrrtSolver {
         options_(options),
         seed_(seed) {}
 
+  using ParameterVector = typename ValueFunctionT::ParameterVector;
+
+  // Copies every stage's parameters but the terminal one's, which never changes.
+  auto SaveParameters(std::vector<ParameterVector>& parameters_out) const noexcept -> void {
+    parameters_out.resize(kNumControlStages);
+    for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
+      parameters_out[stage] = table_[stage].Parameters();
+    }
+  }
+
+  // Sets every non-terminal stage to `previous + step (proposed - previous)`, in place, so that a
+  // policy's span over the table stays valid.
+  auto Blend(const std::vector<ParameterVector>& proposed, Scalar step) noexcept -> Result<> {
+    for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
+      const ParameterVector blended =
+          previous_parameters_[stage] + (step * (proposed[stage] - previous_parameters_[stage]));
+      RESULT_RETURN_IF_ERROR(table_[stage].SetParameters(blended));
+    }
+    return SuccessResult();
+  }
+
+  // Scores the backward pass's update, shortening it until it improves on the current cost or the
+  // halvings run out, and returns the costs of the policy the table is left with.
+  auto LineSearch(IterationReport& report) noexcept -> Result<PolicyRolloutCosts<Scalar>> {
+    std::vector<ParameterVector> proposed;
+    SaveParameters(proposed);
+    auto step = Scalar{1};
+    for (std::size_t halving = 0; halving <= options_.max_step_halvings; ++halving, step *= Scalar{0.5}) {
+      RESULT_RETURN_IF_ERROR(Blend(proposed, step));
+      ++report.candidates_tried;
+      const PolicyRolloutCosts<Scalar> costs = Evaluate();
+      if (costs.total < current_costs_.total) {
+        current_costs_ = costs;
+        report.accepted_step = step;
+        return SuccessResult(costs);
+      }
+    }
+    report.accepted_step = Scalar{0};
+    RESULT_RETURN_IF_ERROR(Blend(proposed, Scalar{0}));
+    return SuccessResult(current_costs_);
+  }
+
   auto SampleInitialParticles() noexcept -> void {
     const CounterBasedNormalSampler sampler(seed_ ^ kInitialParticleStream);
     typename Particles::StateBlock states;
@@ -373,6 +445,11 @@ class FbrrtSolver {
   Particles particles_;
   Particles pre_erosion_particles_;
   std::size_t iteration_ = 0;
+
+  // The line search's state: the cost of the current policy, and the parameters the backward pass
+  // started from.
+  PolicyRolloutCosts<Scalar> current_costs_{.total = std::numeric_limits<Scalar>::infinity()};
+  std::vector<ParameterVector> previous_parameters_;
 };
 
 }  // namespace fbsde_traj_opt

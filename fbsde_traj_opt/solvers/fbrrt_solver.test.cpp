@@ -126,6 +126,32 @@ TEST(FbrrtSolverTest, EndsFarBelowDoingNothingAndReportsEveryPhase) {
   EXPECT_EQ(solver->iteration_count(), 15U);
 }
 
+TEST(FbrrtSolverTest, WithTheLineSearchTheCostNeverIncreases) {
+  const Fixture fixture = MakeFixture();
+  FbrrtOptions<double> options;
+  options.line_search = true;
+  Result<Solver> solver = MakeSolver(fixture, options, kCapacity / 2);
+  ASSERT_TRUE(solver.has_value()) << solver.error();
+
+  double previous = solver->Evaluate().total;
+  for (std::size_t iteration = 0; iteration < 10; ++iteration) {
+    const Result<FbrrtIterationReport<double>> report = solver->Iterate();
+    ASSERT_TRUE(report.has_value()) << report.error();
+    EXPECT_LE(report->mean_cost, previous);
+    EXPECT_GE(report->candidates_tried, 1U);
+    EXPECT_GE(report->accepted_step, 0.0);
+    EXPECT_LE(report->accepted_step, 1.0);
+    // An accepted step strictly improved; a rejected one left the policy exactly as it was.
+    if (report->accepted_step > 0.0) {
+      EXPECT_LT(report->mean_cost, previous);
+    } else {
+      EXPECT_EQ(report->mean_cost, previous);
+    }
+    EXPECT_DOUBLE_EQ(report->mean_cost, solver->Evaluate().total);
+    previous = report->mean_cost;
+  }
+}
+
 TEST(FbrrtSolverTest, ErodesToTheKeepCountAndRefillsToCapacity) {
   const Fixture fixture = MakeFixture();
   FbrrtOptions<double> options;
