@@ -116,8 +116,8 @@ cc_test(
 )
 
 cc_library(
-    name = "noiseless_forward_expansion",
-    hdrs = ["noiseless_forward_expansion.hpp"],
+    name = "forward_expansion",
+    hdrs = ["forward_expansion.hpp"],
     copts = FBSDE_COPTS,
     deps = [
         "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
@@ -128,14 +128,14 @@ cc_library(
 )
 
 cc_test(
-    name = "noiseless_forward_expansion_test",
+    name = "forward_expansion_test",
     size = "small",
-    srcs = ["noiseless_forward_expansion.test.cpp"],
+    srcs = ["forward_expansion.test.cpp"],
     copts = FBSDE_TEST_COPTS,
     deps = [
         ":epsilon_greedy_l1_control_sampler",
         ":fbrrt_particle_set",
-        ":noiseless_forward_expansion",
+        ":forward_expansion",
         ":rrt_expansion_selector",
         "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
         "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",

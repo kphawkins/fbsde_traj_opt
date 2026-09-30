@@ -1,7 +1,7 @@
 // Copyright 2026 Kelsey P. Hawkins.
 // SPDX-License-Identifier: MIT
 
-#include "fbsde_traj_opt/fbrrt/noiseless_forward_expansion.hpp"
+#include "fbsde_traj_opt/fbrrt/forward_expansion.hpp"
 
 #include <cmath>
 #include <cstddef>
@@ -78,18 +78,18 @@ auto MakeSeededSet() -> Set {
 }
 
 auto Expand(const Fixture& fixture, Set& set, std::uint64_t seed) -> Result<> {
-  return ExpandNoiselessly(set,
-                           fixture.model,
-                           fixture.running_cost,
-                           fixture.selector,
-                           fixture.control_sampler,
-                           ZeroPolicy{},
-                           0.5,
-                           0.0,
-                           seed);
+  return ExpandParticles(set,
+                         fixture.model,
+                         fixture.running_cost,
+                         fixture.selector,
+                         fixture.control_sampler,
+                         ZeroPolicy{},
+                         0.5,
+                         0.0,
+                         seed);
 }
 
-TEST(ExpandNoiselesslyTest, FillsEveryStageWithNoiselessEdges) {
+TEST(ExpandParticlesTest, FillsEveryStageWithNoiselessEdges) {
   const Fixture fixture = MakeFixture();
   Set set = MakeSeededSet();
   ASSERT_TRUE(Expand(fixture, set, 1).has_value());
@@ -119,7 +119,34 @@ TEST(ExpandNoiselesslyTest, FillsEveryStageWithNoiselessEdges) {
   }
 }
 
-TEST(ExpandNoiselesslyTest, IsDeterministicInTheSeedAndVariesWithIt) {
+TEST(ExpandParticlesTest, WithNoiseTheChildrenScatterAroundTheDriftButTheEdgesAreUnchanged) {
+  const Fixture fixture = MakeFixture();
+  Set noiseless = MakeSeededSet();
+  Set noisy = noiseless;
+  ASSERT_TRUE(Expand(fixture, noiseless, 1).has_value());
+  ASSERT_TRUE(ExpandParticles(noisy,
+                              fixture.model,
+                              fixture.running_cost,
+                              fixture.selector,
+                              fixture.control_sampler,
+                              ZeroPolicy{},
+                              0.5,
+                              0.0,
+                              1,
+                              true)
+                  .has_value());
+
+  // The first transition draws the same parents and controls either way; only where the child
+  // lands differs, by Sigma w with Sigma = diag(0.5, 0.5).
+  EXPECT_EQ(noisy.source_states(1), noiseless.source_states(1));
+  EXPECT_EQ(noisy.drifts(1), noiseless.drifts(1));
+  const Set::StateBlock offsets = noisy.states(1) - (noisy.source_states(1) + noisy.drifts(1));
+  const double variance = offsets.squaredNorm() / static_cast<double>(2 * kCapacity);
+  EXPECT_GT(variance, 0.25 * 0.5);
+  EXPECT_LT(variance, 0.25 * 1.5);
+}
+
+TEST(ExpandParticlesTest, IsDeterministicInTheSeedAndVariesWithIt) {
   const Fixture fixture = MakeFixture();
   Set first = MakeSeededSet();
   Set second = first;
@@ -131,7 +158,7 @@ TEST(ExpandNoiselesslyTest, IsDeterministicInTheSeedAndVariesWithIt) {
   EXPECT_NE(first.states(kStages - 1), other.states(kStages - 1));
 }
 
-TEST(ExpandNoiselesslyTest, RefillsOnlyTheSlotsErosionFreed) {
+TEST(ExpandParticlesTest, RefillsOnlyTheSlotsErosionFreed) {
   const Fixture fixture = MakeFixture();
   Set set = MakeSeededSet();
   ASSERT_TRUE(Expand(fixture, set, 2).has_value());
@@ -145,7 +172,7 @@ TEST(ExpandNoiselesslyTest, RefillsOnlyTheSlotsErosionFreed) {
   EXPECT_EQ(set.states(3).leftCols<kCapacity / 2>(), survivors.leftCols<kCapacity / 2>());
 }
 
-TEST(ExpandNoiselesslyTest, FailsWithoutInitialParticles) {
+TEST(ExpandParticlesTest, FailsWithoutInitialParticles) {
   const Fixture fixture = MakeFixture();
   Set set;
   EXPECT_FALSE(Expand(fixture, set, 1).has_value());

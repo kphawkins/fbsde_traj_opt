@@ -19,7 +19,7 @@
 #include "fbsde_traj_opt/costs/l1_control_sde_running_cost_term.hpp"
 #include "fbsde_traj_opt/fbrrt/epsilon_greedy_l1_control_sampler.hpp"
 #include "fbsde_traj_opt/fbrrt/fbrrt_particle_set.hpp"
-#include "fbsde_traj_opt/fbrrt/noiseless_forward_expansion.hpp"
+#include "fbsde_traj_opt/fbrrt/forward_expansion.hpp"
 #include "fbsde_traj_opt/fbrrt/path_integral_erode.hpp"
 #include "fbsde_traj_opt/fbrrt/rrt_expansion_selector.hpp"
 #include "fbsde_traj_opt/fbrrt/sgd_taylor_backward_pass.hpp"
@@ -36,7 +36,7 @@ namespace fbsde_traj_opt {
 //
 //  1. Expand. Refill every stage of the particle set to `Capacity` with new edges: parents chosen
 //     by Voronoi-biased RRT draws, controls by the policy or at random, and every child placed at
-//     `x + K` with no noise (ExpandNoiselessly).
+//     `x + K` with no noise (ExpandParticles).
 //  2. Backward. Move each stage's value function a few SGD steps toward its Taylor noiseless
 //     targets over the edges into the next stage (SgdTaylorBackwardPass) -- no LSMC solve.
 //  3. Evaluate. Score the policy, the Taylor Q-function minimizer over the value functions, by
@@ -89,6 +89,10 @@ struct FbrrtOptions {
   // one -- `deployed + step (working - deployed)`, `step` halving from one -- only when that rolls
   // out cheaper. Learning never stalls, and the reported policy changes only when it improves.
   bool keep_working_copy = false;
+
+  // Whether the forward expansion adds the SDE's noise to every new particle, as the thesis did,
+  // rather than placing it at `x + K`; see ExpandParticles.
+  bool sample_forward_noise = false;
 };
 
 // What one iteration did.
@@ -289,15 +293,16 @@ class FbrrtSolver {
       return seconds;
     };
 
-    RESULT_RETURN_IF_ERROR(ExpandNoiselessly(particles_,
-                                             forward_model_,
-                                             running_cost_,
-                                             components_.selector,
-                                             components_.control_sampler,
-                                             policy,
-                                             report.rrt_probability,
-                                             report.exploit_probability,
-                                             iteration_seed));
+    RESULT_RETURN_IF_ERROR(ExpandParticles(particles_,
+                                           forward_model_,
+                                           running_cost_,
+                                           components_.selector,
+                                           components_.control_sampler,
+                                           policy,
+                                           report.rrt_probability,
+                                           report.exploit_probability,
+                                           iteration_seed,
+                                           options_.sample_forward_noise));
     report.expand_seconds = lap();
 
     if (options_.line_search && !options_.keep_working_copy) {

@@ -162,7 +162,7 @@ cc_library(
         "//fbsde_traj_opt/fbrrt:brute_force_nearest_neighbor",
         "//fbsde_traj_opt/fbrrt:epsilon_greedy_l1_control_sampler",
         "//fbsde_traj_opt/fbrrt:fbrrt_particle_set",
-        "//fbsde_traj_opt/fbrrt:noiseless_forward_expansion",
+        "//fbsde_traj_opt/fbrrt:forward_expansion",
         "//fbsde_traj_opt/fbrrt:path_integral_erode",
         "//fbsde_traj_opt/fbrrt:rrt_expansion_selector",
         "//fbsde_traj_opt/fbrrt:sgd_taylor_backward_pass",
