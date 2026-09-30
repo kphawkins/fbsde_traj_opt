@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 #include <Eigen/Core>
@@ -179,6 +180,34 @@ TEST(SgdTaylorBackwardPassTest, TheTargetFloorLiftsEveryTargetBelowIt) {
   }
 }
 
+TEST(SgdTaylorBackwardPassTest, TheEntropyWeightingConcentratesTheFitAndReportsHowMuch) {
+  const ForwardModel forward_model = MakeForwardModel();
+  const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(forward_model, MakeCostModel());
+  ASSERT_TRUE(solution.has_value());
+  const Set edges = MakeEdges();
+
+  const auto run = [&](double temperature) {
+    SgdTaylorBackwardPassOptions<double> options;
+    options.entropy_temperature = temperature;
+    std::vector<ValueFunction> table = MakeTable(kTerminalCost);
+    Result<BackwardPass> pass = BackwardPass::Make(forward_model, MakeRunningCost(), options, table);
+    EXPECT_TRUE(pass.has_value());
+    const Result<SgdTaylorBackwardPassReport<double>> report = (*pass)(table, edges, solution->policy, 0);
+    EXPECT_TRUE(report.has_value());
+    return std::make_pair(*report, table);
+  };
+  const auto [unweighted, unweighted_table] = run(0.0);
+  const auto [weighted, weighted_table] = run(0.5);
+  const auto [sharper, sharper_table] = run(0.1);
+
+  EXPECT_DOUBLE_EQ(unweighted.effective_sample_fraction, 1.0);
+  EXPECT_GT(weighted.effective_sample_fraction, 0.0);
+  EXPECT_LT(weighted.effective_sample_fraction, 1.0);
+  // A lower temperature concentrates the weights further.
+  EXPECT_LT(sharper.effective_sample_fraction, weighted.effective_sample_fraction);
+  EXPECT_NE(weighted_table[0].Parameters(), unweighted_table[0].Parameters());
+}
+
 TEST(SgdTaylorBackwardPassTest, RejectsAStageThatIsNotFull) {
   const ForwardModel forward_model = MakeForwardModel();
   const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(forward_model, MakeCostModel());
@@ -198,6 +227,9 @@ TEST(SgdTaylorBackwardPassTest, MakeRejectsZeroEpochsAndABadFitter) {
   EXPECT_FALSE(BackwardPass::Make(MakeForwardModel(), MakeRunningCost(), options, table).has_value());
   options.epochs_per_stage = 1;
   options.sgd.learning_rate = -1.0;
+  EXPECT_FALSE(BackwardPass::Make(MakeForwardModel(), MakeRunningCost(), options, table).has_value());
+  options.sgd.learning_rate = 0.01;
+  options.entropy_temperature = -1.0;
   EXPECT_FALSE(BackwardPass::Make(MakeForwardModel(), MakeRunningCost(), options, table).has_value());
 }
 

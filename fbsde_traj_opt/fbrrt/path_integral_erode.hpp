@@ -23,7 +23,7 @@ concept FbrrtEroder = requires(const T& eroder, ParticleSetT& particles, const s
 // The erosion step of Hawkins (2021), Algorithm 4.4, without the tree constraint.
 //
 // Every particle at every stage past the first is scored by the optimal trajectory distribution
-// heuristic of Section 4.3.2,
+// heuristic of the thesis's Chapter 4,
 //
 //   rho_i = L_{0:i-1} + V~_i(x_i),
 //

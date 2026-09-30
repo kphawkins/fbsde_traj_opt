@@ -37,6 +37,19 @@ struct SgdTaylorBackwardPassOptions {
   // the policy from steering into it. Negative infinity disables the floor.
   Scalar target_floor = -std::numeric_limits<Scalar>::infinity();
 
+  // `lambda` of the optimal trajectory distribution weighting, in units of the heuristic's spread over
+  // the batch; zero -- the default -- fits every edge equally, leaving the heuristic to erosion. With
+  // a positive value each edge into stage `i + 1` is weighted by `exp(-rho / lambda)` on
+  //
+  //   rho = L_{0:i} + V~_{i+1}(x_{i+1}),
+  //
+  // the optimal trajectory distribution heuristic of Hawkins (2021), Chapter 4 -- the running cost the edge's path
+  // accrued plus the estimated cost from where it landed -- as Algorithm 4.3 weights its regression. The heuristic is
+  // shifted by its minimum and divided by its standard deviation over the batch, so `lambda`
+  // transfers between problems, and the weights are then scaled to average one, so that weighting
+  // changes which edges the fit attends to without also shrinking its effective learning rate.
+  Scalar entropy_temperature = Scalar{0};
+
   // Whether each stage's Adam moments are forgotten at the start of every backward pass. The
   // targets change between passes -- they are computed from a next-stage function that has itself
   // moved -- so moments carried across describe a problem that no longer exists; keeping them is
@@ -53,6 +66,11 @@ struct SgdTaylorBackwardPassReport {
 
   // The root mean square of the above over the stages.
   Scalar rms_residual = Scalar{0};
+
+  // With the entropy weighting, the effective sample fraction `(sum w)^2 / (N sum w^2)` of the
+  // weights, averaged over the stages: one when every edge counts equally, and near `1 / N` when
+  // one edge dominates. One without the weighting.
+  Scalar effective_sample_fraction = Scalar{1};
 };
 
 // The backward pass of the FBRRT method, with the least-squares Monte Carlo regression of Hawkins
@@ -67,8 +85,8 @@ struct SgdTaylorBackwardPassReport {
 // (TaylorNoiselessBackwardStepEstimator, which explains the terms) for the target policy `mu`.
 // The stage's value function is then moved *toward* those targets by `epochs_per_stage` passes of
 // damped minibatch Adam (ValueFunctionSgdFitter), starting from where the previous iteration left
-// it. The regression is unweighted: the path-integral heuristic acts on which particles survive
-// erosion, not on how much each one counts here.
+// it. By default the regression is unweighted: the path-integral heuristic acts on which particles
+// survive erosion, not on how much each one counts here. `entropy_temperature` weights it as well.
 //
 // Why not solve the regression outright, as LSMC does. An exact fit makes each value function the
 // best answer to the *current* targets, which are computed from a next-stage function and a policy
@@ -112,6 +130,8 @@ class SgdTaylorBackwardPass {
                    const std::vector<ValueFunctionT>& initial_table) noexcept -> Result<SgdTaylorBackwardPass> {
     RESULT_ASSERT(initial_table.size() >= 2, "SgdTaylorBackwardPass::Make: the table needs at least two stages.");
     RESULT_ASSERT(options.epochs_per_stage >= 1, "SgdTaylorBackwardPass::Make: a pass needs at least one epoch.");
+    RESULT_ASSERT(std::isfinite(options.entropy_temperature) && options.entropy_temperature >= Scalar{0},
+                  "SgdTaylorBackwardPass::Make: the entropy temperature must be finite and non-negative.");
     std::vector<Fitter> fitters;
     fitters.reserve(initial_table.size() - 1);
     for (std::size_t stage = 0; stage + 1 < initial_table.size(); ++stage) {
@@ -147,13 +167,16 @@ class SgdTaylorBackwardPass {
     Report report;
     report.stage_rms_residuals.assign(fitters_.size(), Scalar{0});
     std::vector<typename Fitter::StepReport> history;
+    auto fraction_sum = Scalar{0};
     for (std::size_t stage = fitters_.size(); stage-- > 0;) {
       RESULT_ASSERT(particles.count(stage + 1) == static_cast<std::size_t>(Capacity),
                     "SgdTaylorBackwardPass: every stage past the first must be full; expand before the backward pass.");
       const ValueFunctionStateBatch<State, Capacity>& states = particles.source_states(stage + 1);
       const ValueFunctionStateBatch<State, Capacity>& drifts = particles.drifts(stage + 1);
 
+      const bool weighted = options_.entropy_temperature > Scalar{0};
       ValueFunctionValueBatch<State, Capacity> targets;
+      ValueFunctionValueBatch<State, Capacity> heuristics;
       ParallelFor(kTargetBlocks, [&](std::size_t block) noexcept {
         const auto first = static_cast<Eigen::Index>(block * static_cast<std::size_t>(TargetBatchSize));
         ValueFunctionValueBatch<State, TargetBatchSize> block_targets;
@@ -163,7 +186,24 @@ class SgdTaylorBackwardPass {
                                                             table[stage + 1],
                                                             block_targets);
         targets.template middleCols<TargetBatchSize>(first) = block_targets.cwiseMax(options_.target_floor);
+        if (weighted) {
+          ValueFunctionValueBatch<State, TargetBatchSize> landing_values;
+          table[stage + 1].template Values<TargetBatchSize>(
+              particles.states(stage + 1).template middleCols<TargetBatchSize>(first), landing_values);
+          heuristics.template middleCols<TargetBatchSize>(first) =
+              particles.accrued_costs(stage + 1).template middleCols<TargetBatchSize>(first) + landing_values;
+        }
       });
+
+      ValueFunctionValueBatch<State, Capacity> weights = ValueFunctionValueBatch<State, Capacity>::Ones();
+      if (weighted) {
+        const Scalar mean = heuristics.mean();
+        const Scalar spread =
+            std::sqrt((heuristics.array() - mean).square().mean()) + std::numeric_limits<Scalar>::epsilon();
+        weights = (-(heuristics.array() - heuristics.minCoeff()) / (spread * options_.entropy_temperature)).exp();
+        weights /= weights.mean();
+        fraction_sum += (weights.sum() * weights.sum()) / (static_cast<Scalar>(Capacity) * weights.squaredNorm());
+      }
 
       Fitter& fitter = fitters_[stage];
       RESULT_RETURN_IF_ERROR(fitter.SetAnchor(table[stage].Parameters()));
@@ -171,8 +211,13 @@ class SgdTaylorBackwardPass {
         fitter.ResetOptimizer();
       }
       history.clear();
-      RESULT_RETURN_IF_ERROR(fitter.template FitEpochs<Capacity>(
-          table[stage], states, targets, options_.epochs_per_stage, seed + (0x9E3779B97F4A7C15ULL * stage), history));
+      RESULT_RETURN_IF_ERROR(fitter.template FitEpochs<Capacity>(table[stage],
+                                                                 states,
+                                                                 targets,
+                                                                 weights,
+                                                                 options_.epochs_per_stage,
+                                                                 seed + (0x9E3779B97F4A7C15ULL * stage),
+                                                                 history));
       if (options_.sgd.parameter_averaging_rate > Scalar{0}) {
         RESULT_RETURN_IF_ERROR(table[stage].SetParameters(fitter.AveragedParameters()));
       }
@@ -185,6 +230,9 @@ class SgdTaylorBackwardPass {
       report.stage_rms_residuals[stage] = std::sqrt(squared / static_cast<Scalar>(first_epoch_steps));
     }
 
+    if (options_.entropy_temperature > Scalar{0}) {
+      report.effective_sample_fraction = fraction_sum / static_cast<Scalar>(fitters_.size());
+    }
     auto total = Scalar{0};
     for (const Scalar residual : report.stage_rms_residuals) {
       total += residual * residual;
