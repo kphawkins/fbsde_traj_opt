@@ -19,7 +19,7 @@
 #include <Eigen/Core>
 
 #include "fbsde_traj_opt/costs/quadratic_regulator_sde_terminal_cost_term.hpp"
-#include "fbsde_traj_opt/fbrrt/sgd_taylor_backward_pass.hpp"
+#include "fbsde_traj_opt/fbrrt/taylor_backward_pass.hpp"
 #include "fbsde_traj_opt/solvers/dt_fbsde_iterative_solver.hpp"
 #include "fbsde_traj_opt/solvers/fbrrt_solver.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"

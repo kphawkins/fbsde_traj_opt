@@ -165,7 +165,7 @@ cc_library(
         "//fbsde_traj_opt/fbrrt:forward_expansion",
         "//fbsde_traj_opt/fbrrt:path_integral_erode",
         "//fbsde_traj_opt/fbrrt:rrt_expansion_selector",
-        "//fbsde_traj_opt/fbrrt:sgd_taylor_backward_pass",
+        "//fbsde_traj_opt/fbrrt:taylor_backward_pass",
         "//fbsde_traj_opt/policies:taylor_q_function_l1_policy",
         "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
         "//fbsde_traj_opt/sampling:normal_distribution_concepts",

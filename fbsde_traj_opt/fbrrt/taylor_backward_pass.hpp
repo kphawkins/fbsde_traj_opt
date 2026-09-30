@@ -1,8 +1,8 @@
 // Copyright 2026 Kelsey P. Hawkins.
 // SPDX-License-Identifier: MIT
 
-#ifndef FBSDE_TRAJ_OPT_FBRRT_SGD_TAYLOR_BACKWARD_PASS_HPP_
-#define FBSDE_TRAJ_OPT_FBRRT_SGD_TAYLOR_BACKWARD_PASS_HPP_
+#ifndef FBSDE_TRAJ_OPT_FBRRT_TAYLOR_BACKWARD_PASS_HPP_
+#define FBSDE_TRAJ_OPT_FBRRT_TAYLOR_BACKWARD_PASS_HPP_
 
 #include <algorithm>
 #include <cmath>
@@ -23,7 +23,7 @@ namespace fbsde_traj_opt {
 
 // The knobs of the SGD backward pass.
 template <typename Scalar = double>
-struct SgdTaylorBackwardPassOptions {
+struct TaylorBackwardPassOptions {
   // The fitter's options -- learning rate, trust region, and the rest; see ValueFunctionSgdFitter.
   ValueFunctionSgdOptions<Scalar> sgd{};
 
@@ -59,7 +59,7 @@ struct SgdTaylorBackwardPassOptions {
 
 // What one backward pass did.
 template <typename Scalar = double>
-struct SgdTaylorBackwardPassReport {
+struct TaylorBackwardPassReport {
   // Per stage 0..K-1, the root-mean-square estimator error at the start of that stage's fit -- the
   // residual `V~_i(x) - Y^_i` the pass then descends, over its first epoch.
   std::vector<Scalar> stage_rms_residuals{};
@@ -107,14 +107,14 @@ template <typename ValueFunctionT,
           int Capacity,
           int MinibatchSize = 64,
           int TargetBatchSize = 128>
-class SgdTaylorBackwardPass {
+class TaylorBackwardPass {
   static_assert(Capacity % TargetBatchSize == 0, "Targets are computed in whole blocks of TargetBatchSize.");
 
  public:
   using State = typename ValueFunctionT::State;
   using Scalar = typename State::Scalar;
-  using Options = SgdTaylorBackwardPassOptions<Scalar>;
-  using Report = SgdTaylorBackwardPassReport<Scalar>;
+  using Options = TaylorBackwardPassOptions<Scalar>;
+  using Report = TaylorBackwardPassReport<Scalar>;
   using Fitter = ValueFunctionSgdFitter<ValueFunctionT, MinibatchSize>;
 
   static constexpr int kStateDim = State::RowsAtCompileTime;
@@ -127,11 +127,11 @@ class SgdTaylorBackwardPass {
   static auto Make(ForwardModelT forward_model,
                    RunningCostT running_cost,
                    const Options& options,
-                   const std::vector<ValueFunctionT>& initial_table) noexcept -> Result<SgdTaylorBackwardPass> {
-    RESULT_ASSERT(initial_table.size() >= 2, "SgdTaylorBackwardPass::Make: the table needs at least two stages.");
-    RESULT_ASSERT(options.epochs_per_stage >= 1, "SgdTaylorBackwardPass::Make: a pass needs at least one epoch.");
+                   const std::vector<ValueFunctionT>& initial_table) noexcept -> Result<TaylorBackwardPass> {
+    RESULT_ASSERT(initial_table.size() >= 2, "TaylorBackwardPass::Make: the table needs at least two stages.");
+    RESULT_ASSERT(options.epochs_per_stage >= 1, "TaylorBackwardPass::Make: a pass needs at least one epoch.");
     RESULT_ASSERT(std::isfinite(options.entropy_temperature) && options.entropy_temperature >= Scalar{0},
-                  "SgdTaylorBackwardPass::Make: the entropy temperature must be finite and non-negative.");
+                  "TaylorBackwardPass::Make: the entropy temperature must be finite and non-negative.");
     std::vector<Fitter> fitters;
     fitters.reserve(initial_table.size() - 1);
     for (std::size_t stage = 0; stage + 1 < initial_table.size(); ++stage) {
@@ -139,7 +139,7 @@ class SgdTaylorBackwardPass {
       fitters.push_back(std::move(fitter));
     }
     return SuccessResult(
-        SgdTaylorBackwardPass(std::move(forward_model), std::move(running_cost), options, std::move(fitters)));
+        TaylorBackwardPass(std::move(forward_model), std::move(running_cost), options, std::move(fitters)));
   }
 
   // Runs one backward pass over `table`, whose policy is `policy`, from the edges of `particles`.
@@ -155,7 +155,7 @@ class SgdTaylorBackwardPass {
                   const PolicyT& policy,
                   std::uint64_t seed) noexcept -> Result<Report> {
     RESULT_ASSERT(table.size() == fitters_.size() + 1,
-                  "SgdTaylorBackwardPass: the table does not have the stage count the pass was built for.");
+                  "TaylorBackwardPass: the table does not have the stage count the pass was built for.");
     using Estimator = TaylorNoiselessBackwardStepEstimator<kStateDim,
                                                            ParticleSetT::Control::RowsAtCompileTime,
                                                            ForwardModelT,
@@ -170,7 +170,7 @@ class SgdTaylorBackwardPass {
     auto fraction_sum = Scalar{0};
     for (std::size_t stage = fitters_.size(); stage-- > 0;) {
       RESULT_ASSERT(particles.count(stage + 1) == static_cast<std::size_t>(Capacity),
-                    "SgdTaylorBackwardPass: every stage past the first must be full; expand before the backward pass.");
+                    "TaylorBackwardPass: every stage past the first must be full; expand before the backward pass.");
       const ValueFunctionStateBatch<State, Capacity>& states = particles.source_states(stage + 1);
       const ValueFunctionStateBatch<State, Capacity>& drifts = particles.drifts(stage + 1);
 
@@ -246,10 +246,10 @@ class SgdTaylorBackwardPass {
  private:
   static constexpr auto kTargetBlocks = static_cast<std::size_t>(Capacity / TargetBatchSize);
 
-  SgdTaylorBackwardPass(ForwardModelT forward_model,
-                        RunningCostT running_cost,
-                        const Options& options,
-                        std::vector<Fitter> fitters) noexcept
+  TaylorBackwardPass(ForwardModelT forward_model,
+                     RunningCostT running_cost,
+                     const Options& options,
+                     std::vector<Fitter> fitters) noexcept
       : forward_model_(std::move(forward_model)),
         running_cost_(std::move(running_cost)),
         options_(options),
@@ -263,4 +263,4 @@ class SgdTaylorBackwardPass {
 
 }  // namespace fbsde_traj_opt
 
-#endif  // FBSDE_TRAJ_OPT_FBRRT_SGD_TAYLOR_BACKWARD_PASS_HPP_
+#endif  // FBSDE_TRAJ_OPT_FBRRT_TAYLOR_BACKWARD_PASS_HPP_

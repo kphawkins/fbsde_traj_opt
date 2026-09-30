@@ -1,7 +1,7 @@
 // Copyright 2026 Kelsey P. Hawkins.
 // SPDX-License-Identifier: MIT
 
-#include "fbsde_traj_opt/fbrrt/sgd_taylor_backward_pass.hpp"
+#include "fbsde_traj_opt/fbrrt/taylor_backward_pass.hpp"
 
 #include <array>
 #include <cstddef>
@@ -41,8 +41,7 @@ using RunningCost = QuadraticRegulatorSdeRunningCostTerm<2, 1>;
 using CostModel = ComposedCostSdeModel<2, 1, RunningCost, QuadraticRegulatorSdeTerminalCostTerm<2>>;
 using ValueFunction = PolynomialValueFunctionApprox<2, 2>;
 using Set = FbrrtParticleSet<2, 1, kCapacity, kNumStages>;
-using BackwardPass =
-    SgdTaylorBackwardPass<ValueFunction, ForwardModel, RunningCost, static_cast<int>(kCapacity), 32, 64>;
+using BackwardPass = TaylorBackwardPass<ValueFunction, ForwardModel, RunningCost, static_cast<int>(kCapacity), 32, 64>;
 
 // An LQR problem, unstable in the first coordinate and actuated only through the second, whose
 // value function is exactly x' P_i x + s_i: something the backward pass can be held to.
@@ -97,7 +96,7 @@ auto MakeTable(const StateMat& terminal_metric) -> std::vector<ValueFunction> {
   return table;
 }
 
-TEST(SgdTaylorBackwardPassTest, RepeatedPassesConvergeToTheRiccatiValueFunction) {
+TEST(TaylorBackwardPassTest, RepeatedPassesConvergeToTheRiccatiValueFunction) {
   const ForwardModel forward_model = MakeForwardModel();
   const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(forward_model, MakeCostModel());
   ASSERT_TRUE(solution.has_value()) << solution.error();
@@ -110,7 +109,7 @@ TEST(SgdTaylorBackwardPassTest, RepeatedPassesConvergeToTheRiccatiValueFunction)
         offsets[stage + 1] + (diffusion.transpose() * solution->cost_to_go_hessians[stage + 1] * diffusion).trace();
   }
 
-  SgdTaylorBackwardPassOptions<double> options;
+  TaylorBackwardPassOptions<double> options;
   options.sgd.learning_rate = 0.05;
   options.epochs_per_stage = 4;
   std::vector<ValueFunction> table = MakeTable(kTerminalCost);
@@ -120,7 +119,7 @@ TEST(SgdTaylorBackwardPassTest, RepeatedPassesConvergeToTheRiccatiValueFunction)
   const Set edges = MakeEdges();
   std::vector<double> residuals;
   for (std::uint64_t iteration = 0; iteration < 60; ++iteration) {
-    const Result<SgdTaylorBackwardPassReport<double>> report = (*pass)(table, edges, solution->policy, iteration);
+    const Result<TaylorBackwardPassReport<double>> report = (*pass)(table, edges, solution->policy, iteration);
     ASSERT_TRUE(report.has_value()) << report.error();
     ASSERT_EQ(report->stage_rms_residuals.size(), kNumStages - 1);
     residuals.push_back(report->rms_residual);
@@ -136,14 +135,14 @@ TEST(SgdTaylorBackwardPassTest, RepeatedPassesConvergeToTheRiccatiValueFunction)
   }
 }
 
-TEST(SgdTaylorBackwardPassTest, EachPassMovesTheValueFunctionsOnlyPartWay) {
+TEST(TaylorBackwardPassTest, EachPassMovesTheValueFunctionsOnlyPartWay) {
   // One pass from a table that is badly wrong must leave it still visibly wrong: the pass is a
   // step, not a solve.
   const ForwardModel forward_model = MakeForwardModel();
   const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(forward_model, MakeCostModel());
   ASSERT_TRUE(solution.has_value());
 
-  SgdTaylorBackwardPassOptions<double> options;
+  TaylorBackwardPassOptions<double> options;
   options.sgd.learning_rate = 0.01;
   options.sgd.max_rms_value_change = 0.05;
   options.epochs_per_stage = 1;
@@ -162,12 +161,12 @@ TEST(SgdTaylorBackwardPassTest, EachPassMovesTheValueFunctionsOnlyPartWay) {
   EXPECT_EQ(table.back().Parameters(), before.back().Parameters());
 }
 
-TEST(SgdTaylorBackwardPassTest, TheTargetFloorLiftsEveryTargetBelowIt) {
+TEST(TaylorBackwardPassTest, TheTargetFloorLiftsEveryTargetBelowIt) {
   // Every exact target here is well under 1000; with the floor there, every stage is pulled up.
   const ForwardModel forward_model = MakeForwardModel();
   const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(forward_model, MakeCostModel());
   ASSERT_TRUE(solution.has_value());
-  SgdTaylorBackwardPassOptions<double> options;
+  TaylorBackwardPassOptions<double> options;
   options.sgd.learning_rate = 0.5;
   options.target_floor = 1000.0;
   std::vector<ValueFunction> table = MakeTable(kTerminalCost);
@@ -180,19 +179,19 @@ TEST(SgdTaylorBackwardPassTest, TheTargetFloorLiftsEveryTargetBelowIt) {
   }
 }
 
-TEST(SgdTaylorBackwardPassTest, TheEntropyWeightingConcentratesTheFitAndReportsHowMuch) {
+TEST(TaylorBackwardPassTest, TheEntropyWeightingConcentratesTheFitAndReportsHowMuch) {
   const ForwardModel forward_model = MakeForwardModel();
   const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(forward_model, MakeCostModel());
   ASSERT_TRUE(solution.has_value());
   const Set edges = MakeEdges();
 
   const auto run = [&](double temperature) {
-    SgdTaylorBackwardPassOptions<double> options;
+    TaylorBackwardPassOptions<double> options;
     options.entropy_temperature = temperature;
     std::vector<ValueFunction> table = MakeTable(kTerminalCost);
     Result<BackwardPass> pass = BackwardPass::Make(forward_model, MakeRunningCost(), options, table);
     EXPECT_TRUE(pass.has_value());
-    const Result<SgdTaylorBackwardPassReport<double>> report = (*pass)(table, edges, solution->policy, 0);
+    const Result<TaylorBackwardPassReport<double>> report = (*pass)(table, edges, solution->policy, 0);
     EXPECT_TRUE(report.has_value());
     return std::make_pair(*report, table);
   };
@@ -208,7 +207,7 @@ TEST(SgdTaylorBackwardPassTest, TheEntropyWeightingConcentratesTheFitAndReportsH
   EXPECT_NE(weighted_table[0].Parameters(), unweighted_table[0].Parameters());
 }
 
-TEST(SgdTaylorBackwardPassTest, RejectsAStageThatIsNotFull) {
+TEST(TaylorBackwardPassTest, RejectsAStageThatIsNotFull) {
   const ForwardModel forward_model = MakeForwardModel();
   const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(forward_model, MakeCostModel());
   ASSERT_TRUE(solution.has_value());
@@ -220,9 +219,9 @@ TEST(SgdTaylorBackwardPassTest, RejectsAStageThatIsNotFull) {
   EXPECT_FALSE((*pass)(table, edges, solution->policy, 0).has_value());
 }
 
-TEST(SgdTaylorBackwardPassTest, MakeRejectsZeroEpochsAndABadFitter) {
+TEST(TaylorBackwardPassTest, MakeRejectsZeroEpochsAndABadFitter) {
   const std::vector<ValueFunction> table = MakeTable(kTerminalCost);
-  SgdTaylorBackwardPassOptions<double> options;
+  TaylorBackwardPassOptions<double> options;
   options.epochs_per_stage = 0;
   EXPECT_FALSE(BackwardPass::Make(MakeForwardModel(), MakeRunningCost(), options, table).has_value());
   options.epochs_per_stage = 1;

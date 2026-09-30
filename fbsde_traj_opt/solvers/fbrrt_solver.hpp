@@ -22,7 +22,7 @@
 #include "fbsde_traj_opt/fbrrt/forward_expansion.hpp"
 #include "fbsde_traj_opt/fbrrt/path_integral_erode.hpp"
 #include "fbsde_traj_opt/fbrrt/rrt_expansion_selector.hpp"
-#include "fbsde_traj_opt/fbrrt/sgd_taylor_backward_pass.hpp"
+#include "fbsde_traj_opt/fbrrt/taylor_backward_pass.hpp"
 #include "fbsde_traj_opt/policies/taylor_q_function_l1_policy.hpp"
 #include "fbsde_traj_opt/sampling/counter_based_normal_sampler.hpp"
 #include "fbsde_traj_opt/sampling/normal_distribution_concepts.hpp"
@@ -38,7 +38,7 @@ namespace fbsde_traj_opt {
 //     by Voronoi-biased RRT draws, controls by the policy or at random, and every child placed at
 //     `x + K` with no noise (ExpandParticles).
 //  2. Backward. Move each stage's value function a few SGD steps toward its Taylor noiseless
-//     targets over the edges into the next stage (SgdTaylorBackwardPass) -- no LSMC solve.
+//     targets over the edges into the next stage (TaylorBackwardPass) -- no LSMC solve.
 //  3. Evaluate. Score the policy, the Taylor Q-function minimizer over the value functions, by
 //     rollouts on fixed noise (EvaluatePolicyByRollouts, with the same stream DtFbsdeIterative-
 //     Solver uses, so that the two methods are scored on identical noise).
@@ -136,10 +136,10 @@ template <int N, int M, std::size_t Capacity, typename ForwardModelT, typename V
 struct DefaultFbrrtComponents {
   using Selector = RrtExpansionSelector<N, BruteForceNearestNeighbor<N, Scalar>, Scalar>;
   using ControlSampler = EpsilonGreedyL1ControlSampler<N, M, Scalar>;
-  using BackwardPass = SgdTaylorBackwardPass<ValueFunctionT,
-                                             ForwardModelT,
-                                             L1ControlSdeRunningCostTerm<N, M, Scalar>,
-                                             static_cast<int>(Capacity)>;
+  using BackwardPass = TaylorBackwardPass<ValueFunctionT,
+                                          ForwardModelT,
+                                          L1ControlSdeRunningCostTerm<N, M, Scalar>,
+                                          static_cast<int>(Capacity)>;
   using Eroder = PathIntegralErode;
 
   Selector selector;
@@ -166,7 +166,7 @@ template <std::size_t Capacity,
                                               const Eigen::Matrix<Scalar, N, 1>& region_upper,
                                               const Eigen::Matrix<Scalar, M, 1>& lower_bounds,
                                               const Eigen::Matrix<Scalar, M, 1>& upper_bounds,
-                                              const SgdTaylorBackwardPassOptions<Scalar>& backward_options,
+                                              const TaylorBackwardPassOptions<Scalar>& backward_options,
                                               std::size_t erode_keep_count,
                                               const ValueFunctionT& initial_value_function) noexcept
     -> Result<DefaultFbrrtComponents<N, M, Capacity, ForwardModelT, ValueFunctionT, Scalar>> {

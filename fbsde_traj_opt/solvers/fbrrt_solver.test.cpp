@@ -76,7 +76,7 @@ auto MakeFixture() -> Fixture {
 }
 
 auto MakeSolver(const Fixture& fixture, const FbrrtOptions<double>& options, std::size_t keep_count) -> Result<Solver> {
-  SgdTaylorBackwardPassOptions<double> backward;
+  TaylorBackwardPassOptions<double> backward;
   backward.sgd.learning_rate = 0.05;
   backward.epochs_per_stage = 2;
   RESULT_ASSIGN_OR_RETURN(Components components,

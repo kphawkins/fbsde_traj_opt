@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include "fbsde_traj_opt/fbrrt/sgd_taylor_backward_pass.hpp"
+#include "fbsde_traj_opt/fbrrt/taylor_backward_pass.hpp"
 #include "fbsde_traj_opt/solvers/fbrrt_solver.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/value_function_sgd_fitter.hpp"
@@ -89,8 +89,8 @@ struct FbrrtComparisonOptions {
     defaults.line_search = true;
     return defaults;
   }();
-  SgdTaylorBackwardPassOptions<double> backward = [] {
-    SgdTaylorBackwardPassOptions<double> defaults;
+  TaylorBackwardPassOptions<double> backward = [] {
+    TaylorBackwardPassOptions<double> defaults;
     defaults.sgd.learning_rate = 0.2;
     defaults.epochs_per_stage = 8;
     defaults.target_floor = 0.0;
