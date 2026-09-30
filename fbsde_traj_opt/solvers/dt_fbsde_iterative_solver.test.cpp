@@ -139,8 +139,11 @@ TEST_P(DtFbsdeIterativeSolverTest, ControlsStayWithinTheirBoundsAndCoastSomewher
   EXPECT_GT(coasting, 0U);
 }
 
-TEST(DtFbsdeIterativeSolverSoftMinTest, FitsANonlinearRepresentationBySgd) {
-  // The soft-min quadratic model has no closed-form fit; the solver falls back to SGD.
+class DtFbsdeIterativeSolverSoftMinTest : public ::testing::TestWithParam<ValueFunctionFitMethod> {};
+
+TEST_P(DtFbsdeIterativeSolverSoftMinTest, FitsANonlinearRepresentation) {
+  // The soft-min quadratic model has no closed-form fit; the solver falls back to SGD or
+  // Gauss-Newton.
   using SoftMin = SoftMinQuadraticValueFunctionApprox<2, 3>;
   using SoftMinSolver = DtFbsdeIterativeSolver<2, 1, 256, kStages, 64, Model, TerminalCost, SoftMin>;
   constexpr double kSharpness = 1.0;
@@ -166,6 +169,7 @@ TEST(DtFbsdeIterativeSolverSoftMinTest, FitsANonlinearRepresentationBySgd) {
   options.exploration_decay = 0.5;
   options.sgd.learning_rate = 0.05;
   options.sgd_epochs = 20;
+  options.nonlinear_fit_method = GetParam();
   Result<SoftMinSolver> solver = SoftMinSolver::Make(fixture.model,
                                                      fixture.running_cost,
                                                      fixture.terminal_cost,
@@ -189,7 +193,11 @@ TEST(DtFbsdeIterativeSolverSoftMinTest, FitsANonlinearRepresentationBySgd) {
   EXPECT_LT(solver->CurrentCost(), 0.05 * coasting_cost);
 }
 
-TEST(DtFbsdeIterativeSolverSoftMinTest, MakeRejectsZeroSgdEpochs) {
+INSTANTIATE_TEST_SUITE_P(FitMethods,
+                         DtFbsdeIterativeSolverSoftMinTest,
+                         ::testing::Values(ValueFunctionFitMethod::kSgd, ValueFunctionFitMethod::kGaussNewton));
+
+TEST(DtFbsdeIterativeSolverOptionsSoftMinTest, MakeRejectsZeroSgdEpochs) {
   const Fixture fixture = MakeFixture();
   DtFbsdeIterativeOptions<double> options;
   options.sgd_epochs = 0;

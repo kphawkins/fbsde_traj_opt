@@ -124,6 +124,7 @@ cc_library(
         "//fbsde_traj_opt/utils:parallel_for",
         "//fbsde_traj_opt/utils:result",
         "//fbsde_traj_opt/value_function:value_function_approx_concepts",
+        "//fbsde_traj_opt/value_function:value_function_gauss_newton_fitter",
         "//fbsde_traj_opt/value_function:value_function_sgd_fitter",
         "@eigen",
     ],

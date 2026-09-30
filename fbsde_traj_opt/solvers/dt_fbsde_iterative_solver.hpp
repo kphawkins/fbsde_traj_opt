@@ -27,6 +27,7 @@
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/value_function_approx_concepts.hpp"
+#include "fbsde_traj_opt/value_function/value_function_gauss_newton_fitter.hpp"
 #include "fbsde_traj_opt/value_function/value_function_sgd_fitter.hpp"
 
 namespace fbsde_traj_opt {
@@ -124,10 +125,18 @@ struct DtFbsdeIterativeOptions {
   // The ridge weight of the closed-form least-squares fit; see PolynomialValueFunctionApprox.
   Scalar ridge = Scalar{1e-6};
 
-  // How a representation without a closed-form fit is fitted instead: `sgd_epochs` epochs of the
-  // fitter with these options, from the current value function, every iteration.
+  // How a representation without a closed-form fit is fitted instead, from the current value
+  // function, every iteration: by `sgd_epochs` epochs of ValueFunctionSgdFitter with `sgd`, or by
+  // ValueFunctionGaussNewtonFitter with `gauss_newton` -- whose default, no trust region and several
+  // steps, is a near-exact nonlinear least-squares solve, the closest stand-in for the closed form.
+  ValueFunctionFitMethod nonlinear_fit_method = ValueFunctionFitMethod::kSgd;
   ValueFunctionSgdOptions<Scalar> sgd{};
   std::size_t sgd_epochs = 50;
+  ValueFunctionGaussNewtonOptions<Scalar> gauss_newton = [] {
+    ValueFunctionGaussNewtonOptions<Scalar> defaults;
+    defaults.max_steps = 8;
+    return defaults;
+  }();
 
   // The fraction of the batch given over to one-step probes rather than full paths; see
   // SampleForwardPass() for what a probe is and why. In [0, 1).
@@ -336,7 +345,8 @@ class DtFbsdeIterativeSolver {
   static constexpr std::size_t kParentPickComponent = static_cast<std::size_t>(N) + 1;
   static constexpr std::size_t kControlPickComponent = static_cast<std::size_t>(N) + 2;
 
-  // The minibatch of an SGD fit, for a representation without a closed-form one.
+  // The minibatch of an SGD fit, and the accumulation block of a Gauss-Newton one, for a
+  // representation without a closed-form fit.
   static constexpr int kSgdMinibatch = 64;
 
   DtFbsdeIterativeSolver(ForwardModelT forward_model,
@@ -599,6 +609,11 @@ class DtFbsdeIterativeSolver {
                     value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, Scalar{});
                   }) {
       return value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, options_.ridge);
+    } else if (options_.nonlinear_fit_method == ValueFunctionFitMethod::kGaussNewton) {
+      using Fitter = ValueFunctionGaussNewtonFitter<ValueFunctionT, kSgdMinibatch>;
+      RESULT_ASSIGN_OR_RETURN(const Fitter fitter, Fitter::Make(options_.gauss_newton));
+      ValueFunctionGaussNewtonReport<Scalar> report;
+      return fitter.template Fit<Count>(value_function, states, targets, weights, report);
     } else {
       using Fitter = ValueFunctionSgdFitter<ValueFunctionT, kSgdMinibatch>;
       RESULT_ASSIGN_OR_RETURN(Fitter fitter, Fitter::Make(options_.sgd, value_function.Parameters()));
