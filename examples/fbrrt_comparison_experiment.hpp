@@ -14,6 +14,7 @@
 #include "fbsde_traj_opt/fbrrt/taylor_backward_pass.hpp"
 #include "fbsde_traj_opt/solvers/fbrrt_solver.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
+#include "fbsde_traj_opt/value_function/value_function_gauss_newton_fitter.hpp"
 #include "fbsde_traj_opt/value_function/value_function_sgd_fitter.hpp"
 #include "fbsde_traj_opt/viz/plotly_figure.hpp"
 
@@ -76,6 +77,7 @@ struct FbrrtComparisonOptions {
     return defaults;
   }();
   std::size_t dt_fbsde_sgd_epochs = 50;
+  ValueFunctionFitMethod dt_fbsde_fit_method = ValueFunctionFitMethod::kSgd;
 
   // The FBRRT defaults are the best of a small sweep on the two 2-D benchmarks with the polynomial
   // model (three seeds each); a learning rate of 0.05 was steadier on the soft-min pendulum but slower

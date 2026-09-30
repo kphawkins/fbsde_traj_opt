@@ -121,6 +121,7 @@ auto DtFbsdeOptions(const FbrrtComparisonOptions& comparison) noexcept -> DtFbsd
   DtFbsdeIterativeOptions<double> options;
   options.sgd = comparison.dt_fbsde_sgd;
   options.sgd_epochs = comparison.dt_fbsde_sgd_epochs;
+  options.nonlinear_fit_method = comparison.dt_fbsde_fit_method;
   options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
   options.exploration_probability = 0.03;
   options.initial_exploration_probability = 1.0;

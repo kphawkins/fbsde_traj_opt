@@ -39,6 +39,7 @@ auto PrintUsage() noexcept -> void {
       << "  --sharpness B                     the soft-min model's beta (default 1)\n"
       << "  --dt-learning-rate R              DT-FBSDE's SGD learning rate on the soft-min model (default 0.05)\n"
       << "  --dt-epochs N                     DT-FBSDE's SGD epochs per fit on the soft-min model (default 50)\n"
+      << "  --dt-fit M                        DT-FBSDE's fit of the soft-min model: sgd (default) or gauss-newton\n"
       << "FBRRT design knobs:\n"
       << "  --rrt P             probability a parent is drawn by RRT (default 0.2)\n"
       << "  --exploit P         probability a control is the policy's (default 0.7)\n"
@@ -47,6 +48,9 @@ auto PrintUsage() noexcept -> void {
       << "  --epochs N          SGD epochs per stage per iteration (default 8)\n"
       << "  --line-search S     on (default), off, or working-copy: FBRRT adopts an update only if it\n"
       << "                      lowers the cost; working-copy keeps training the rejected updates\n"
+      << "  --fit M             sgd (default) or gauss-newton: how FBRRT's backward pass fits\n"
+      << "  --gn-steps N        Gauss-Newton steps per stage per iteration (default 2)\n"
+      << "  --gn-max-change D   Gauss-Newton trust region on each step's RMS value change (default none)\n"
       << "  --entropy-temperature L  weight FBRRT's SGD fit by the trajectory heuristic (default 0: off)\n"
       << "  --forward-noise S   off (default) or on: add the SDE's noise to FBRRT's new particles\n"
       << "  --target-floor F    floor under the backward pass's targets (default 0)\n"
@@ -104,6 +108,15 @@ auto ParseOptions(int argc, char** argv, FbrrtComparisonOptions& options_out, bo
                     "--line-search is on, off, or working-copy.");
       options_out.fbrrt.line_search = value != "off";
       options_out.fbrrt.keep_working_copy = value == "working-copy";
+    } else if (argument == "--fit" || argument == "--dt-fit") {
+      RESULT_ASSERT(value == "sgd" || value == "gauss-newton", "--fit and --dt-fit are sgd or gauss-newton.");
+      const ValueFunctionFitMethod method =
+          value == "sgd" ? ValueFunctionFitMethod::kSgd : ValueFunctionFitMethod::kGaussNewton;
+      (argument == "--fit" ? options_out.backward.fit_method : options_out.dt_fbsde_fit_method) = method;
+    } else if (argument == "--gn-steps") {
+      options_out.backward.gauss_newton.max_steps = count;
+    } else if (argument == "--gn-max-change") {
+      options_out.backward.gauss_newton.max_rms_value_change = number;
     } else if (argument == "--entropy-temperature") {
       options_out.backward.entropy_temperature = number;
     } else if (argument == "--forward-noise") {
