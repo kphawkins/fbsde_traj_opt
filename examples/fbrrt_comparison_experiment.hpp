@@ -35,7 +35,8 @@ namespace fbsde_traj_opt::examples {
 //
 // The time charged to a method is the time its algorithm needs. For DT-FBSDE that is the whole of
 // Iterate(), whose line search is itself made of rollouts. For FBRRT it is expansion, the backward
-// pass and erosion, but not the evaluation, which it performs only to report.
+// pass and erosion, plus the evaluation when its line search is on (the default) -- without the
+// line search FBRRT evaluates only to report, and that time is not charged.
 
 // The value function representation both methods use.
 enum class ComparisonValueFunctionModel : std::uint8_t {
@@ -85,6 +86,7 @@ struct FbrrtComparisonOptions {
     FbrrtOptions<double> defaults;
     defaults.rrt_probability = 0.2;
     defaults.exploit_probability = 0.7;
+    defaults.line_search = true;
     return defaults;
   }();
   SgdTaylorBackwardPassOptions<double> backward = [] {

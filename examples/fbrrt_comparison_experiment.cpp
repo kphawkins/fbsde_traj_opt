@@ -173,7 +173,9 @@ auto RunFbrrt(const BenchmarkT& benchmark,
   for (std::size_t iteration = 0; iteration < iterations; ++iteration) {
     RESULT_ASSIGN_OR_RETURN(const FbrrtIterationReport<double> report, (*solver)->Iterate());
     run.costs.push_back(report.mean_cost);
-    run.seconds.push_back(run.seconds.back() + report.expand_seconds + report.backward_seconds + report.erode_seconds);
+    const double evaluation = options.fbrrt.line_search ? report.evaluate_seconds : 0.0;
+    run.seconds.push_back(run.seconds.back() + report.expand_seconds + report.backward_seconds + evaluation +
+                          report.erode_seconds);
   }
   return SuccessResult(std::move(run));
 }
