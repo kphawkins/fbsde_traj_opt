@@ -47,6 +47,7 @@ auto PrintUsage() noexcept -> void {
       << "  --epochs N          SGD epochs per stage per iteration (default 8)\n"
       << "  --line-search S     on (default), off, or working-copy: FBRRT adopts an update only if it\n"
       << "                      lowers the cost; working-copy keeps training the rejected updates\n"
+      << "  --forward-noise S   off (default) or on: add the SDE's noise to FBRRT's new particles\n"
       << "  --target-floor F    floor under the backward pass's targets (default 0)\n"
       << "  --max-value-change D  SGD trust region on the RMS value change per step (default off)\n";
 }
@@ -102,6 +103,9 @@ auto ParseOptions(int argc, char** argv, FbrrtComparisonOptions& options_out, bo
                     "--line-search is on, off, or working-copy.");
       options_out.fbrrt.line_search = value != "off";
       options_out.fbrrt.keep_working_copy = value == "working-copy";
+    } else if (argument == "--forward-noise") {
+      RESULT_ASSERT(value == "on" || value == "off", "--forward-noise is on or off.");
+      options_out.fbrrt.sample_forward_noise = value == "on";
     } else if (argument == "--target-floor") {
       options_out.backward.target_floor = number;
     } else if (argument == "--max-value-change") {
