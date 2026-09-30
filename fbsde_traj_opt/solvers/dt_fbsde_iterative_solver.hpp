@@ -27,6 +27,7 @@
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/value_function_approx_concepts.hpp"
+#include "fbsde_traj_opt/value_function/value_function_sgd_fitter.hpp"
 
 namespace fbsde_traj_opt {
 
@@ -76,9 +77,12 @@ namespace fbsde_traj_opt {
 //     comparison use the same noise for every candidate -- the evaluation seed is fixed -- so a
 //     difference in cost is a difference between policies and not between noise draws.
 //
-// The value function representation must be a linear-in-parameters model whose coefficient
-// vectors can be blended (PolynomialValueFunctionApprox with its fixed normalization is one) and
-// that can fit itself by weighted least squares.
+// The value function representation is fitted by its own closed-form weighted least squares when
+// it offers one (PolynomialValueFunctionApprox does), and otherwise -- for a model that is not
+// linear in its parameters, such as SoftMinQuadraticValueFunctionApprox -- by `sgd_epochs` epochs
+// of minibatch SGD warm-started from the current fit, which stands in for the same solve. Blending
+// is coefficient by coefficient either way; for a linear model that blends the functions exactly,
+// and for a nonlinear one it is a path in parameter space that the line search still checks.
 //
 // `N` and `M` are the state and control dimensions, `NumSamples` the width of the forward batch,
 // `NumStages` the number of stages including the terminal one, `NumEvaluationSamples` the
@@ -117,8 +121,13 @@ struct DtFbsdeIterativeOptions {
   // The per-iteration decay of the schedule, in [0, 1).
   Scalar exploration_decay = Scalar{0};
 
-  // The ridge weight of the least-squares fit; see PolynomialValueFunctionApprox.
+  // The ridge weight of the closed-form least-squares fit; see PolynomialValueFunctionApprox.
   Scalar ridge = Scalar{1e-6};
+
+  // How a representation without a closed-form fit is fitted instead: `sgd_epochs` epochs of the
+  // fitter with these options, from the current value function, every iteration.
+  ValueFunctionSgdOptions<Scalar> sgd{};
+  std::size_t sgd_epochs = 50;
 
   // The fraction of the batch given over to one-step probes rather than full paths; see
   // SampleForwardPass() for what a probe is and why. In [0, 1).
@@ -227,6 +236,7 @@ class DtFbsdeIterativeSolver {
                   "DtFbsdeIterativeSolver::Make: the exploration decay must lie in [0, 1).");
     RESULT_ASSERT(std::isfinite(options.ridge) && options.ridge >= Scalar{0},
                   "DtFbsdeIterativeSolver::Make: the ridge weight must be finite and non-negative.");
+    RESULT_ASSERT(options.sgd_epochs >= 1, "DtFbsdeIterativeSolver::Make: an SGD fit needs at least one epoch.");
     RESULT_ASSERT(options.probe_fraction >= Scalar{0} && options.probe_fraction < Scalar{1},
                   "DtFbsdeIterativeSolver::Make: the probe fraction must lie in [0, 1).");
     RESULT_ASSERT(std::isfinite(options.entropy_temperature) && options.entropy_temperature >= Scalar{0},
@@ -326,6 +336,9 @@ class DtFbsdeIterativeSolver {
   static constexpr std::size_t kParentPickComponent = static_cast<std::size_t>(N) + 1;
   static constexpr std::size_t kControlPickComponent = static_cast<std::size_t>(N) + 2;
 
+  // The minibatch of an SGD fit, for a representation without a closed-form one.
+  static constexpr int kSgdMinibatch = 64;
+
   DtFbsdeIterativeSolver(ForwardModelT forward_model,
                          RunningCost running_cost,
                          TerminalCostT terminal_cost,
@@ -420,7 +433,7 @@ class DtFbsdeIterativeSolver {
         // A path steps from its own state; a probe from a path's.
         std::size_t parent = sample;
         if (!is_path) {
-          const Scalar pick = SampleUniform<Scalar>(sampler, sample, stage + 1, kParentPickComponent);
+          const auto pick = SampleUniform<Scalar>(sampler, sample, stage + 1, kParentPickComponent);
           parent = std::min(static_cast<std::size_t>(pick * static_cast<Scalar>(path_count)), path_count - 1);
         }
         const State state = states_[stage].col(static_cast<Eigen::Index>(parent));
@@ -488,7 +501,8 @@ class DtFbsdeIterativeSolver {
             std::max(continuation.QValue(stage, state, target_policy(stage, state)), options_.target_floor);
       });
       fitted_[stage] = current_[stage];
-      if (const Result<> fitted = FitStage<kSampleCount>(fitted_[stage], states, targets, accrued_before_[stage]);
+      if (const Result<> fitted =
+              FitStage<kSampleCount>(fitted_[stage], states, targets, accrued_before_[stage], FitSeed(stage, 0));
           !fitted.has_value()) {
         return fitted;
       }
@@ -526,7 +540,8 @@ class DtFbsdeIterativeSolver {
           targets[column] = std::max(scorer.QValue(stage, state, chooser(stage, state)), options_.target_floor);
         });
         halves_[half][stage] = current_[stage];
-        if (const Result<> fitted = FitStage<kHalf>(halves_[half][stage], states, targets, accrued);
+        if (const Result<> fitted =
+                FitStage<kHalf>(halves_[half][stage], states, targets, accrued, FitSeed(stage, half + 1));
             !fitted.has_value()) {
           return fitted;
         }
@@ -570,7 +585,8 @@ class DtFbsdeIterativeSolver {
   auto FitStage(ValueFunctionT& value_function,
                 const ValueFunctionStateBatch<State, Count>& states,
                 const ValueFunctionValueBatch<State, Count>& targets,
-                const ValueFunctionValueBatch<State, Count>& accrued) const noexcept -> Result<> {
+                const ValueFunctionValueBatch<State, Count>& accrued,
+                std::uint64_t seed) const noexcept -> Result<> {
     ValueFunctionValueBatch<State, Count> weights = ValueFunctionValueBatch<State, Count>::Ones();
     if (options_.entropy_temperature > Scalar{0}) {
       const ValueFunctionValueBatch<State, Count> heuristic = accrued + targets;
@@ -579,7 +595,22 @@ class DtFbsdeIterativeSolver {
           std::sqrt((heuristic.array() - mean).square().mean()) + std::numeric_limits<Scalar>::epsilon();
       weights = (-(heuristic.array() - heuristic.minCoeff()) / (spread * options_.entropy_temperature)).exp();
     }
-    return value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, options_.ridge);
+    if constexpr (requires {
+                    value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, Scalar{});
+                  }) {
+      return value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, options_.ridge);
+    } else {
+      using Fitter = ValueFunctionSgdFitter<ValueFunctionT, kSgdMinibatch>;
+      RESULT_ASSIGN_OR_RETURN(Fitter fitter, Fitter::Make(options_.sgd, value_function.Parameters()));
+      std::vector<typename Fitter::StepReport> history;
+      return fitter.template FitEpochs<Count>(
+          value_function, states, targets, weights, options_.sgd_epochs, seed, history);
+    }
+  }
+
+  // The minibatch shuffling seed of one stage's SGD fit: distinct per iteration, stage, and half.
+  [[nodiscard]] auto FitSeed(std::size_t stage, std::size_t half) const noexcept -> std::uint64_t {
+    return SamplingSeed(iteration_) ^ ((static_cast<std::uint64_t>(stage) * 3U + half) * 0xBF58476D1CE4E5B9ULL);
   }
 
   // The mean cost of the policy over `table`, on NumEvaluationSamples rollouts with no exploration
