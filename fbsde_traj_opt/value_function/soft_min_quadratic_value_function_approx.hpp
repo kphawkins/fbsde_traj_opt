@@ -186,6 +186,30 @@ class SoftMinQuadraticValueFunctionApprox {
     return SuccessResult(parameters);
   }
 
+  // Returns the parameters for which component `p` is the quadratic
+  //
+  //   q_p(x) = (x - centers[p])' metric (x - centers[p]) + offset + log(NumComponents) / sharpness,
+  //
+  // that is, the same bowl as QuadraticParameters() moved to a center of its own. With every
+  // center equal this is exactly QuadraticParameters(). With them spread, the model starts as a
+  // softened union of the bowls -- the way to start a fit with several components, since identical
+  // components receive identical gradients and would never separate.
+  //
+  // Fails as QuadraticParameters() does.
+  static auto QuadraticParametersAt(const StateMat& metric,
+                                    const std::array<State, static_cast<std::size_t>(NumComponents)>& centers,
+                                    Scalar offset,
+                                    Scalar sharpness,
+                                    Scalar diagonal_offset) noexcept -> Result<ParameterVector> {
+    RESULT_ASSIGN_OR_RETURN(ParameterVector parameters,
+                            QuadraticParameters(metric, State::Zero(), offset, sharpness, diagonal_offset));
+    for (std::size_t component = 0; component < kNumComponents; ++component) {
+      const auto base = static_cast<Eigen::Index>(component * static_cast<std::size_t>(kParametersPerComponent));
+      parameters.template segment<N>(base + kLowerTriangleSize) = centers[component];
+    }
+    return SuccessResult(parameters);
+  }
+
   // Returns V~(state).
   auto operator()(const State& state) const noexcept -> Scalar {
     ValueBatch<1> values;
