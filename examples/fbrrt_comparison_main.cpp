@@ -45,7 +45,8 @@ auto PrintUsage() noexcept -> void {
       << "  --keep F            fraction of each stage erosion keeps on the 2-D benchmarks (default 0.75)\n"
       << "  --learning-rate R   SGD learning rate of the backward pass (default 0.2)\n"
       << "  --epochs N          SGD epochs per stage per iteration (default 8)\n"
-      << "  --line-search S     on (default) or off: FBRRT adopts an update only if it lowers the cost\n"
+      << "  --line-search S     on (default), off, or working-copy: FBRRT adopts an update only if it\n"
+      << "                      lowers the cost; working-copy keeps training the rejected updates\n"
       << "  --target-floor F    floor under the backward pass's targets (default 0)\n"
       << "  --max-value-change D  SGD trust region on the RMS value change per step (default off)\n";
 }
@@ -97,8 +98,10 @@ auto ParseOptions(int argc, char** argv, FbrrtComparisonOptions& options_out, bo
     } else if (argument == "--dt-epochs") {
       options_out.dt_fbsde_sgd_epochs = count;
     } else if (argument == "--line-search") {
-      RESULT_ASSERT(value == "on" || value == "off", "--line-search is on or off.");
-      options_out.fbrrt.line_search = value == "on";
+      RESULT_ASSERT(value == "on" || value == "off" || value == "working-copy",
+                    "--line-search is on, off, or working-copy.");
+      options_out.fbrrt.line_search = value != "off";
+      options_out.fbrrt.keep_working_copy = value == "working-copy";
     } else if (argument == "--target-floor") {
       options_out.backward.target_floor = number;
     } else if (argument == "--max-value-change") {
