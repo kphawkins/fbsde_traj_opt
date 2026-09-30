@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 
 #include <Eigen/Cholesky>
@@ -54,6 +55,14 @@ namespace fbsde_traj_opt {
 //
 // `ValueFunctionT` is the model and `BlockSize` the width of the batches the normal equations are
 // accumulated over.
+
+// How a solver moves a value function toward its targets, for the solvers that offer a choice.
+enum class ValueFunctionFitMethod : std::uint8_t {
+  // Minibatch Adam, ValueFunctionSgdFitter.
+  kSgd,
+  // Damped Gauss-Newton, ValueFunctionGaussNewtonFitter.
+  kGaussNewton,
+};
 
 // The knobs of one fit.
 template <typename Scalar = double>

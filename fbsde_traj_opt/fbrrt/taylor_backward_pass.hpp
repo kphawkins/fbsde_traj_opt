@@ -17,19 +17,28 @@
 #include "fbsde_traj_opt/solvers/taylor_noiseless_backward_step_estimator.hpp"
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
+#include "fbsde_traj_opt/value_function/value_function_gauss_newton_fitter.hpp"
 #include "fbsde_traj_opt/value_function/value_function_sgd_fitter.hpp"
 
 namespace fbsde_traj_opt {
 
-// The knobs of the SGD backward pass.
+// The knobs of the backward pass.
 template <typename Scalar = double>
 struct TaylorBackwardPassOptions {
-  // The fitter's options -- learning rate, trust region, and the rest; see ValueFunctionSgdFitter.
-  ValueFunctionSgdOptions<Scalar> sgd{};
+  // How each stage's value function is moved toward its targets: by a few epochs of minibatch Adam,
+  // or by a few damped Gauss-Newton steps. Either way the pass moves the value functions part of the
+  // way toward their targets, not all of it; Gauss-Newton does it in fewer, better-aimed steps, and
+  // bounds each one directly in the value function's own units.
+  ValueFunctionFitMethod fit_method = ValueFunctionFitMethod::kSgd;
 
-  // Passes over a stage's samples per backward pass. Few, on purpose: each backward pass is meant
-  // to move a value function part of the way toward its targets, not all of it.
+  // With SGD: the fitter's options -- learning rate, trust region, and the rest; see
+  // ValueFunctionSgdFitter -- and the passes over a stage's samples per backward pass.
+  ValueFunctionSgdOptions<Scalar> sgd{};
   std::size_t epochs_per_stage = 2;
+
+  // With Gauss-Newton: the steps per stage per backward pass, the trust region on each, and the
+  // damping; see ValueFunctionGaussNewtonFitter.
+  ValueFunctionGaussNewtonOptions<Scalar> gauss_newton{};
 
   // A floor under every target. The true value function of a problem whose costs are all
   // non-negative is itself non-negative, so a target below zero is extrapolation error by
@@ -61,7 +70,8 @@ struct TaylorBackwardPassOptions {
 template <typename Scalar = double>
 struct TaylorBackwardPassReport {
   // Per stage 0..K-1, the root-mean-square estimator error at the start of that stage's fit -- the
-  // residual `V~_i(x) - Y^_i` the pass then descends, over its first epoch.
+  // residual `V~_i(x) - Y^_i` the pass then descends: over its first epoch with SGD, and before its
+  // first step with Gauss-Newton.
   std::vector<Scalar> stage_rms_residuals{};
 
   // The root mean square of the above over the stages.
@@ -74,8 +84,7 @@ struct TaylorBackwardPassReport {
 };
 
 // The backward pass of the FBRRT method, with the least-squares Monte Carlo regression of Hawkins
-// (2021), Algorithm 4.3, replaced by a few steps of stochastic gradient descent on the estimator's
-// error.
+// (2021), Algorithm 4.3, replaced by a few damped steps on the estimator's error.
 //
 // For each stage `i` from the last down, every edge into stage `i + 1` -- a source state `x_i`
 // with the drift `K_i` it was drawn under -- yields a Taylor noiseless target
@@ -83,10 +92,11 @@ struct TaylorBackwardPassReport {
 //   Y^_i = L^mu_i + V~_{i+1}(x_i + K_i) + g' dF + 1/2 dF' H dF + 1/2 tr(Sigma' H Sigma),
 //
 // (TaylorNoiselessBackwardStepEstimator, which explains the terms) for the target policy `mu`.
-// The stage's value function is then moved *toward* those targets by `epochs_per_stage` passes of
-// damped minibatch Adam (ValueFunctionSgdFitter), starting from where the previous iteration left
-// it. By default the regression is unweighted: the path-integral heuristic acts on which particles
-// survive erosion, not on how much each one counts here. `entropy_temperature` weights it as well.
+// The stage's value function is then moved *toward* those targets, starting from where the previous
+// iteration left it: by `epochs_per_stage` passes of damped minibatch Adam (ValueFunctionSgdFitter),
+// or by a few trust-region Gauss-Newton steps (ValueFunctionGaussNewtonFitter). By default the regression is
+// unweighted: the path-integral heuristic acts on which particles survive erosion, not on how much each one counts
+// here. `entropy_temperature` weights it as well.
 //
 // Why not solve the regression outright, as LSMC does. An exact fit makes each value function the
 // best answer to the *current* targets, which are computed from a next-stage function and a policy
@@ -116,14 +126,15 @@ class TaylorBackwardPass {
   using Options = TaylorBackwardPassOptions<Scalar>;
   using Report = TaylorBackwardPassReport<Scalar>;
   using Fitter = ValueFunctionSgdFitter<ValueFunctionT, MinibatchSize>;
+  using GaussNewtonFitter = ValueFunctionGaussNewtonFitter<ValueFunctionT, TargetBatchSize>;
 
   static constexpr int kStateDim = State::RowsAtCompileTime;
 
   // Builds a backward pass for a table of `num_stages` value functions, one fitter per non-terminal
   // stage, each anchored at that stage's initial representation.
   //
-  // Fails if there are fewer than two stages, if `epochs_per_stage` is zero, or if the fitter
-  // rejects the SGD options.
+  // Fails if there are fewer than two stages, if `epochs_per_stage` is zero, or if either fitter
+  // rejects its options.
   static auto Make(ForwardModelT forward_model,
                    RunningCostT running_cost,
                    const Options& options,
@@ -138,8 +149,9 @@ class TaylorBackwardPass {
       RESULT_ASSIGN_OR_RETURN(Fitter fitter, Fitter::Make(options.sgd, initial_table[stage].Parameters()));
       fitters.push_back(std::move(fitter));
     }
-    return SuccessResult(
-        TaylorBackwardPass(std::move(forward_model), std::move(running_cost), options, std::move(fitters)));
+    RESULT_ASSIGN_OR_RETURN(GaussNewtonFitter gauss_newton, GaussNewtonFitter::Make(options.gauss_newton));
+    return SuccessResult(TaylorBackwardPass(
+        std::move(forward_model), std::move(running_cost), options, std::move(fitters), std::move(gauss_newton)));
   }
 
   // Runs one backward pass over `table`, whose policy is `policy`, from the edges of `particles`.
@@ -205,6 +217,13 @@ class TaylorBackwardPass {
         fraction_sum += (weights.sum() * weights.sum()) / (static_cast<Scalar>(Capacity) * weights.squaredNorm());
       }
 
+      if (options_.fit_method == ValueFunctionFitMethod::kGaussNewton) {
+        ValueFunctionGaussNewtonReport<Scalar> fit;
+        RESULT_RETURN_IF_ERROR(gauss_newton_.template Fit<Capacity>(table[stage], states, targets, weights, fit));
+        report.stage_rms_residuals[stage] = fit.initial_rms_residual;
+        continue;
+      }
+
       Fitter& fitter = fitters_[stage];
       RESULT_RETURN_IF_ERROR(fitter.SetAnchor(table[stage].Parameters()));
       if (options_.reset_optimizer_each_pass) {
@@ -249,16 +268,19 @@ class TaylorBackwardPass {
   TaylorBackwardPass(ForwardModelT forward_model,
                      RunningCostT running_cost,
                      const Options& options,
-                     std::vector<Fitter> fitters) noexcept
+                     std::vector<Fitter> fitters,
+                     GaussNewtonFitter gauss_newton) noexcept
       : forward_model_(std::move(forward_model)),
         running_cost_(std::move(running_cost)),
         options_(options),
-        fitters_(std::move(fitters)) {}
+        fitters_(std::move(fitters)),
+        gauss_newton_(std::move(gauss_newton)) {}
 
   ForwardModelT forward_model_;
   RunningCostT running_cost_;
   Options options_;
   std::vector<Fitter> fitters_;
+  GaussNewtonFitter gauss_newton_;
 };
 
 }  // namespace fbsde_traj_opt

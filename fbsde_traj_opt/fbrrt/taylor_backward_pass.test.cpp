@@ -135,6 +135,62 @@ TEST(TaylorBackwardPassTest, RepeatedPassesConvergeToTheRiccatiValueFunction) {
   }
 }
 
+TEST(TaylorBackwardPassTest, GaussNewtonPassesConvergeToTheRiccatiValueFunctionInFewPasses) {
+  // The quadratic model is linear in its parameters, so an undamped Gauss-Newton step is an exact
+  // fit: one pass from the end reproduces the Riccati recursion, stage by stage.
+  const ForwardModel forward_model = MakeForwardModel();
+  const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(forward_model, MakeCostModel());
+  ASSERT_TRUE(solution.has_value());
+  const StateMat diffusion = kDiffusionDiagonal.asDiagonal();
+  std::array<double, kNumStages> offsets{};
+  for (std::size_t stage = kNumStages - 1; stage-- > 0;) {
+    offsets[stage] =
+        offsets[stage + 1] + (diffusion.transpose() * solution->cost_to_go_hessians[stage + 1] * diffusion).trace();
+  }
+
+  TaylorBackwardPassOptions<double> options;
+  options.fit_method = ValueFunctionFitMethod::kGaussNewton;
+  options.gauss_newton.initial_damping = 0.0;
+  options.gauss_newton.max_steps = 1;
+  std::vector<ValueFunction> table = MakeTable(kTerminalCost);
+  Result<BackwardPass> pass = BackwardPass::Make(forward_model, MakeRunningCost(), options, table);
+  ASSERT_TRUE(pass.has_value()) << pass.error();
+  ASSERT_TRUE((*pass)(table, MakeEdges(), solution->policy, 0).has_value());
+
+  for (std::size_t stage = 0; stage < kNumStages; ++stage) {
+    const State state(0.7, -1.1);
+    const double exact = state.dot(solution->cost_to_go_hessians[stage] * state) + offsets[stage];
+    EXPECT_NEAR(table[stage](state), exact, 1e-6 * (1.0 + std::abs(exact))) << "stage " << stage;
+  }
+}
+
+TEST(TaylorBackwardPassTest, AGaussNewtonTrustRegionBoundsEachPass) {
+  const ForwardModel forward_model = MakeForwardModel();
+  const auto solution = SolveFiniteHorizonLqrWithCostToGo<kNumStages>(forward_model, MakeCostModel());
+  ASSERT_TRUE(solution.has_value());
+  TaylorBackwardPassOptions<double> options;
+  options.fit_method = ValueFunctionFitMethod::kGaussNewton;
+  options.gauss_newton.max_steps = 1;
+  options.gauss_newton.max_rms_value_change = 0.1;
+  std::vector<ValueFunction> table = MakeTable(kTerminalCost);
+  const std::vector<ValueFunction> before = table;
+  Result<BackwardPass> pass = BackwardPass::Make(forward_model, MakeRunningCost(), options, table);
+  ASSERT_TRUE(pass.has_value());
+  const Set edges = MakeEdges();
+  ASSERT_TRUE((*pass)(table, edges, solution->policy, 0).has_value());
+
+  // One step of at most 0.1 RMS over each stage's own samples; the model is linear, so that is exact.
+  for (std::size_t stage = 0; stage + 1 < kNumStages; ++stage) {
+    ValueFunctionValueBatch<State, static_cast<int>(kCapacity)> after_values;
+    ValueFunctionValueBatch<State, static_cast<int>(kCapacity)> before_values;
+    table[stage].Values<static_cast<int>(kCapacity)>(edges.source_states(stage + 1), after_values);
+    before[stage].Values<static_cast<int>(kCapacity)>(edges.source_states(stage + 1), before_values);
+    const double rms = (after_values - before_values).norm() / std::sqrt(static_cast<double>(kCapacity));
+    EXPECT_LE(rms, 0.1 + 1e-9) << "stage " << stage;
+    EXPECT_GT(rms, 0.05) << "stage " << stage;
+  }
+}
+
 TEST(TaylorBackwardPassTest, EachPassMovesTheValueFunctionsOnlyPartWay) {
   // One pass from a table that is badly wrong must leave it still visibly wrong: the pass is a
   // step, not a solve.
