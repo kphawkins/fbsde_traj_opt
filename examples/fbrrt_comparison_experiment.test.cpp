@@ -17,8 +17,11 @@ namespace {
 TEST(FbrrtComparisonTest, AShortRunComparesBothMethodsOnTheSameStartingCost) {
   FbrrtComparisonOptions options;
   options.num_seeds = 1;
-  options.iterations = 3;
+  options.iterations = 2;
   options.include_double_inverted_pendulum = false;
+  // The test checks the plumbing, not the results: as little fitting as will run.
+  options.backward.epochs_per_stage = 1;
+  options.dt_fbsde_sgd_epochs = 1;
 
   std::size_t runs = 0;
   const Result<std::vector<BenchmarkComparison>> comparisons = RunFbrrtComparison(
@@ -32,8 +35,8 @@ TEST(FbrrtComparisonTest, AShortRunComparesBothMethodsOnTheSameStartingCost) {
     ASSERT_EQ(comparison.dt_fbsde.runs.size(), 1U);
     const MethodRun& fbrrt = comparison.fbrrt.runs.front();
     const MethodRun& dt_fbsde = comparison.dt_fbsde.runs.front();
-    ASSERT_EQ(fbrrt.costs.size(), 4U);
-    ASSERT_EQ(fbrrt.seconds.size(), 4U);
+    ASSERT_EQ(fbrrt.costs.size(), 3U);
+    ASSERT_EQ(fbrrt.seconds.size(), 3U);
 
     // Both start from the same value functions and score on the same noise.
     EXPECT_DOUBLE_EQ(fbrrt.costs.front(), dt_fbsde.costs.front());

@@ -26,21 +26,27 @@ namespace fbsde_traj_opt::examples {
 namespace {
 
 auto PrintUsage() noexcept -> void {
-  std::cout << "usage: fbrrt_comparison [options]\n"
-            << "  --seed N                          the seed all sampling derives from\n"
-            << "  --seeds N                         runs per method per benchmark (default 10)\n"
-            << "  --iterations N                    iterations on the 2-D benchmarks (default 30)\n"
-            << "  --double-pendulum-iterations N    iterations on the double inverted pendulum (default 60)\n"
-            << "  --skip-double-inverted-pendulum   run the 2-D benchmarks only\n"
-            << "  --trace                           print every iteration's cost\n"
-            << "FBRRT design knobs:\n"
-            << "  --rrt P             probability a parent is drawn by RRT (default 0.2)\n"
-            << "  --exploit P         probability a control is the policy's (default 0.7)\n"
-            << "  --keep F            fraction of each stage erosion keeps on the 2-D benchmarks (default 0.75)\n"
-            << "  --learning-rate R   SGD learning rate of the backward pass (default 0.2)\n"
-            << "  --epochs N          SGD epochs per stage per iteration (default 8)\n"
-            << "  --target-floor F    floor under the backward pass's targets (default 0)\n"
-            << "  --max-value-change D  SGD trust region on the RMS value change per step (default off)\n";
+  std::cout
+      << "usage: fbrrt_comparison [options]\n"
+      << "  --seed N                          the seed all sampling derives from\n"
+      << "  --seeds N                         runs per method per benchmark (default 10)\n"
+      << "  --iterations N                    iterations on the 2-D benchmarks (default 30)\n"
+      << "  --double-pendulum-iterations N    iterations on the double inverted pendulum (default 60)\n"
+      << "  --skip-double-inverted-pendulum   run the 2-D benchmarks only\n"
+      << "  --trace                           print every iteration's cost\n"
+      << "  --model M                         soft-min (default) or polynomial value functions, for both methods\n"
+      << "  --center-spread F                 how far toward the start the soft-min components begin (default 1)\n"
+      << "  --sharpness B                     the soft-min model's beta (default 1)\n"
+      << "  --dt-learning-rate R              DT-FBSDE's SGD learning rate on the soft-min model (default 0.05)\n"
+      << "  --dt-epochs N                     DT-FBSDE's SGD epochs per fit on the soft-min model (default 50)\n"
+      << "FBRRT design knobs:\n"
+      << "  --rrt P             probability a parent is drawn by RRT (default 0.2)\n"
+      << "  --exploit P         probability a control is the policy's (default 0.7)\n"
+      << "  --keep F            fraction of each stage erosion keeps on the 2-D benchmarks (default 0.75)\n"
+      << "  --learning-rate R   SGD learning rate of the backward pass (default 0.2)\n"
+      << "  --epochs N          SGD epochs per stage per iteration (default 8)\n"
+      << "  --target-floor F    floor under the backward pass's targets (default 0)\n"
+      << "  --max-value-change D  SGD trust region on the RMS value change per step (default off)\n";
 }
 
 auto ParseOptions(int argc, char** argv, FbrrtComparisonOptions& options_out, bool& trace_out) noexcept -> Result<> {
@@ -77,6 +83,18 @@ auto ParseOptions(int argc, char** argv, FbrrtComparisonOptions& options_out, bo
       options_out.backward.sgd.learning_rate = number;
     } else if (argument == "--epochs") {
       options_out.backward.epochs_per_stage = count;
+    } else if (argument == "--model") {
+      RESULT_ASSERT(value == "soft-min" || value == "polynomial", "--model is soft-min or polynomial.");
+      options_out.model = value == "soft-min" ? ComparisonValueFunctionModel::kSoftMinQuadratic
+                                              : ComparisonValueFunctionModel::kPolynomial;
+    } else if (argument == "--center-spread") {
+      options_out.soft_min_center_spread = number;
+    } else if (argument == "--sharpness") {
+      options_out.soft_min_sharpness = number;
+    } else if (argument == "--dt-learning-rate") {
+      options_out.dt_fbsde_sgd.learning_rate = number;
+    } else if (argument == "--dt-epochs") {
+      options_out.dt_fbsde_sgd_epochs = count;
     } else if (argument == "--target-floor") {
       options_out.backward.target_floor = number;
     } else if (argument == "--max-value-change") {

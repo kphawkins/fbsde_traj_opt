@@ -14,6 +14,7 @@
 #include "fbsde_traj_opt/fbrrt/sgd_taylor_backward_pass.hpp"
 #include "fbsde_traj_opt/solvers/fbrrt_solver.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
+#include "fbsde_traj_opt/value_function/value_function_sgd_fitter.hpp"
 #include "fbsde_traj_opt/viz/plotly_figure.hpp"
 
 namespace fbsde_traj_opt::examples {
@@ -36,6 +37,16 @@ namespace fbsde_traj_opt::examples {
 // Iterate(), whose line search is itself made of rollouts. For FBRRT it is expansion, the backward
 // pass and erosion, but not the evaluation, which it performs only to report.
 
+// The value function representation both methods use.
+enum class ComparisonValueFunctionModel : std::uint8_t {
+  // SoftMinQuadraticValueFunctionApprox with kSoftMinComponents components: the intended model.
+  kSoftMinQuadratic,
+  // PolynomialValueFunctionApprox: quadratic on the double integrator, quartic otherwise.
+  kPolynomial,
+};
+
+inline constexpr int kSoftMinComponents = 4;
+
 // The knobs of the comparison. The FBRRT ones are exposed so the design choices can be varied from
 // the command line.
 struct FbrrtComparisonOptions {
@@ -45,7 +56,29 @@ struct FbrrtComparisonOptions {
   std::size_t double_inverted_pendulum_iterations = 60;
   bool include_double_inverted_pendulum = true;
 
-  // The FBRRT defaults are the best of a small sweep on the two 2-D benchmarks (three seeds each):
+  ComparisonValueFunctionModel model = ComparisonValueFunctionModel::kSoftMinQuadratic;
+
+  // The soft-min model's sharpness `beta` and diagonal floor `eps`. Its non-terminal stages start
+  // as kSoftMinComponents copies of the terminal cost's bowl, centered evenly along the segment
+  // from the goal to the initial mean, where the trajectories will be.
+  double soft_min_sharpness = 1.0;
+  double soft_min_diagonal_offset = 1e-3;
+  // How far along that segment the components reach: 1 spreads them from the goal to the start, and
+  // a small value keeps the starting table close to the terminal cost while still breaking the
+  // symmetry between components.
+  double soft_min_center_spread = 1.0;
+
+  // How DT-FBSDE fits a representation with no closed-form least squares (the soft-min model).
+  ValueFunctionSgdOptions<double> dt_fbsde_sgd = [] {
+    ValueFunctionSgdOptions<double> defaults;
+    defaults.learning_rate = 0.05;
+    return defaults;
+  }();
+  std::size_t dt_fbsde_sgd_epochs = 50;
+
+  // The FBRRT defaults are the best of a small sweep on the two 2-D benchmarks with the polynomial
+  // model (three seeds each); a learning rate of 0.05 was steadier on the soft-min pendulum but slower
+  // on the double integrator:
   // mostly-uniform parent draws after the first iteration, mostly-policy controls, eight epochs of
   // SGD per stage at a learning rate of 0.2, targets floored at zero, and erosion keeping 3/4.
   FbrrtOptions<double> fbrrt = [] {

@@ -271,6 +271,8 @@ cc_library(
         "//fbsde_traj_opt/solvers:fbrrt_solver",
         "//fbsde_traj_opt/utils:result",
         "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "//fbsde_traj_opt/value_function:value_function_sgd_fitter",
         "//fbsde_traj_opt/viz:plotly_figure",
         "@eigen",
     ],
