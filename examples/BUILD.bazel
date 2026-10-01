@@ -261,7 +261,10 @@ cc_test(
 cc_library(
     name = "fbrrt_comparison_experiment",
     srcs = ["fbrrt_comparison_experiment.cpp"],
-    hdrs = ["fbrrt_comparison_experiment.hpp"],
+    hdrs = [
+        "fbrrt_comparison_experiment.hpp",
+        "fbrrt_comparison_setup.hpp",
+    ],
     copts = FBSDE_COPTS,
     deps = [
         ":l1_benchmark_models",
@@ -302,5 +305,34 @@ cc_binary(
     deps = [
         ":fbrrt_comparison_experiment",
         "//fbsde_traj_opt/utils:result",
+    ],
+)
+
+cc_library(
+    name = "fbrrt_particle_swarms_experiment",
+    srcs = ["fbrrt_particle_swarms.cpp"],
+    hdrs = ["fbrrt_particle_swarms.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":fbrrt_comparison_experiment",
+        ":l1_benchmark_models",
+        "//fbsde_traj_opt/solvers:fbrrt_solver",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "@eigen",
+    ],
+)
+
+cc_binary(
+    name = "fbrrt_particle_swarms",
+    srcs = ["fbrrt_particle_swarms_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":fbrrt_particle_swarms_experiment",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/viz:plotly_figure",
+        "//fbsde_traj_opt/viz:plotly_report",
     ],
 )

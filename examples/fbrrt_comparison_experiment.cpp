@@ -25,6 +25,7 @@
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/polynomial_value_function_approx.hpp"
 #include "fbsde_traj_opt/value_function/soft_min_quadratic_value_function_approx.hpp"
+#include "examples/fbrrt_comparison_setup.hpp"
 #include "examples/l1_benchmark_models.hpp"
 
 namespace fbsde_traj_opt::examples {
@@ -33,104 +34,7 @@ namespace {
 using Clock = std::chrono::steady_clock;
 using Control = Eigen::Matrix<double, 1, 1>;
 
-constexpr std::size_t kEvaluationSamples = 256;
 constexpr double kInfinity = std::numeric_limits<double>::infinity();
-
-// The solver types for one benchmark: `Capacity` samples per stage for both methods, and value
-// functions of type `ValueFunctionT`.
-template <typename BenchmarkT, std::size_t Capacity, std::size_t NumStages, typename ValueFunctionT>
-struct Setup {
-  static constexpr int kStateDim = BenchmarkT::State::RowsAtCompileTime;
-  using ForwardModel = typename BenchmarkT::ForwardModel;
-  using ValueFunction = ValueFunctionT;
-  using TerminalCost = QuadraticRegulatorSdeTerminalCostTerm<kStateDim>;
-  using Components = DefaultFbrrtComponents<kStateDim, 1, Capacity, ForwardModel, ValueFunction>;
-  using Fbrrt = FbrrtSolver<kStateDim,
-                            1,
-                            Capacity,
-                            NumStages,
-                            kEvaluationSamples,
-                            ForwardModel,
-                            TerminalCost,
-                            ValueFunction,
-                            Components>;
-  using DtFbsde = DtFbsdeIterativeSolver<kStateDim,
-                                         1,
-                                         Capacity,
-                                         NumStages,
-                                         kEvaluationSamples,
-                                         ForwardModel,
-                                         TerminalCost,
-                                         ValueFunction>;
-};
-
-// The terminal value function and the starting guess at every other stage.
-template <typename ValueFunctionT>
-struct StartingTable {
-  ValueFunctionT terminal;
-  ValueFunctionT initial;
-};
-
-// The polynomial model: the terminal cost, exactly, at every stage.
-template <int N, int Degree, typename BenchmarkT>
-auto MakeStartingTable(const BenchmarkT& benchmark,
-                       const FbrrtComparisonOptions& /*options*/,
-                       const PolynomialValueFunctionApprox<N, Degree>* /*tag*/) noexcept
-    -> Result<StartingTable<PolynomialValueFunctionApprox<N, Degree>>> {
-  using ValueFunction = PolynomialValueFunctionApprox<N, Degree>;
-  RESULT_ASSIGN_OR_RETURN(
-      ValueFunction value_function,
-      ValueFunction::Make(
-          ValueFunction::ParameterVector::Zero(), benchmark.normalization_center, benchmark.normalization_scale));
-  RESULT_RETURN_IF_ERROR(
-      value_function.SetParameters(value_function.QuadraticParameters(benchmark.terminal_cost_mat, 0.0)));
-  return SuccessResult(StartingTable<ValueFunction>{.terminal = value_function, .initial = value_function});
-}
-
-// The soft-min model: the terminal cost exactly at the terminal stage, and its bowl spread along
-// the way from the goal to the start everywhere else.
-template <int N, int K, typename BenchmarkT>
-auto MakeStartingTable(const BenchmarkT& benchmark,
-                       const FbrrtComparisonOptions& options,
-                       const SoftMinQuadraticValueFunctionApprox<N, K>* /*tag*/) noexcept
-    -> Result<StartingTable<SoftMinQuadraticValueFunctionApprox<N, K>>> {
-  using ValueFunction = SoftMinQuadraticValueFunctionApprox<N, K>;
-  using State = typename ValueFunction::State;
-  using Parameters = typename ValueFunction::ParameterVector;
-  const double sharpness = options.soft_min_sharpness;
-  const double offset = options.soft_min_diagonal_offset;
-  RESULT_ASSIGN_OR_RETURN(
-      const Parameters terminal_parameters,
-      ValueFunction::QuadraticParameters(benchmark.terminal_cost_mat, State::Zero(), 0.0, sharpness, offset));
-  std::array<State, static_cast<std::size_t>(K)> centers{};
-  const State start = benchmark.initial_distribution.Mean();
-  for (std::size_t component = 0; component < centers.size(); ++component) {
-    centers[component] =
-        (options.soft_min_center_spread * static_cast<double>(component) / static_cast<double>(K - 1)) * start;
-  }
-  RESULT_ASSIGN_OR_RETURN(
-      const Parameters initial_parameters,
-      ValueFunction::QuadraticParametersAt(benchmark.terminal_cost_mat, centers, 0.0, sharpness, offset));
-  RESULT_ASSIGN_OR_RETURN(ValueFunction terminal, ValueFunction::Make(terminal_parameters, sharpness, offset));
-  RESULT_ASSIGN_OR_RETURN(ValueFunction initial, ValueFunction::Make(initial_parameters, sharpness, offset));
-  return SuccessResult(StartingTable<ValueFunction>{.terminal = terminal, .initial = initial});
-}
-
-// The DT-FBSDE options the double inverted pendulum example was tuned with.
-auto DtFbsdeOptions(const FbrrtComparisonOptions& comparison) noexcept -> DtFbsdeIterativeOptions<double> {
-  DtFbsdeIterativeOptions<double> options;
-  options.sgd = comparison.dt_fbsde_sgd;
-  options.sgd_epochs = comparison.dt_fbsde_sgd_epochs;
-  options.nonlinear_fit_method = comparison.dt_fbsde_fit_method;
-  options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
-  options.exploration_probability = 0.03;
-  options.initial_exploration_probability = 1.0;
-  options.exploration_decay = 0.8;
-  options.probe_fraction = 0.25;
-  options.target_floor = 0.0;
-  options.entropy_temperature = 2.0;
-  return options;
-}
 
 template <typename SetupT, typename BenchmarkT>
 auto RunFbrrt(const BenchmarkT& benchmark,
@@ -139,40 +43,15 @@ auto RunFbrrt(const BenchmarkT& benchmark,
               double keep_fraction,
               std::size_t iterations,
               std::uint64_t seed) noexcept -> Result<MethodRun> {
-  constexpr auto kCapacity = static_cast<std::size_t>(SetupT::Fbrrt::Particles::kCapacity);
-  constexpr std::size_t kNumStages = SetupT::Fbrrt::Particles::kNumStages;
-  const auto keep_count = static_cast<std::size_t>(keep_fraction * static_cast<double>(kCapacity));
-  RESULT_ASSIGN_OR_RETURN(typename SetupT::Components components,
-                          (MakeDefaultFbrrtComponents<kCapacity, kNumStages>(benchmark.forward_model,
-                                                                             benchmark.running_cost,
-                                                                             benchmark.region_lower,
-                                                                             benchmark.region_upper,
-                                                                             Control(-1.0),
-                                                                             Control(1.0),
-                                                                             options.backward,
-                                                                             keep_count,
-                                                                             table.initial)));
-  // The particle set and value function tables run to megabytes; the solver lives on the heap.
-  auto solver = std::make_unique<Result<typename SetupT::Fbrrt>>(SetupT::Fbrrt::Make(benchmark.forward_model,
-                                                                                     benchmark.running_cost,
-                                                                                     benchmark.terminal_cost,
-                                                                                     benchmark.initial_distribution,
-                                                                                     Control(-1.0),
-                                                                                     Control(1.0),
-                                                                                     table.initial,
-                                                                                     table.terminal,
-                                                                                     std::move(components),
-                                                                                     options.fbrrt,
-                                                                                     seed));
-  if (!solver->has_value()) {
-    return ErrorResult(solver->error().message, solver->error().location);
-  }
+  RESULT_ASSIGN_OR_RETURN(
+      const std::unique_ptr<typename SetupT::Fbrrt> solver,
+      MakeComparisonFbrrtSolver<SetupT>(benchmark, table, options, options.fbrrt, keep_fraction, seed));
 
   MethodRun run;
-  run.costs.push_back((*solver)->Evaluate().total);
+  run.costs.push_back(solver->Evaluate().total);
   run.seconds.push_back(0.0);
   for (std::size_t iteration = 0; iteration < iterations; ++iteration) {
-    RESULT_ASSIGN_OR_RETURN(const FbrrtIterationReport<double> report, (*solver)->Iterate());
+    RESULT_ASSIGN_OR_RETURN(const FbrrtIterationReport<double> report, solver->Iterate());
     run.costs.push_back(report.mean_cost);
     const double evaluation = options.fbrrt.line_search ? report.evaluate_seconds : 0.0;
     run.seconds.push_back(run.seconds.back() + report.expand_seconds + report.backward_seconds + evaluation +
