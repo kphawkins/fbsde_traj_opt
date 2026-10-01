@@ -273,6 +273,19 @@ auto DrawFbrrtParticleSwarms(const FbrrtParticleSwarmOptions& options) noexcept
     reports.push_back(std::move(pendulum_report));
     return SuccessResult(std::move(reports));
   }
+  if (options.comparison.model == ComparisonValueFunctionModel::kNonnegativeSoftMin) {
+    using Nonnegative = NonnegativeSoftMinQuadraticValueFunctionApprox<2, kSoftMinComponents, double>;
+    RESULT_ASSIGN_OR_RETURN(const L1DoubleIntegrator integrator, MakeL1DoubleIntegrator());
+    RESULT_ASSIGN_OR_RETURN(
+        FbrrtParticleSwarmReport integrator_report,
+        (Draw<Setup<L1DoubleIntegrator, 1024, kL1DoubleIntegratorNumStages, Nonnegative>>(integrator, options)));
+    reports.push_back(std::move(integrator_report));
+    RESULT_ASSIGN_OR_RETURN(const L1Pendulum pendulum, MakeL1Pendulum());
+    RESULT_ASSIGN_OR_RETURN(FbrrtParticleSwarmReport pendulum_report,
+                            (Draw<Setup<L1Pendulum, 1024, kL1PendulumNumStages, Nonnegative>>(pendulum, options)));
+    reports.push_back(std::move(pendulum_report));
+    return SuccessResult(std::move(reports));
+  }
   using SoftMin = SoftMinQuadraticValueFunctionApprox<2, kSoftMinComponents>;
   RESULT_ASSIGN_OR_RETURN(const L1DoubleIntegrator integrator, MakeL1DoubleIntegrator());
   RESULT_ASSIGN_OR_RETURN(

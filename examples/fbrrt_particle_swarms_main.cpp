@@ -35,7 +35,9 @@ auto PrintUsage() noexcept -> void {
             << "  --output-dir DIR    where the HTML reports are written (default: fbrrt_particle_swarms_report)\n"
             << "  --iterations N      FBRRT iterations (default 30)\n"
             << "  --seed N            the seed of the run\n"
-            << "  --model M           soft-min (default) or polynomial value functions\n"
+            << "  --model M           soft-min (default), polynomial, or nonnegative-soft-min value functions\n"
+            << "  --erode-temperature L, --orphan-radius R, --density-weight A, --max-age N\n"
+            << "                      erosion's mode-collapse safeguards, as in fbrrt_comparison\n"
             << "  --line-search S     on (default), off, or working-copy\n"
             << "  --forward-noise S   off (default) or on: add the SDE's noise to new particles\n"
             << "  --per-stage N       particles per stage in the over-iterations picture (default 64)\n";
@@ -57,9 +59,19 @@ auto ParseOptions(int argc, char** argv, Options& options_out) noexcept -> Resul
     } else if (argument == "--seed") {
       options_out.swarms.seed = std::strtoull(value.c_str(), nullptr, 10);
     } else if (argument == "--model") {
-      RESULT_ASSERT(value == "soft-min" || value == "polynomial", "--model is soft-min or polynomial.");
-      comparison.model = value == "soft-min" ? ComparisonValueFunctionModel::kSoftMinQuadratic
-                                             : ComparisonValueFunctionModel::kPolynomial;
+      RESULT_ASSERT(value == "soft-min" || value == "polynomial" || value == "nonnegative-soft-min",
+                    "--model is soft-min, polynomial, or nonnegative-soft-min.");
+      comparison.model = value == "soft-min"     ? ComparisonValueFunctionModel::kSoftMinQuadratic
+                         : value == "polynomial" ? ComparisonValueFunctionModel::kPolynomial
+                                                 : ComparisonValueFunctionModel::kNonnegativeSoftMin;
+    } else if (argument == "--erode-temperature") {
+      comparison.erode.temperature = std::strtod(value.c_str(), nullptr);
+    } else if (argument == "--orphan-radius") {
+      comparison.erode.orphan_radius = std::strtod(value.c_str(), nullptr);
+    } else if (argument == "--density-weight") {
+      comparison.erode.density_weight = std::strtod(value.c_str(), nullptr);
+    } else if (argument == "--max-age") {
+      comparison.erode.max_age = count;
     } else if (argument == "--line-search") {
       RESULT_ASSERT(value == "on" || value == "off" || value == "working-copy",
                     "--line-search is on, off, or working-copy.");
