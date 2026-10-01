@@ -216,6 +216,25 @@ td:first-child, th:first-child { text-align: left; }
 
     return data.map(function (trace) {
       var themed = Object.assign({}, trace);
+      if (trace.mode === "markers") {
+        if (trace.markerColorscaleRole) {
+          delete themed.markerColorscaleRole;
+          var colorbar = (trace.marker || {}).colorbar || {};
+          themed.marker = Object.assign({}, trace.marker, {
+            colorscale: ResolveColorscale(trace.markerColorscaleRole),
+            colorbar: Object.assign({}, colorbar, {
+              outlinecolor: axis,
+              tickcolor: axis,
+              tickfont: { color: secondary, size: 12 },
+              title: Object.assign({}, colorbar.title, { font: { color: ink, size: 13 } })
+            })
+          });
+        } else {
+          delete themed.colorRole;
+          themed.marker = Object.assign({}, trace.marker, { color: ResolveToken(trace.colorRole || "series-1") });
+        }
+        return themed;
+      }
       if (trace.colorscaleRole) {
         delete themed.colorscaleRole;
         themed.colorscale = ResolveColorscale(trace.colorscaleRole);
@@ -334,7 +353,10 @@ td:first-child, th:first-child { text-align: left; }
     var heatmap = figure.data.find(function (trace) { return trace.type === "heatmap"; });
     if (heatmap) { return BuildGridTable(figure, heatmap); }
 
-    var series = figure.data.filter(function (trace) { return trace.showlegend !== false; });
+    // Point clouds are left out: a table of thousands of samples says nothing the picture does not.
+    var series = figure.data.filter(function (trace) {
+      return trace.showlegend !== false && trace.mode !== "markers";
+    });
     if (series.length === 0) { return null; }
 
     var sharedX = series.every(function (trace) {
