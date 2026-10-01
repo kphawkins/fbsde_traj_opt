@@ -170,3 +170,30 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "nonnegative_value_function_approx",
+    hdrs = ["nonnegative_value_function_approx.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "nonnegative_value_function_approx_test",
+    size = "small",
+    srcs = ["nonnegative_value_function_approx.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":nonnegative_value_function_approx",
+        ":soft_min_quadratic_value_function_approx",
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
