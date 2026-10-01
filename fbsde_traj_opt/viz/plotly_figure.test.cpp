@@ -493,6 +493,24 @@ TEST(PlotlyFigureTest, AnimatingAColoredScatterMovesAndRecolorsItAndPinsTheColor
             (std::vector<double>{-5.0, 0.0, 0.0, 0.0}));
 }
 
+TEST(PlotlyFigureTest, ALineCanBeAnimatedAlongsideARecoloredScatter) {
+  PlotlyFigure figure("Particles", "Position", "Velocity");
+  constexpr std::array<double, 4> kColors{0.0, 1.0, 2.0, 3.0};
+  ASSERT_TRUE(figure.AddScatter(kStages, kValues, kColors, ScatterStyle{}).has_value());
+  ASSERT_TRUE(figure.AddLine(kStages, kValues, LineStyle{}).has_value());
+  const std::vector<AnimationFrame> frames{{.label = "0",
+                                            .trace_values = {{0.0, 0.0, 0.0, 0.0}, {1.0, 1.0, 1.0, 1.0}},
+                                            .trace_x_values = {{1.0, 2.0, 3.0, 4.0}, {4.0, 3.0, 2.0, 1.0}},
+                                            .trace_color_values = {{9.0, 9.0, 9.0, 9.0}, {}}}};
+  constexpr std::array<std::size_t, 2> kAnimated{0, 1};
+  ASSERT_TRUE(figure.Animate(kAnimated, frames, AnimationStyle{}).has_value());
+  const nlohmann::json frame = figure.ToJson().at("frames").at(0).at("data");
+  EXPECT_TRUE(frame.at(0).contains("marker"));
+  EXPECT_FALSE(frame.at(1).contains("marker"));
+  EXPECT_EQ(figure.ToJson().at("data").at(1).at("x").get<std::vector<double>>(),
+            (std::vector<double>{4.0, 3.0, 2.0, 1.0}));
+}
+
 TEST(PlotlyFigureTest, AnimateRejectsColorsForALineOrOfTheWrongLength) {
   PlotlyFigure line("Trajectories", "Stage", "Position");
   ASSERT_TRUE(line.AddLine(kStages, kValues, LineStyle{}).has_value());

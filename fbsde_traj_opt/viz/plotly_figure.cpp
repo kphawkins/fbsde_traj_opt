@@ -281,6 +281,9 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
       RESULT_ASSERT(frame.trace_color_values.size() == trace_indices.size(),
                     "PlotlyFigure::Animate: a frame that recolors must carry one set of colors per animated trace.");
       for (std::size_t slot = 0; slot < trace_indices.size(); ++slot) {
+        if (frame.trace_color_values[slot].empty()) {
+          continue;
+        }
         const nlohmann::json& trace = traces_[trace_indices[slot]];
         RESULT_ASSERT(trace.contains("markerColorscaleRole"),
                       "PlotlyFigure::Animate: only a scatter colored by value can be recolored.");
@@ -362,7 +365,7 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
     if (!resting.trace_x_values.empty()) {
       trace["x"] = resting.trace_x_values[slot];
     }
-    if (!resting.trace_color_values.empty()) {
+    if (!resting.trace_color_values.empty() && !resting.trace_color_values[slot].empty()) {
       trace["marker"]["color"] = resting.trace_color_values[slot];
       if (std::isfinite(color_lowest) && std::isfinite(color_highest)) {
         trace["marker"]["cmin"] = color_lowest;
@@ -413,7 +416,7 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
       if (!frames[index].trace_x_values.empty()) {
         frame_trace["x"] = frames[index].trace_x_values[slot];
       }
-      if (!frames[index].trace_color_values.empty()) {
+      if (!frames[index].trace_color_values.empty() && !frames[index].trace_color_values[slot].empty()) {
         frame_trace["marker"] = {{"color", frames[index].trace_color_values[slot]}};
       }
       frame_traces.push_back(std::move(frame_trace));

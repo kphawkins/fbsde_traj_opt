@@ -171,8 +171,8 @@ struct AnimationFrame {
   std::vector<std::vector<double>> trace_x_values{};
 
   // Optionally, one entry per animated trace giving its marker color values at this step, for a
-  // scatter colored by value. Empty means every trace keeps its colors. Every animated trace must
-  // then be a scatter colored by value.
+  // scatter colored by value. Empty means every trace keeps its colors, and so does an empty entry
+  // for one trace -- a line animated alongside a recolored cloud, say.
   std::vector<std::vector<double>> trace_color_values{};
 };
 
