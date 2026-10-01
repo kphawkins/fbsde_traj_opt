@@ -109,9 +109,17 @@ struct FbrrtComparisonOptions {
   // 3/4 on the double inverted pendulum; 3/4 was steadier on both 2-D problems here.
   double keep_fraction = 0.75;
 
-  // FBRRT's erosion options beyond the keep fraction -- resampling, orphan pruning, density, age --
-  // all off by default; see PathIntegralErodeOptions.
-  PathIntegralErodeOptions<double> erode{};
+  // FBRRT's erosion options beyond the keep fraction; see PathIntegralErodeOptions. Orphan pruning
+  // is on, at the same radius the connectivity metric uses: without it the pendulum's particle
+  // distributions came apart from stage to stage -- up to 43% of a stage cut off from the one
+  // before, and 84% with forward noise -- and with it they do not, at no cost in convergence (6
+  // seeds: 4.56 against 4.64 on the double integrator, 4.80 against 6.34 on the pendulum). The
+  // rest stay off; --orphan-radius inf turns pruning off too.
+  PathIntegralErodeOptions<double> erode = [] {
+    PathIntegralErodeOptions<double> defaults;
+    defaults.orphan_radius = 0.1;
+    return defaults;
+  }();
   double double_inverted_pendulum_keep_fraction = 0.75;
 
   // "Converged" means within this fraction of the best cost either method reached on the problem.
