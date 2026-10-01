@@ -65,6 +65,8 @@ class FbrrtParticleSet {
     Control control = Control::Zero();
     Scalar accrued_cost = Scalar{0};
     std::size_t parent = kDetachedParent;
+    // How many erosions the particle has survived.
+    std::size_t age = 0;
   };
 
   // An empty set: every stage, the initial one included, holds no particles.
@@ -91,6 +93,7 @@ class FbrrtParticleSet {
     target.controls.col(column) = particle.control;
     target.accrued_costs[column] = particle.accrued_cost;
     target.parents[slot] = particle.parent;
+    target.ages[slot] = particle.age;
   }
 
   // Sets how many leading slots of `stage` are live.
@@ -175,6 +178,21 @@ class FbrrtParticleSet {
     return stages_[stage].heuristics;
   }
 
+  // Ages every live particle past the first stage by one erosion survived.
+  auto IncrementAges() noexcept -> void {
+    for (std::size_t stage = 1; stage < NumStages; ++stage) {
+      Stage& target = stages_[stage];
+      for (std::size_t slot = 0; slot < target.count; ++slot) {
+        ++target.ages[slot];
+      }
+    }
+  }
+
+  // How many erosions every live particle of `stage` has survived.
+  [[nodiscard]] auto ages(std::size_t stage) const noexcept -> std::span<const std::size_t> {
+    return std::span<const std::size_t>(stages_[stage].ages).first(stages_[stage].count);
+  }
+
   // The parent slot of every live particle of `stage`, or kDetachedParent where it was removed.
   [[nodiscard]] auto parents(std::size_t stage) const noexcept -> std::span<const std::size_t> {
     return std::span<const std::size_t>(stages_[stage].parents).first(stages_[stage].count);
@@ -189,6 +207,7 @@ class FbrrtParticleSet {
     ValueBlock accrued_costs = ValueBlock::Zero();
     ValueBlock heuristics = ValueBlock::Zero();
     std::array<std::size_t, Capacity> parents{};
+    std::array<std::size_t, Capacity> ages{};
     std::size_t count = 0;
   };
 
@@ -207,6 +226,7 @@ class FbrrtParticleSet {
     stage.accrued_costs[to] = stage.accrued_costs[from];
     stage.heuristics[to] = stage.heuristics[from];
     stage.parents[destination] = stage.parents[source];
+    stage.ages[destination] = stage.ages[source];
   }
 
   std::vector<Stage> stages_;

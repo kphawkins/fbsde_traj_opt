@@ -193,7 +193,10 @@ cc_library(
     hdrs = ["path_integral_erode.hpp"],
     copts = FBSDE_COPTS,
     deps = [
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:l1_exploratory_control",
         "//fbsde_traj_opt/utils:result",
+        "@eigen",
     ],
 )
 

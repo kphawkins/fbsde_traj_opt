@@ -168,7 +168,8 @@ template <std::size_t Capacity,
                                               const Eigen::Matrix<Scalar, M, 1>& upper_bounds,
                                               const TaylorBackwardPassOptions<Scalar>& backward_options,
                                               std::size_t erode_keep_count,
-                                              const ValueFunctionT& initial_value_function) noexcept
+                                              const ValueFunctionT& initial_value_function,
+                                              const PathIntegralErodeOptions<double>& erode_options = {}) noexcept
     -> Result<DefaultFbrrtComponents<N, M, Capacity, ForwardModelT, ValueFunctionT, Scalar>> {
   using Components = DefaultFbrrtComponents<N, M, Capacity, ForwardModelT, ValueFunctionT, Scalar>;
   RESULT_ASSERT(erode_keep_count < Capacity, "MakeDefaultFbrrtComponents: erosion must leave room to expand.");
@@ -179,7 +180,14 @@ template <std::size_t Capacity,
   const std::vector<ValueFunctionT> table(NumStages, initial_value_function);
   RESULT_ASSIGN_OR_RETURN(typename Components::BackwardPass backward_pass,
                           Components::BackwardPass::Make(forward_model, running_cost, backward_options, table));
-  RESULT_ASSIGN_OR_RETURN(PathIntegralErode eroder, PathIntegralErode::Make(erode_keep_count));
+  // Erosion measures distances as the RRT does, in fractions of the region along every axis.
+  std::vector<double> metric_scale(static_cast<std::size_t>(N));
+  for (std::size_t axis = 0; axis < metric_scale.size(); ++axis) {
+    const auto index = static_cast<Eigen::Index>(axis);
+    metric_scale[axis] = 2.0 / static_cast<double>(region_upper[index] - region_lower[index]);
+  }
+  RESULT_ASSIGN_OR_RETURN(PathIntegralErode eroder,
+                          PathIntegralErode::Make(erode_keep_count, erode_options, std::move(metric_scale)));
   return SuccessResult(Components{.selector = std::move(selector),
                                   .control_sampler = std::move(control_sampler),
                                   .backward_pass = std::move(backward_pass),
@@ -330,7 +338,7 @@ class FbrrtSolver {
     if (options_.keep_pre_erosion_snapshot) {
       pre_erosion_particles_ = particles_;
     }
-    RESULT_RETURN_IF_ERROR(components_.eroder(particles_, table_));
+    RESULT_RETURN_IF_ERROR(components_.eroder(particles_, table_, iteration_seed));
     report.erode_seconds = lap();
 
     ++iteration_;

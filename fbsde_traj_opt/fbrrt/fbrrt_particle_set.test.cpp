@@ -103,6 +103,22 @@ TEST(FbrrtParticleSetTest, KeepLowestRemapsTheNextStagesParentsAndDetachesOrphan
   EXPECT_EQ(set.source_states(2).col(4), Eigen::Vector2d(4.5, 0.0));
 }
 
+TEST(FbrrtParticleSetTest, AgesStartAtZeroIncrementAndMoveWithTheirParticles) {
+  Set set;
+  FillStage(set, 1, 6);
+  EXPECT_EQ(set.ages(1)[4], 0U);
+  set.IncrementAges();
+  set.IncrementAges();
+  set.WriteParticle(1, 5, TaggedParticle(5.0, 5));
+  Set::ValueBlock keys;
+  keys << 5.0, 0.0, 4.0, 1.0, 3.0, 2.0;
+  ASSERT_TRUE(set.KeepLowest(1, keys, 3).has_value());
+  // Survivors 1, 3, 5: two aged twice, and the freshly rewritten slot 5 at zero.
+  EXPECT_EQ(set.ages(1)[0], 2U);
+  EXPECT_EQ(set.ages(1)[1], 2U);
+  EXPECT_EQ(set.ages(1)[2], 0U);
+}
+
 TEST(FbrrtParticleSetTest, KeepLowestLeavesASmallEnoughStageAloneAndNeverThinsStageZero) {
   Set set;
   FillStage(set, 1, 3);
