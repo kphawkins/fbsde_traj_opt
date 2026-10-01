@@ -110,8 +110,21 @@ auto Median(std::vector<double> values) noexcept -> double {
   return 0.5 * (upper + *std::ranges::max_element(values.begin(), middle));
 }
 
-// Fills in a method's medians against the problem's convergence threshold.
-auto Summarize(MethodResult& result, double threshold) noexcept -> void {
+// Fills in a method's medians against the problem's convergence threshold, and against each run's own
+// best cost with the same `tolerance`.
+auto Summarize(MethodResult& result, double threshold, double tolerance) noexcept -> void {
+  std::vector<double> settle_iterations;
+  std::vector<double> settle_seconds;
+  for (const MethodRun& run : result.runs) {
+    const double own = (1.0 + tolerance) * *std::ranges::min_element(run.costs);
+    const auto index = static_cast<std::size_t>(
+        std::ranges::find_if(run.costs, [own](double cost) { return cost <= own; }) - run.costs.begin());
+    settle_iterations.push_back(static_cast<double>(index));
+    settle_seconds.push_back(run.seconds[index]);
+  }
+  result.median_iterations_to_settle = Median(settle_iterations);
+  result.median_seconds_to_settle = Median(settle_seconds);
+
   std::vector<double> final_costs;
   std::vector<double> best_costs;
   std::vector<double> iterations;
@@ -193,8 +206,8 @@ auto Compare(const BenchmarkT& benchmark,
     }
   }
   comparison.convergence_threshold = (1.0 + options.convergence_tolerance) * comparison.best_cost;
-  Summarize(comparison.fbrrt, comparison.convergence_threshold);
-  Summarize(comparison.dt_fbsde, comparison.convergence_threshold);
+  Summarize(comparison.fbrrt, comparison.convergence_threshold, options.convergence_tolerance);
+  Summarize(comparison.dt_fbsde, comparison.convergence_threshold, options.convergence_tolerance);
   return SuccessResult(std::move(comparison));
 }
 
@@ -274,6 +287,11 @@ auto SummarizeFbrrtComparison(const BenchmarkComparison& comparison) noexcept ->
             : std::string("never"),
         method->median_seconds_to_converge,
         method->median_seconds_per_iteration);
+    summary += std::format("  {:<8} settles within {:.0f}% of its own best in {:.0f} iterations / {:.3f} s\n",
+                           "",
+                           100.0 * (comparison.convergence_threshold / comparison.best_cost - 1.0),
+                           method->median_iterations_to_settle,
+                           method->median_seconds_to_settle);
     if (method == &comparison.fbrrt) {
       summary += std::format(
           "  {:<8} last iteration: {:.1f}% of particles disconnected from the stage before ({:.1f}% "

@@ -154,6 +154,11 @@ struct MethodResult {
   double median_seconds_per_iteration = 0.0;
 
   // FBRRT only: medians over seeds of the last iteration's disconnected and orphaned fractions.
+  // Medians over seeds of when each run came within the convergence tolerance of its own best cost:
+  // how long a method takes to settle, wherever it settles.
+  double median_iterations_to_settle = 0.0;
+  double median_seconds_to_settle = 0.0;
+
   double median_disconnected_fraction = 0.0;
   double median_worst_stage_disconnected_fraction = 0.0;
   double median_orphan_fraction = 0.0;
