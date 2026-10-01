@@ -37,6 +37,7 @@ auto PrintUsage() noexcept -> void {
             << "  --seed N            the seed of the run\n"
             << "  --model M           soft-min (default) or polynomial value functions\n"
             << "  --line-search S     on (default), off, or working-copy\n"
+            << "  --forward-noise S   off (default) or on: add the SDE's noise to new particles\n"
             << "  --per-stage N       particles per stage in the over-iterations picture (default 64)\n";
 }
 
@@ -64,6 +65,9 @@ auto ParseOptions(int argc, char** argv, Options& options_out) noexcept -> Resul
                     "--line-search is on, off, or working-copy.");
       comparison.fbrrt.line_search = value != "off";
       comparison.fbrrt.keep_working_copy = value == "working-copy";
+    } else if (argument == "--forward-noise") {
+      RESULT_ASSERT(value == "on" || value == "off", "--forward-noise is on or off.");
+      comparison.fbrrt.sample_forward_noise = value == "on";
     } else if (argument == "--per-stage") {
       RESULT_ASSERT(count >= 1, "--per-stage needs a positive count.");
       options_out.swarms.particles_per_stage_shown = count;
