@@ -54,6 +54,11 @@ auto RunFbrrt(const BenchmarkT& benchmark,
     RESULT_ASSIGN_OR_RETURN(const FbrrtIterationReport<double> report, solver->Iterate());
     run.costs.push_back(report.mean_cost);
     const double evaluation = options.fbrrt.line_search ? report.evaluate_seconds : 0.0;
+    const Connectivity connectivity =
+        ParticleConnectivity(solver->particles(), benchmark.region_lower, benchmark.region_upper);
+    run.disconnected_fractions.push_back(connectivity.disconnected);
+    run.worst_stage_disconnected_fractions.push_back(connectivity.worst_stage_disconnected);
+    run.orphan_fractions.push_back(connectivity.orphaned);
     run.seconds.push_back(run.seconds.back() + report.expand_seconds + report.backward_seconds + evaluation +
                           report.erode_seconds);
   }
@@ -133,6 +138,19 @@ auto Summarize(MethodResult& result, double threshold) noexcept -> void {
   result.median_iterations_to_converge = Median(iterations);
   result.median_seconds_to_converge = Median(seconds);
   result.median_seconds_per_iteration = Median(per_iteration);
+  std::vector<double> disconnected;
+  std::vector<double> worst;
+  std::vector<double> orphaned;
+  for (const MethodRun& run : result.runs) {
+    if (!run.disconnected_fractions.empty()) {
+      disconnected.push_back(run.disconnected_fractions.back());
+      worst.push_back(run.worst_stage_disconnected_fractions.back());
+      orphaned.push_back(run.orphan_fractions.back());
+    }
+  }
+  result.median_disconnected_fraction = disconnected.empty() ? 0.0 : Median(disconnected);
+  result.median_worst_stage_disconnected_fraction = worst.empty() ? 0.0 : Median(worst);
+  result.median_orphan_fraction = orphaned.empty() ? 0.0 : Median(orphaned);
   result.fraction_converged = static_cast<double>(converged) / static_cast<double>(result.runs.size());
 }
 
@@ -229,6 +247,10 @@ auto RunFbrrtComparison(const FbrrtComparisonOptions& options, const FbrrtCompar
   if (options.model == ComparisonValueFunctionModel::kPolynomial) {
     return CompareAll<PolynomialValueFunctionApprox, 2, 4>(options, progress);
   }
+  if (options.model == ComparisonValueFunctionModel::kNonnegativeSoftMin) {
+    return CompareAll<NonnegativeSoftMinQuadraticValueFunctionApprox, kSoftMinComponents, kSoftMinComponents>(options,
+                                                                                                              progress);
+  }
   return CompareAll<SoftMinQuadraticValueFunctionApprox, kSoftMinComponents, kSoftMinComponents>(options, progress);
 }
 
@@ -252,6 +274,15 @@ auto SummarizeFbrrtComparison(const BenchmarkComparison& comparison) noexcept ->
             : std::string("never"),
         method->median_seconds_to_converge,
         method->median_seconds_per_iteration);
+    if (method == &comparison.fbrrt) {
+      summary += std::format(
+          "  {:<8} last iteration: {:.1f}% of particles disconnected from the stage before ({:.1f}% "
+          "in the worst stage), {:.1f}% orphaned\n",
+          "",
+          100.0 * method->median_disconnected_fraction,
+          100.0 * method->median_worst_stage_disconnected_fraction,
+          100.0 * method->median_orphan_fraction);
+    }
   }
   return summary;
 }

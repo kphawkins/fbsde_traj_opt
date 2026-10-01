@@ -34,7 +34,9 @@ auto PrintUsage() noexcept -> void {
       << "  --double-pendulum-iterations N    iterations on the double inverted pendulum (default 60)\n"
       << "  --skip-double-inverted-pendulum   run the 2-D benchmarks only\n"
       << "  --trace                           print every iteration's cost\n"
-      << "  --model M                         soft-min (default) or polynomial value functions, for both methods\n"
+      << "  --model M                         soft-min (default), polynomial, or nonnegative-soft-min value\n"
+      << "                                    functions, for both methods\n"
+      << "  --softness S                      the nonnegative soft-min model's softplus softness (default 0.25)\n"
       << "  --center-spread F                 how far toward the start the soft-min components begin (default 1)\n"
       << "  --sharpness B                     the soft-min model's beta (default 1)\n"
       << "  --dt-learning-rate R              DT-FBSDE's SGD learning rate on the soft-min model (default 0.05)\n"
@@ -52,6 +54,10 @@ auto PrintUsage() noexcept -> void {
       << "  --gn-steps N        Gauss-Newton steps per stage per iteration (default 2)\n"
       << "  --gn-max-change D   Gauss-Newton trust region on each step's RMS value change (default none)\n"
       << "  --entropy-temperature L  weight FBRRT's SGD fit by the trajectory heuristic (default 0: off)\n"
+      << "  --erode-temperature L  resample erosion's survivors in proportion to exp(-rho / L) (default 0: cut)\n"
+      << "  --orphan-radius R   remove particles nothing at the previous stage reaches within R (default off)\n"
+      << "  --density-weight A  rank erosion by rho - A log(nearest-neighbor distance) (default 0)\n"
+      << "  --max-age N         remove particles that have survived more than N erosions (default off)\n"
       << "  --forward-noise S   off (default) or on: add the SDE's noise to FBRRT's new particles\n"
       << "  --target-floor F    floor under the backward pass's targets (default 0)\n"
       << "  --max-value-change D  SGD trust region on the RMS value change per step (default off)\n";
@@ -92,9 +98,21 @@ auto ParseOptions(int argc, char** argv, FbrrtComparisonOptions& options_out, bo
     } else if (argument == "--epochs") {
       options_out.backward.epochs_per_stage = count;
     } else if (argument == "--model") {
-      RESULT_ASSERT(value == "soft-min" || value == "polynomial", "--model is soft-min or polynomial.");
-      options_out.model = value == "soft-min" ? ComparisonValueFunctionModel::kSoftMinQuadratic
-                                              : ComparisonValueFunctionModel::kPolynomial;
+      RESULT_ASSERT(value == "soft-min" || value == "polynomial" || value == "nonnegative-soft-min",
+                    "--model is soft-min, polynomial, or nonnegative-soft-min.");
+      options_out.model = value == "soft-min"     ? ComparisonValueFunctionModel::kSoftMinQuadratic
+                          : value == "polynomial" ? ComparisonValueFunctionModel::kPolynomial
+                                                  : ComparisonValueFunctionModel::kNonnegativeSoftMin;
+    } else if (argument == "--softness") {
+      options_out.nonnegative_softness = number;
+    } else if (argument == "--erode-temperature") {
+      options_out.erode.temperature = number;
+    } else if (argument == "--orphan-radius") {
+      options_out.erode.orphan_radius = number;
+    } else if (argument == "--density-weight") {
+      options_out.erode.density_weight = number;
+    } else if (argument == "--max-age") {
+      options_out.erode.max_age = count;
     } else if (argument == "--center-spread") {
       options_out.soft_min_center_spread = number;
     } else if (argument == "--sharpness") {

@@ -4,6 +4,7 @@
 #ifndef FBSDE_TRAJ_OPT_EXAMPLES_FBRRT_COMPARISON_SETUP_HPP_
 #define FBSDE_TRAJ_OPT_EXAMPLES_FBRRT_COMPARISON_SETUP_HPP_
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -16,6 +17,7 @@
 #include "fbsde_traj_opt/solvers/dt_fbsde_iterative_solver.hpp"
 #include "fbsde_traj_opt/solvers/fbrrt_solver.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
+#include "fbsde_traj_opt/value_function/nonnegative_value_function_approx.hpp"
 #include "fbsde_traj_opt/value_function/polynomial_value_function_approx.hpp"
 #include "fbsde_traj_opt/value_function/soft_min_quadratic_value_function_approx.hpp"
 #include "examples/fbrrt_comparison_experiment.hpp"
@@ -108,6 +110,67 @@ auto MakeStartingTable(const BenchmarkT& benchmark,
   return SuccessResult(StartingTable<ValueFunction>{.terminal = terminal, .initial = initial});
 }
 
+// The nonnegative soft-min model: the soft-min model's starting table, each entry wrapped in the
+// softplus. The terminal entry is then the terminal cost to within `s log 2` near the goal.
+template <int N, int K, typename Scalar>
+using NonnegativeSoftMinQuadraticValueFunctionApprox =
+    NonnegativeValueFunctionApprox<SoftMinQuadraticValueFunctionApprox<N, K, Scalar>>;
+
+template <int N, int K, typename BenchmarkT>
+auto MakeStartingTable(const BenchmarkT& benchmark,
+                       const FbrrtComparisonOptions& options,
+                       const NonnegativeSoftMinQuadraticValueFunctionApprox<N, K, double>* /*tag*/) noexcept
+    -> Result<StartingTable<NonnegativeSoftMinQuadraticValueFunctionApprox<N, K, double>>> {
+  using ValueFunction = NonnegativeSoftMinQuadraticValueFunctionApprox<N, K, double>;
+  using Inner = SoftMinQuadraticValueFunctionApprox<N, K>;
+  RESULT_ASSIGN_OR_RETURN(const StartingTable<Inner> inner,
+                          MakeStartingTable(benchmark, options, static_cast<const Inner*>(nullptr)));
+  RESULT_ASSIGN_OR_RETURN(ValueFunction terminal, ValueFunction::Make(inner.terminal, options.nonnegative_softness));
+  RESULT_ASSIGN_OR_RETURN(ValueFunction initial, ValueFunction::Make(inner.initial, options.nonnegative_softness));
+  return SuccessResult(StartingTable<ValueFunction>{.terminal = terminal, .initial = initial});
+}
+
+// How connected one particle set's stages are: the fractions MethodRun records.
+struct Connectivity {
+  double disconnected = 0.0;
+  double worst_stage_disconnected = 0.0;
+  double orphaned = 0.0;
+};
+
+template <typename ParticleSetT, typename State>
+auto ParticleConnectivity(const ParticleSetT& particles, const State& region_lower, const State& region_upper) noexcept
+    -> Connectivity {
+  Connectivity connectivity;
+  const State scale = (2.0 / (region_upper - region_lower).array()).matrix();
+  std::size_t total = 0;
+  std::size_t disconnected = 0;
+  std::size_t orphaned = 0;
+  for (std::size_t stage = 2; stage < ParticleSetT::kNumStages; ++stage) {
+    std::size_t stage_disconnected = 0;
+    for (std::size_t slot = 0; slot < particles.count(stage); ++slot) {
+      ++total;
+      orphaned += particles.parents(stage)[slot] == ParticleSetT::kDetachedParent ? 1 : 0;
+      const State source = particles.source_states(stage).col(static_cast<Eigen::Index>(slot));
+      bool reached = false;
+      for (std::size_t parent = 0; parent < particles.count(stage - 1) && !reached; ++parent) {
+        const State difference = source - State(particles.states(stage - 1).col(static_cast<Eigen::Index>(parent)));
+        reached = scale.cwiseProduct(difference).norm() <= kDisconnectionRadius;
+      }
+      stage_disconnected += reached ? 0 : 1;
+    }
+    disconnected += stage_disconnected;
+    if (particles.count(stage) > 0) {
+      connectivity.worst_stage_disconnected =
+          std::max(connectivity.worst_stage_disconnected,
+                   static_cast<double>(stage_disconnected) / static_cast<double>(particles.count(stage)));
+    }
+  }
+  const double count = total == 0 ? 1.0 : static_cast<double>(total);
+  connectivity.disconnected = static_cast<double>(disconnected) / count;
+  connectivity.orphaned = static_cast<double>(orphaned) / count;
+  return connectivity;
+}
+
 // The DT-FBSDE options the double inverted pendulum example was tuned with.
 inline auto DtFbsdeOptions(const FbrrtComparisonOptions& comparison) noexcept -> DtFbsdeIterativeOptions<double> {
   DtFbsdeIterativeOptions<double> options;
@@ -146,7 +209,8 @@ auto MakeComparisonFbrrtSolver(const BenchmarkT& benchmark,
                                                                              Control(1.0),
                                                                              options.backward,
                                                                              keep_count,
-                                                                             table.initial)));
+                                                                             table.initial,
+                                                                             options.erode)));
   auto solver = std::make_unique<Result<typename SetupT::Fbrrt>>(SetupT::Fbrrt::Make(benchmark.forward_model,
                                                                                      benchmark.running_cost,
                                                                                      benchmark.terminal_cost,

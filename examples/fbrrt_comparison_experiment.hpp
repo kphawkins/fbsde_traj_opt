@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "fbsde_traj_opt/fbrrt/path_integral_erode.hpp"
 #include "fbsde_traj_opt/fbrrt/taylor_backward_pass.hpp"
 #include "fbsde_traj_opt/solvers/fbrrt_solver.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
@@ -45,6 +46,8 @@ enum class ComparisonValueFunctionModel : std::uint8_t {
   kSoftMinQuadratic,
   // PolynomialValueFunctionApprox: quadratic on the double integrator, quartic otherwise.
   kPolynomial,
+  // The soft-min model passed through NonnegativeValueFunctionApprox, so that it cannot go negative.
+  kNonnegativeSoftMin,
 };
 
 inline constexpr int kSoftMinComponents = 4;
@@ -69,6 +72,9 @@ struct FbrrtComparisonOptions {
   // a small value keeps the starting table close to the terminal cost while still breaking the
   // symmetry between components.
   double soft_min_center_spread = 1.0;
+
+  // The softness `s` of the nonnegative soft-min model's softplus.
+  double nonnegative_softness = 0.25;
 
   // How DT-FBSDE fits a representation with no closed-form least squares (the soft-min model).
   ValueFunctionSgdOptions<double> dt_fbsde_sgd = [] {
@@ -102,6 +108,10 @@ struct FbrrtComparisonOptions {
   // The fraction of each stage erosion keeps, M~ / M. The thesis used 1/2 on the 2-D problems and
   // 3/4 on the double inverted pendulum; 3/4 was steadier on both 2-D problems here.
   double keep_fraction = 0.75;
+
+  // FBRRT's erosion options beyond the keep fraction -- resampling, orphan pruning, density, age --
+  // all off by default; see PathIntegralErodeOptions.
+  PathIntegralErodeOptions<double> erode{};
   double double_inverted_pendulum_keep_fraction = 0.75;
 
   // "Converged" means within this fraction of the best cost either method reached on the problem.
@@ -113,7 +123,21 @@ struct FbrrtComparisonOptions {
 struct MethodRun {
   std::vector<double> costs{};
   std::vector<double> seconds{};
+
+  // FBRRT only, after each iteration's erosion: the fraction of particles past the second stage
+  // whose edge leaves from farther than kDisconnectionRadius from every particle at the stage before
+  // -- populations that nothing at the previous stage can reach -- and the fraction whose parent is
+  // gone.
+  std::vector<double> disconnected_fractions{};
+  std::vector<double> orphan_fractions{};
+  // The largest disconnected fraction of any one stage: a population cut off from the stage before
+  // is concentrated in a few stages, which the overall fraction averages away.
+  std::vector<double> worst_stage_disconnected_fractions{};
 };
+
+// The radius, in the RRT's region metric -- fractions of the region's half-width -- beyond which an
+// edge counts as disconnected from the stage before: 5% of the region's width.
+inline constexpr double kDisconnectionRadius = 0.1;
 
 // One method's runs over all seeds, and what they add up to.
 struct MethodResult {
@@ -128,6 +152,11 @@ struct MethodResult {
   double median_seconds_to_converge = std::numeric_limits<double>::infinity();
   double fraction_converged = 0.0;
   double median_seconds_per_iteration = 0.0;
+
+  // FBRRT only: medians over seeds of the last iteration's disconnected and orphaned fractions.
+  double median_disconnected_fraction = 0.0;
+  double median_worst_stage_disconnected_fraction = 0.0;
+  double median_orphan_fraction = 0.0;
 };
 
 // The comparison on one benchmark.
