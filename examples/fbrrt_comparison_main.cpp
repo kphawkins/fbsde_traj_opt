@@ -33,6 +33,8 @@ auto PrintUsage() noexcept -> void {
       << "  --iterations N                    iterations on the 2-D benchmarks (default 30)\n"
       << "  --double-pendulum-iterations N    iterations on the double inverted pendulum (default 60)\n"
       << "  --skip-double-inverted-pendulum   run the 2-D benchmarks only\n"
+      << "  --only-double-inverted-pendulum   run the double inverted pendulum alone\n"
+      << "  --fbrrt-only                      skip DT-FBSDE\n"
       << "  --trace                           print every iteration's cost\n"
       << "  --model M                         soft-min (default), polynomial, or nonnegative-soft-min value\n"
       << "                                    functions, for both methods\n"
@@ -72,11 +74,20 @@ auto ParseOptions(int argc, char** argv, FbrrtComparisonOptions& options_out, bo
       options_out.include_double_inverted_pendulum = false;
       continue;
     }
+    if (argument == "--only-double-inverted-pendulum") {
+      options_out.include_two_dimensional = false;
+      options_out.include_double_inverted_pendulum = true;
+      continue;
+    }
+    if (argument == "--fbrrt-only") {
+      options_out.include_dt_fbsde = false;
+      continue;
+    }
     if (argument == "--trace") {
       trace_out = true;
       continue;
     }
-    RESULT_ASSERT(index + 1 < arguments.size(), "every option but the two flags needs a value.");
+    RESULT_ASSERT(index + 1 < arguments.size(), "every option but the flags needs a value.");
     const std::string value(arguments[++index]);
     const double number = std::strtod(value.c_str(), nullptr);
     const auto count = static_cast<std::size_t>(std::strtoull(value.c_str(), nullptr, 10));

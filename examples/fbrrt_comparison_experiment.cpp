@@ -191,6 +191,9 @@ auto Compare(const BenchmarkT& benchmark,
     }
     comparison.fbrrt.runs.push_back(std::move(fbrrt));
 
+    if (!options.include_dt_fbsde) {
+      continue;
+    }
     RESULT_ASSIGN_OR_RETURN(MethodRun dt_fbsde, RunDtFbsde<SetupT>(benchmark, table, options, iterations, seed));
     if (progress) {
       progress(benchmark.name, comparison.dt_fbsde.method, index, dt_fbsde);
@@ -207,7 +210,9 @@ auto Compare(const BenchmarkT& benchmark,
   }
   comparison.convergence_threshold = (1.0 + options.convergence_tolerance) * comparison.best_cost;
   Summarize(comparison.fbrrt, comparison.convergence_threshold, options.convergence_tolerance);
-  Summarize(comparison.dt_fbsde, comparison.convergence_threshold, options.convergence_tolerance);
+  if (!comparison.dt_fbsde.runs.empty()) {
+    Summarize(comparison.dt_fbsde, comparison.convergence_threshold, options.convergence_tolerance);
+  }
   return SuccessResult(std::move(comparison));
 }
 
@@ -223,18 +228,20 @@ auto CompareAll(const FbrrtComparisonOptions& options, const FbrrtComparisonProg
     -> Result<std::vector<BenchmarkComparison>> {
   std::vector<BenchmarkComparison> comparisons;
 
-  RESULT_ASSIGN_OR_RETURN(const L1DoubleIntegrator integrator, MakeL1DoubleIntegrator());
-  RESULT_ASSIGN_OR_RETURN(
-      BenchmarkComparison integrator_comparison,
-      (Compare<Setup<L1DoubleIntegrator, 1024, kL1DoubleIntegratorNumStages, Model<2, Small, double>>>(
-          integrator, options, options.keep_fraction, options.iterations, progress)));
-  comparisons.push_back(std::move(integrator_comparison));
+  if (options.include_two_dimensional) {
+    RESULT_ASSIGN_OR_RETURN(const L1DoubleIntegrator integrator, MakeL1DoubleIntegrator());
+    RESULT_ASSIGN_OR_RETURN(
+        BenchmarkComparison integrator_comparison,
+        (Compare<Setup<L1DoubleIntegrator, 1024, kL1DoubleIntegratorNumStages, Model<2, Small, double>>>(
+            integrator, options, options.keep_fraction, options.iterations, progress)));
+    comparisons.push_back(std::move(integrator_comparison));
 
-  RESULT_ASSIGN_OR_RETURN(const L1Pendulum pendulum, MakeL1Pendulum());
-  RESULT_ASSIGN_OR_RETURN(BenchmarkComparison pendulum_comparison,
-                          (Compare<Setup<L1Pendulum, 1024, kL1PendulumNumStages, Model<2, Large, double>>>(
-                              pendulum, options, options.keep_fraction, options.iterations, progress)));
-  comparisons.push_back(std::move(pendulum_comparison));
+    RESULT_ASSIGN_OR_RETURN(const L1Pendulum pendulum, MakeL1Pendulum());
+    RESULT_ASSIGN_OR_RETURN(BenchmarkComparison pendulum_comparison,
+                            (Compare<Setup<L1Pendulum, 1024, kL1PendulumNumStages, Model<2, Large, double>>>(
+                                pendulum, options, options.keep_fraction, options.iterations, progress)));
+    comparisons.push_back(std::move(pendulum_comparison));
+  }
 
   if (options.include_double_inverted_pendulum) {
     RESULT_ASSIGN_OR_RETURN(const L1DoubleInvertedPendulum double_pendulum, MakeL1DoubleInvertedPendulum());
@@ -274,6 +281,9 @@ auto SummarizeFbrrtComparison(const BenchmarkComparison& comparison) noexcept ->
                                     comparison.best_cost,
                                     comparison.convergence_threshold);
   for (const MethodResult* method : {&comparison.fbrrt, &comparison.dt_fbsde}) {
+    if (method->runs.empty()) {
+      continue;
+    }
     summary += std::format(
         "  {:<8} median final {:.3f}, median best {:.3f}; converged in {:.0f}% of {} runs, median {} iterations / "
         "{:.3f} s ({:.4f} s per iteration)\n",

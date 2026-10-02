@@ -60,6 +60,10 @@ struct FbrrtComparisonOptions {
   std::size_t iterations = 30;
   std::size_t double_inverted_pendulum_iterations = 60;
   bool include_double_inverted_pendulum = true;
+  // Skip the two-dimensional benchmarks, for a run on the double inverted pendulum alone.
+  bool include_two_dimensional = true;
+  // Skip DT-FBSDE, for a study of FBRRT's own options.
+  bool include_dt_fbsde = true;
 
   ComparisonValueFunctionModel model = ComparisonValueFunctionModel::kSoftMinQuadratic;
 
