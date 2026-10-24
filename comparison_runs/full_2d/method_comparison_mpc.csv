@@ -1,0 +1,13 @@
+problem,method,seed,rollouts,cost,seconds_per_step
+L1 double integrator,iLQR-MPC,0,128,4.328626,0.000017461
+L1 double integrator,MPPI-MPC,0,128,4.500680,0.001207130
+L1 double integrator,iLQR-MPC,1,128,4.338679,0.000017164
+L1 double integrator,MPPI-MPC,1,128,4.510910,0.001228213
+L1 double integrator,iLQR-MPC,2,128,4.329027,0.000019103
+L1 double integrator,MPPI-MPC,2,128,4.499290,0.001307466
+L1 inverted pendulum,iLQR-MPC,0,128,3.126626,0.000615828
+L1 inverted pendulum,MPPI-MPC,0,128,3.331469,0.011572086
+L1 inverted pendulum,iLQR-MPC,1,128,2.826384,0.000474692
+L1 inverted pendulum,MPPI-MPC,1,128,3.268995,0.011723723
+L1 inverted pendulum,iLQR-MPC,2,128,3.141249,0.000480535
+L1 inverted pendulum,MPPI-MPC,2,128,3.359609,0.010166704

@@ -1,0 +1,32 @@
+
+=== L1 double inverted pendulum ===
+softmin4                                 seed 0: final cost    7.3914 after 180.4 s
+softmin4                                 seed 1: final cost   15.9119 after 182.3 s
+softmin4                                 seed 2: final cost    8.8483 after 181.6 s
+softmin2                                 seed 0: final cost    6.4788 after 182.1 s
+softmin2                                 seed 1: final cost   25.8611 after 182.7 s
+softmin2                                 seed 2: final cost    6.5960 after 182.6 s
+softmin8                                 seed 0: final cost   15.2754 after 181.8 s
+softmin8                                 seed 1: final cost   11.4214 after 186.7 s
+softmin8                                 seed 2: final cost   15.4914 after 183.7 s
+poly2                                    seed 0: final cost    6.1666 after 180.7 s
+poly2                                    seed 1: final cost    5.9714 after 181.0 s
+poly2                                    seed 2: final cost    4.7415 after 180.5 s
+poly4                                    seed 0: final cost    6.0702 after 183.7 s
+poly4                                    seed 1: final cost    4.6270 after 180.9 s
+poly4                                    seed 2: final cost    3.1274 after 180.3 s
+poly6                                    seed 0: final cost    9.4567 after 184.7 s
+poly6                                    seed 1: final cost    4.9271 after 186.0 s
+poly6                                    seed 2: final cost    6.5359 after 184.2 s
+leg4                                     seed 0: final cost   55.0770 after 182.8 s
+leg4                                     seed 1: final cost   13.7956 after 182.8 s
+leg4                                     seed 2: final cost    6.9628 after 181.3 s
+rbf4                                     seed 0: final cost   12.4561 after 210.7 s
+rbf4                                     seed 1: final cost    8.4869 after 195.0 s
+rbf4                                     seed 2: final cost   12.7593 after 196.2 s
+spline2                                  seed 0: final cost   18.4960 after 212.0 s
+spline2                                  seed 1: final cost   16.2534 after 207.9 s
+spline2                                  seed 2: final cost   10.0328 after 205.9 s
+tanh32                                   seed 0: final cost    9.9255 after 181.1 s
+tanh32                                   seed 1: final cost    9.0315 after 186.0 s
+tanh32                                   seed 2: final cost    8.5767 after 182.6 s

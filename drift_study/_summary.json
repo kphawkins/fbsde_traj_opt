@@ -1,0 +1,342 @@
+[
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,explore=0.03,target=taylor",
+  "setting": {
+   "batch": "128",
+   "explore": "0.03",
+   "target": "taylor"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 112.88530969191272,
+  "gap_worst": 120.22653241335047,
+  "gaps": [
+   120.22653241335047,
+   112.88530969191272,
+   62.262114890885776
+  ],
+  "iterations": 43,
+  "mean_girsanov_drift": 5.536035,
+  "mean_first_order_correction": 0.18024233333333334,
+  "mean_target_magnitude": 10.967619000000001,
+  "mean_signed_first_order_correction": -0.08846166666666666,
+  "mean_second_order_correction": 0.052604,
+  "off_policy_fraction": 0.07473833333333334,
+  "mean_off_policy_correction": 1.1147516666666666,
+  "mean_taylor_residual": 0.0,
+  "k_share": 0.016434044010220753
+ },
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,explore=0.05,target=taylor",
+  "setting": {
+   "batch": "128",
+   "explore": "0.05",
+   "target": "taylor"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 61.321405648267024,
+  "gap_worst": 156.89798620025672,
+  "gaps": [
+   156.89798620025672,
+   54.67682926829269,
+   61.321405648267024
+  ],
+  "iterations": 52,
+  "mean_girsanov_drift": 5.445597333333334,
+  "mean_first_order_correction": 0.153708,
+  "mean_target_magnitude": 9.711001333333334,
+  "mean_signed_first_order_correction": -0.07791066666666667,
+  "mean_second_order_correction": 0.04355133333333333,
+  "off_policy_fraction": 0.07499233333333333,
+  "mean_off_policy_correction": 1.05731,
+  "mean_taylor_residual": 0.0,
+  "k_share": 0.015828233847769355
+ },
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,explore=0.1,inflation=6,target=taylor",
+  "setting": {
+   "batch": "128",
+   "explore": "0.1",
+   "inflation": "6",
+   "target": "taylor"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 114.49285943517333,
+  "gap_worst": 161.71193035943517,
+  "gaps": [
+   114.49285943517333,
+   161.71193035943517,
+   89.35353818998718
+  ],
+  "iterations": 48,
+  "mean_girsanov_drift": 7.238858666666666,
+  "mean_first_order_correction": 0.22033466666666668,
+  "mean_target_magnitude": 13.718832,
+  "mean_signed_first_order_correction": -0.11726333333333333,
+  "mean_second_order_correction": 0.06374166666666667,
+  "off_policy_fraction": 0.10070733333333333,
+  "mean_off_policy_correction": 1.7930536666666668,
+  "mean_taylor_residual": 0.0,
+  "k_share": 0.01606074530737505
+ },
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,explore=0.1,order=0,target=taylor",
+  "setting": {
+   "batch": "128",
+   "explore": "0.1",
+   "order": "0",
+   "target": "taylor"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 138.8252567394095,
+  "gap_worst": 197.18192394094993,
+  "gaps": [
+   119.49382220795894,
+   138.8252567394095,
+   197.18192394094993
+  ],
+  "iterations": 43,
+  "mean_girsanov_drift": 8.560383666666667,
+  "mean_first_order_correction": 0.21167833333333333,
+  "mean_target_magnitude": 19.994557333333333,
+  "mean_signed_first_order_correction": -0.13507,
+  "mean_second_order_correction": 0.064359,
+  "off_policy_fraction": 0.11398233333333332,
+  "mean_off_policy_correction": 1.44647,
+  "mean_taylor_residual": 0.0,
+  "k_share": 0.010586797687210613
+ },
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,explore=0.1,order=0,target=taylor,tpolicy=greedy",
+  "setting": {
+   "batch": "128",
+   "explore": "0.1",
+   "order": "0",
+   "target": "taylor",
+   "tpolicy": "greedy"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 207.45438863928115,
+  "gap_worst": 268.4262676508344,
+  "gaps": [
+   194.58701059050068,
+   207.45438863928115,
+   268.4262676508344
+  ],
+  "iterations": 44,
+  "mean_girsanov_drift": 33.84731,
+  "mean_first_order_correction": 0.6160683333333333,
+  "mean_target_magnitude": 16.262928666666667,
+  "mean_signed_first_order_correction": -0.5719646666666667,
+  "mean_second_order_correction": 0.277241,
+  "off_policy_fraction": 0.42504833333333336,
+  "mean_off_policy_correction": 1.5710626666666667,
+  "mean_taylor_residual": 0.0,
+  "k_share": 0.03788175832044683
+ },
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,explore=0.1,target=current",
+  "setting": {
+   "batch": "128",
+   "explore": "0.1",
+   "target": "current"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 117.48571887034664,
+  "gap_worst": 180.89770539152764,
+  "gaps": [
+   113.33019094993584,
+   117.48571887034664,
+   180.89770539152764
+  ],
+  "iterations": 40,
+  "mean_girsanov_drift": 0.0,
+  "mean_first_order_correction": 0.0,
+  "mean_target_magnitude": 0.0,
+  "mean_signed_first_order_correction": 0.0,
+  "mean_second_order_correction": 0.0,
+  "off_policy_fraction": 0.0,
+  "mean_off_policy_correction": 0.0,
+  "mean_taylor_residual": 0.0,
+  "k_share": null
+ },
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,explore=0.1,target=greedy",
+  "setting": {
+   "batch": "128",
+   "explore": "0.1",
+   "target": "greedy"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 202.87415757381262,
+  "gap_worst": 276.8400593709885,
+  "gaps": [
+   193.88222079589218,
+   202.87415757381262,
+   276.8400593709885
+  ],
+  "iterations": 39,
+  "mean_girsanov_drift": 0.0,
+  "mean_first_order_correction": 0.0,
+  "mean_target_magnitude": 0.0,
+  "mean_signed_first_order_correction": 0.0,
+  "mean_second_order_correction": 0.0,
+  "off_policy_fraction": 0.0,
+  "mean_off_policy_correction": 0.0,
+  "mean_taylor_residual": 0.0,
+  "k_share": null
+ },
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,explore=0.1,target=taylor",
+  "setting": {
+   "batch": "128",
+   "explore": "0.1",
+   "target": "taylor"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 145.21754653401797,
+  "gap_worst": 157.8472801668806,
+  "gaps": [
+   157.8472801668806,
+   61.457116495507094,
+   145.21754653401797
+  ],
+  "iterations": 42,
+  "mean_girsanov_drift": 8.287075666666667,
+  "mean_first_order_correction": 0.23467033333333334,
+  "mean_target_magnitude": 12.588555666666666,
+  "mean_signed_first_order_correction": -0.138328,
+  "mean_second_order_correction": 0.068011,
+  "off_policy_fraction": 0.11084899999999999,
+  "mean_off_policy_correction": 1.653234,
+  "mean_taylor_residual": 0.0,
+  "k_share": 0.018641561394904003
+ },
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,explore=0.1,target=taylor,tpolicy=greedy",
+  "setting": {
+   "batch": "128",
+   "explore": "0.1",
+   "target": "taylor",
+   "tpolicy": "greedy"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 234.44443998716304,
+  "gap_worst": 350.94865211810014,
+  "gaps": [
+   165.39369383825417,
+   350.94865211810014,
+   234.44443998716304
+  ],
+  "iterations": 45,
+  "mean_girsanov_drift": 23.22091933333333,
+  "mean_first_order_correction": 0.4471216666666667,
+  "mean_target_magnitude": 9.058103333333333,
+  "mean_signed_first_order_correction": -0.42178066666666664,
+  "mean_second_order_correction": 0.15799966666666665,
+  "off_policy_fraction": 0.3571296666666667,
+  "mean_off_policy_correction": 1.2471703333333333,
+  "mean_taylor_residual": 0.0,
+  "k_share": 0.04936151092704838
+ },
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,explore=0.2,target=taylor",
+  "setting": {
+   "batch": "128",
+   "explore": "0.2",
+   "target": "taylor"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 123.3825818356868,
+  "gap_worst": 169.6539232991014,
+  "gaps": [
+   123.3825818356868,
+   169.6539232991014,
+   107.75533536585367
+  ],
+  "iterations": 39,
+  "mean_girsanov_drift": 12.504552333333333,
+  "mean_first_order_correction": 0.36667,
+  "mean_target_magnitude": 16.259116666666667,
+  "mean_signed_first_order_correction": -0.231222,
+  "mean_second_order_correction": 0.09628833333333334,
+  "off_policy_fraction": 0.17027799999999998,
+  "mean_off_policy_correction": 2.005314,
+  "mean_taylor_residual": 0.0,
+  "k_share": 0.022551655635248736
+ },
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,inflation=6,target=greedy",
+  "setting": {
+   "batch": "128",
+   "inflation": "6",
+   "target": "greedy"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 457.74346116816434,
+  "gap_worst": 505.5103096919127,
+  "gaps": [
+   302.95972400513483,
+   505.5103096919127,
+   457.74346116816434
+  ],
+  "iterations": 38,
+  "mean_girsanov_drift": 0.0,
+  "mean_first_order_correction": 0.0,
+  "mean_target_magnitude": 0.0,
+  "mean_signed_first_order_correction": 0.0,
+  "mean_second_order_correction": 0.0,
+  "off_policy_fraction": 0.0,
+  "mean_off_policy_correction": 0.0,
+  "mean_taylor_residual": 0.0,
+  "k_share": null
+ },
+ {
+  "problem": "L1 double inverted pendulum",
+  "model": "poly4:batch=128,target=greedy",
+  "setting": {
+   "batch": "128",
+   "target": "greedy"
+  },
+  "runs": 3,
+  "broke": 0,
+  "gap_median": 73.8624438382542,
+  "gap_worst": 159.78903241335044,
+  "gaps": [
+   31.990532734274723,
+   159.78903241335044,
+   73.8624438382542
+  ],
+  "iterations": 42,
+  "mean_girsanov_drift": 0.0,
+  "mean_first_order_correction": 0.0,
+  "mean_target_magnitude": 0.0,
+  "mean_signed_first_order_correction": 0.0,
+  "mean_second_order_correction": 0.0,
+  "off_policy_fraction": 0.0,
+  "mean_off_policy_correction": 0.0,
+  "mean_taylor_residual": 0.0,
+  "k_share": null
+ }
+]

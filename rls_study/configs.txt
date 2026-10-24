@@ -1,0 +1,1 @@
+poly4:memory=0.5;poly4:memory=0.8;poly4:memory=0.9;poly4:memory=0.95;poly4:memory=0.5,reset=1;poly4:memory=0.8,reset=1;poly4:memory=0.9,reset=1;poly4:memory=0.95,reset=1;poly4:memory=1,reset=1

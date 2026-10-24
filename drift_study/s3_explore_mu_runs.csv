@@ -1,0 +1,19 @@
+problem,model,seed,iterations,accepted,failures,seconds,final_cost,mean_girsanov_drift,mean_first_order_correction,mean_target_magnitude,mean_signed_first_order_correction,mean_second_order_correction,off_policy_fraction,mean_off_policy_correction,mean_taylor_residual
+L1 double integrator,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2",0,1968,41,0,30.005948,4.181540,0.194191,0.074705,5.862595,-0.074278,0.008429,0.051012,0.820792,0.000000
+L1 double integrator,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2",1,1739,53,0,30.010385,4.172423,0.194107,0.076719,5.999455,-0.076123,0.008508,0.051139,0.832808,0.000000
+L1 double integrator,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2",2,1372,48,0,30.032161,4.182895,0.194849,0.077345,6.000100,-0.076784,0.008487,0.051351,0.837974,0.000000
+L1 double integrator,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4",0,1672,34,0,30.009440,4.433588,0.391551,0.376876,17.906480,-0.375626,0.034611,0.100873,3.143202,0.000000
+L1 double integrator,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4",1,2037,31,0,30.007291,4.266008,0.390617,0.374588,17.848215,-0.373970,0.034149,0.100802,3.122380,0.000000
+L1 double integrator,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4",2,1995,47,0,30.002180,4.509919,0.391784,0.376142,17.836296,-0.375398,0.034441,0.101180,3.146127,0.000000
+L1 double integrator,"poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4",0,1489,35,0,30.041641,4.210083,0.195889,0.185029,10.132599,-0.184291,0.015058,0.050290,2.219943,0.000000
+L1 double integrator,"poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4",1,1572,34,0,30.009328,4.174285,0.195638,0.185543,10.162798,-0.184825,0.014867,0.050357,2.231295,0.000000
+L1 double integrator,"poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4",2,1748,32,0,30.002159,4.224339,0.195951,0.184623,10.079407,-0.183981,0.014820,0.050515,2.223033,0.000000
+L1 inverted pendulum,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2",0,513,29,0,30.026406,2.397149,0.187044,0.155169,5.548252,-0.150224,0.017267,0.053427,1.741067,0.000000
+L1 inverted pendulum,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2",1,795,41,0,30.047548,2.411893,0.185444,0.127182,4.674340,-0.122550,0.014466,0.052955,1.419272,0.000000
+L1 inverted pendulum,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2",2,667,31,0,30.014395,2.442117,0.184956,0.119845,4.509741,-0.113391,0.013587,0.053005,1.329205,0.000000
+L1 inverted pendulum,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4",0,755,39,0,30.057966,2.852695,0.376060,0.172743,5.011859,-0.163684,0.014369,0.102125,1.432421,0.000000
+L1 inverted pendulum,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4",1,732,41,0,30.036138,2.720680,0.380666,0.246956,6.719723,-0.234341,0.019252,0.102330,2.058254,0.000000
+L1 inverted pendulum,"poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4",2,890,25,0,30.001842,2.811006,0.376427,0.205000,5.786452,-0.192617,0.016112,0.102263,1.701581,0.000000
+L1 inverted pendulum,"poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4",0,744,43,0,30.024668,2.565833,0.188359,0.131882,4.776345,-0.126826,0.007819,0.050915,1.585967,0.000000
+L1 inverted pendulum,"poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4",1,759,30,0,30.018964,2.677372,0.187671,0.117099,4.259268,-0.112601,0.007010,0.050976,1.409198,0.000000
+L1 inverted pendulum,"poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4",2,760,24,0,30.012554,2.522934,0.184859,0.176044,6.292543,-0.169871,0.009999,0.050572,2.119788,0.000000

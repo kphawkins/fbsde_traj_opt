@@ -38,3 +38,6 @@ __pycache__/
 
 # The HTML reports written by //examples:fbrrt_particle_swarms with its default output directory.
 /fbrrt_particle_swarms_report/
+
+# Study binaries copied out of bazel-bin.
+/drift_study/study_bin*

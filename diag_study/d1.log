@@ -1,0 +1,32 @@
+
+=== L1 inverted pendulum: grid optimum 2.2977 ===
+poly4                                    seed 0: final gap    +3.00% after 30.0 s
+poly4                                    seed 1: final gap    +3.40% after 30.0 s
+poly4                                    seed 2: final gap    +5.18% after 30.0 s
+poly4                                    seed 3: final gap    +4.42% after 30.0 s
+poly4                                    seed 4: final gap    +3.58% after 30.0 s
+poly4:memory=0.5                         seed 0: final gap   +22.86% after 30.0 s
+poly4:memory=0.5                         seed 1: final gap   +26.44% after 30.0 s
+poly4:memory=0.5                         seed 2: final gap   +29.55% after 30.0 s
+poly4:memory=0.5                         seed 3: final gap   +30.25% after 30.0 s
+poly4:memory=0.5                         seed 4: final gap   +30.10% after 30.0 s
+poly4:memory=0.9                         seed 0: final gap   +56.68% after 30.0 s
+poly4:memory=0.9                         seed 1: final gap  +121.02% after 30.0 s
+poly4:memory=0.9                         seed 2: final gap  +273.38% after 30.0 s
+poly4:memory=0.9                         seed 3: final gap   +73.84% after 30.0 s
+poly4:memory=0.9                         seed 4: final gap  +126.35% after 30.0 s
+poly4:memory=0.95                        seed 0: final gap  +298.19% after 30.0 s
+poly4:memory=0.95                        seed 1: final gap  +240.87% after 30.0 s
+poly4:memory=0.95                        seed 2: final gap  +165.29% after 30.0 s
+poly4:memory=0.95                        seed 3: final gap   +61.76% after 30.0 s
+poly4:memory=0.95                        seed 4: final gap  +215.03% after 30.0 s
+poly4:memory=0.5,reset=1                 seed 0: final gap   +16.02% after 30.0 s
+poly4:memory=0.5,reset=1                 seed 1: final gap   +13.89% after 30.0 s
+poly4:memory=0.5,reset=1                 seed 2: final gap   +23.47% after 30.0 s
+poly4:memory=0.5,reset=1                 seed 3: final gap   +10.40% after 30.0 s
+poly4:memory=0.5,reset=1                 seed 4: final gap   +19.45% after 30.0 s
+poly4:memory=1,reset=1                   seed 0: final gap   +38.29% after 30.0 s
+poly4:memory=1,reset=1                   seed 1: final gap   +47.23% after 30.0 s
+poly4:memory=1,reset=1                   seed 2: final gap  +714.83% after 30.0 s
+poly4:memory=1,reset=1                   seed 3: final gap  +233.97% after 30.0 s
+poly4:memory=1,reset=1                   seed 4: final gap   +37.39% after 30.0 s

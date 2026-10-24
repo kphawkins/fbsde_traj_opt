@@ -1,0 +1,64 @@
+
+=== L1 double integrator: grid optimum 4.1367, grid V0(x0) 4.2353 ===
+ut:rotate=random                     batch 80 (asked 80)
+ut:rotate=random                     seed 0: cost    4.2328 (gap   +2.32%), V0 estimate    3.5844, 2467 iterations (28 accepted), fwd/bwd/ls 8/54/38%
+ut:rotate=random                     seed 1: cost    4.2784 (gap   +3.43%), V0 estimate    3.6821, 2357 iterations (11 accepted), fwd/bwd/ls 8/51/41%
+ut:rotate=random                     seed 2: cost    4.3022 (gap   +4.00%), V0 estimate    3.7942, 2384 iterations (21 accepted), fwd/bwd/ls 8/51/41%
+ut:rotate=random                     seed 3: cost    4.2572 (gap   +2.91%), V0 estimate    3.5031, 2386 iterations (29 accepted), fwd/bwd/ls 8/51/41%
+ut:rotate=random                     seed 4: cost    4.3778 (gap   +5.83%), V0 estimate   65.8233, 2519 iterations (12 accepted), fwd/bwd/ls 8/54/37%
+cub5:rotate=random                   batch 144 (asked 144)
+cub5:rotate=random                   seed 0: cost    4.6580 (gap  +12.60%), V0 estimate    3.6951, 1320 iterations (6 accepted), fwd/bwd/ls 7/74/20%
+cub5:rotate=random                   seed 1: cost    4.4434 (gap   +7.41%), V0 estimate    3.2738, 1315 iterations (15 accepted), fwd/bwd/ls 7/73/20%
+cub5:rotate=random                   seed 2: cost    5.2684 (gap  +27.36%), V0 estimate    3.9827, 1297 iterations (3 accepted), fwd/bwd/ls 7/74/19%
+cub5:rotate=random                   seed 3: cost    4.4330 (gap   +7.16%), V0 estimate    3.3817, 1298 iterations (16 accepted), fwd/bwd/ls 7/74/20%
+cub5:rotate=random                   seed 4: cost    4.4540 (gap   +7.67%), V0 estimate    3.3614, 1242 iterations (32 accepted), fwd/bwd/ls 6/69/24%
+cut:rotate=random                    batch 144 (asked 144)
+cut:rotate=random                    seed 0: cost    4.4002 (gap   +6.37%), V0 estimate    3.4962, 1292 iterations (15 accepted), fwd/bwd/ls 7/73/20%
+cut:rotate=random                    seed 1: cost    4.4287 (gap   +7.06%), V0 estimate    3.1234, 1270 iterations (27 accepted), fwd/bwd/ls 7/72/21%
+cut:rotate=random                    seed 2: cost    4.4093 (gap   +6.59%), V0 estimate    3.4736, 1277 iterations (27 accepted), fwd/bwd/ls 7/71/22%
+cut:rotate=random                    seed 3: cost    4.4271 (gap   +7.02%), V0 estimate    3.2541, 960 iterations (46 accepted), fwd/bwd/ls 5/54/41%
+cut:rotate=random                    seed 4: cost    4.4073 (gap   +6.54%), V0 estimate    3.3348, 1238 iterations (22 accepted), fwd/bwd/ls 6/70/23%
+gh3:rotate=random                    batch 144 (asked 144)
+gh3:rotate=random                    seed 0: cost    4.4089 (gap   +6.58%), V0 estimate    3.1730, 1273 iterations (24 accepted), fwd/bwd/ls 7/72/21%
+gh3:rotate=random                    seed 1: cost    4.4064 (gap   +6.52%), V0 estimate    3.1970, 1302 iterations (19 accepted), fwd/bwd/ls 7/73/20%
+gh3:rotate=random                    seed 2: cost    4.3735 (gap   +5.72%), V0 estimate    3.1916, 1288 iterations (22 accepted), fwd/bwd/ls 7/72/21%
+gh3:rotate=random                    seed 3: cost    4.3606 (gap   +5.41%), V0 estimate    3.4470, 1118 iterations (25 accepted), fwd/bwd/ls 6/63/31%
+gh3:rotate=random                    seed 4: cost    4.3860 (gap   +6.03%), V0 estimate    3.2875, 1208 iterations (23 accepted), fwd/bwd/ls 6/69/25%
+ut:rotate=random,probes=0            batch 20 (asked 20)
+ut:rotate=random,probes=0            seed 0: cost    4.2302 (gap   +2.26%), V0 estimate  281.1073, 3592 iterations (67 accepted), fwd/bwd/ls 11/23/66%
+ut:rotate=random,probes=0            seed 1: cost    4.2257 (gap   +2.15%), V0 estimate  203.8926, 3528 iterations (50 accepted), fwd/bwd/ls 11/23/66%
+ut:rotate=random,probes=0            seed 2: cost    4.2532 (gap   +2.82%), V0 estimate  275.8905, 3677 iterations (54 accepted), fwd/bwd/ls 11/24/65%
+ut:rotate=random,probes=0            seed 3: cost    4.2484 (gap   +2.70%), V0 estimate  232.8174, 3660 iterations (65 accepted), fwd/bwd/ls 12/24/64%
+ut:rotate=random,probes=0            seed 4: cost    4.3168 (gap   +4.35%), V0 estimate   13.1629, 3699 iterations (7 accepted), fwd/bwd/ls 12/24/64%
+
+=== L1 inverted pendulum: grid optimum 2.2977, grid V0(x0) 2.3134 ===
+ut:rotate=random                     batch 80 (asked 80)
+ut:rotate=random                     seed 0: cost    2.6634 (gap  +15.92%), V0 estimate    5.0422, 755 iterations (31 accepted), fwd/bwd/ls 9/64/27%
+ut:rotate=random                     seed 1: cost    2.7554 (gap  +19.92%), V0 estimate    1.7167, 762 iterations (14 accepted), fwd/bwd/ls 9/65/26%
+ut:rotate=random                     seed 2: cost    2.7883 (gap  +21.35%), V0 estimate    1.6352, 730 iterations (19 accepted), fwd/bwd/ls 9/62/30%
+ut:rotate=random                     seed 3: cost    2.7391 (gap  +19.21%), V0 estimate    1.8944, 770 iterations (21 accepted), fwd/bwd/ls 9/65/26%
+ut:rotate=random                     seed 4: cost    2.6871 (gap  +16.95%), V0 estimate    2.1295, 769 iterations (22 accepted), fwd/bwd/ls 9/65/25%
+cub5:rotate=random                   batch 144 (asked 144)
+cub5:rotate=random                   seed 0: cost    3.4623 (gap  +50.68%), V0 estimate    2.7834, 460 iterations (18 accepted), fwd/bwd/ls 10/72/18%
+cub5:rotate=random                   seed 1: cost    3.2141 (gap  +39.88%), V0 estimate    1.2429, 463 iterations (12 accepted), fwd/bwd/ls 10/73/17%
+cub5:rotate=random                   seed 2: cost    4.2476 (gap  +84.86%), V0 estimate    1.4543, 480 iterations (4 accepted), fwd/bwd/ls 10/75/15%
+cub5:rotate=random                   seed 3: cost    5.1552 (gap +124.36%), V0 estimate    0.8256, 459 iterations (4 accepted), fwd/bwd/ls 10/71/19%
+cub5:rotate=random                   seed 4: cost    6.0001 (gap +161.13%), V0 estimate    0.6750, 445 iterations (3 accepted), fwd/bwd/ls 10/71/19%
+cut:rotate=random                    batch 144 (asked 144)
+cut:rotate=random                    seed 0: cost    2.9128 (gap  +26.77%), V0 estimate    2.3535, 458 iterations (16 accepted), fwd/bwd/ls 10/71/19%
+cut:rotate=random                    seed 1: cost    9.4594 (gap +311.69%), V0 estimate    5.9990, 478 iterations (5 accepted), fwd/bwd/ls 10/75/15%
+cut:rotate=random                    seed 2: cost    6.5102 (gap +183.33%), V0 estimate    0.4784, 471 iterations (2 accepted), fwd/bwd/ls 10/75/14%
+cut:rotate=random                    seed 3: cost    5.1790 (gap +125.40%), V0 estimate    1.3904, 482 iterations (5 accepted), fwd/bwd/ls 10/75/15%
+cut:rotate=random                    seed 4: cost    3.6926 (gap  +60.71%), V0 estimate    6.1559, 474 iterations (5 accepted), fwd/bwd/ls 10/74/16%
+gh3:rotate=random                    batch 144 (asked 144)
+gh3:rotate=random                    seed 0: cost    6.1687 (gap +168.47%), V0 estimate    1.8986, 476 iterations (3 accepted), fwd/bwd/ls 10/75/15%
+gh3:rotate=random                    seed 1: cost    4.6421 (gap +102.03%), V0 estimate    1.4106, 473 iterations (5 accepted), fwd/bwd/ls 10/75/15%
+gh3:rotate=random                    seed 2: cost    4.8537 (gap +111.24%), V0 estimate    1.0807, 468 iterations (6 accepted), fwd/bwd/ls 10/74/16%
+gh3:rotate=random                    seed 3: cost    6.1848 (gap +169.17%), V0 estimate    1.2953, 475 iterations (4 accepted), fwd/bwd/ls 10/75/15%
+gh3:rotate=random                    seed 4: cost    2.9063 (gap  +26.49%), V0 estimate    1.8470, 458 iterations (14 accepted), fwd/bwd/ls 10/71/19%
+ut:rotate=random,probes=0            batch 20 (asked 20)
+ut:rotate=random,probes=0            seed 0: cost    3.8297 (gap  +66.68%), V0 estimate    3.9305, 1711 iterations (10 accepted), fwd/bwd/ls 9/38/53%
+ut:rotate=random,probes=0            seed 1: cost    2.7730 (gap  +20.68%), V0 estimate    3.0179, 1677 iterations (22 accepted), fwd/bwd/ls 9/39/52%
+ut:rotate=random,probes=0            seed 2: cost    3.1260 (gap  +36.05%), V0 estimate    3.0615, 1628 iterations (12 accepted), fwd/bwd/ls 9/39/53%
+ut:rotate=random,probes=0            seed 3: cost    2.7634 (gap  +20.27%), V0 estimate    3.1037, 1705 iterations (18 accepted), fwd/bwd/ls 9/39/51%
+ut:rotate=random,probes=0            seed 4: cost    3.0291 (gap  +31.83%), V0 estimate    3.9650, 1653 iterations (21 accepted), fwd/bwd/ls 9/39/52%

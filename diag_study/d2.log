@@ -1,0 +1,27 @@
+
+=== L1 inverted pendulum: grid optimum 2.2977 ===
+poly4:ridge=1e-5                         seed 0: final gap   +12.00% after 30.0 s
+poly4:ridge=1e-5                         seed 1: final gap    +6.90% after 30.0 s
+poly4:ridge=1e-5                         seed 2: final gap   +14.50% after 30.0 s
+poly4:ridge=1e-5                         seed 3: final gap   +16.83% after 30.0 s
+poly4:ridge=1e-5                         seed 4: final gap   +14.98% after 30.0 s
+poly4:memory=0.5,reset=1,ridge=1e-5      seed 0: final gap   +19.89% after 30.0 s
+poly4:memory=0.5,reset=1,ridge=1e-5      seed 1: final gap   +17.53% after 30.0 s
+poly4:memory=0.5,reset=1,ridge=1e-5      seed 2: final gap   +13.71% after 30.0 s
+poly4:memory=0.5,reset=1,ridge=1e-5      seed 3: final gap   +18.33% after 30.0 s
+poly4:memory=0.5,reset=1,ridge=1e-5      seed 4: final gap   +21.47% after 30.0 s
+poly4:memory=0.5,reset=1,ridge=1e-4      seed 0: final gap   +21.88% after 30.0 s
+poly4:memory=0.5,reset=1,ridge=1e-4      seed 1: final gap   +18.31% after 30.0 s
+poly4:memory=0.5,reset=1,ridge=1e-4      seed 2: final gap   +26.11% after 30.0 s
+poly4:memory=0.5,reset=1,ridge=1e-4      seed 3: final gap   +20.72% after 30.0 s
+poly4:memory=0.5,reset=1,ridge=1e-4      seed 4: final gap   +24.16% after 30.0 s
+poly4:memory=0.9,ridge=1e-5              seed 0: final gap  +142.44% after 30.0 s
+poly4:memory=0.9,ridge=1e-5              seed 1: final gap  +210.28% after 30.0 s
+poly4:memory=0.9,ridge=1e-5              seed 2: final gap  +184.29% after 30.0 s
+poly4:memory=0.9,ridge=1e-5              seed 3: final gap  +163.72% after 30.0 s
+poly4:memory=0.9,ridge=1e-5              seed 4: final gap  +169.98% after 30.0 s
+poly4:memory=0.9,ridge=1e-4              seed 0: final gap  +158.51% after 30.0 s
+poly4:memory=0.9,ridge=1e-4              seed 1: final gap  +335.35% after 30.0 s
+poly4:memory=0.9,ridge=1e-4              seed 2: final gap  +186.50% after 30.0 s
+poly4:memory=0.9,ridge=1e-4              seed 3: final gap  +163.61% after 30.0 s
+poly4:memory=0.9,ridge=1e-4              seed 4: final gap  +103.91% after 30.0 s

@@ -1,0 +1,10 @@
+STEP sigma_2d done 13:09
+STEP roughness done 13:43 exit 0
+STEP dip_models done 15:22 exit 0
+STEP dip_sigma done 16:28 exit 0
+QUEUE FINISHED
+STEP sigma_2d_random done 16:54 exit 0
+STEP sigma_dip_random done 17:13 exit 0
+QUEUE2 FINISHED
+STEP confirm done 19:10 exit 0
+QUEUE3 FINISHED
