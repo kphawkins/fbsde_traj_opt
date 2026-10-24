@@ -670,6 +670,61 @@ class DtFbsdeIterativeSolver {
 
   [[nodiscard]] auto DiffusionScale() const noexcept -> Scalar { return forward_model_.scale(); }
 
+  // Replaces the value functions at every stage before the terminal one with `table`, one entry per
+  // stage 0..K-1, and re-scores the current policy: a warm start from another method's solution,
+  // such as iLQR's quadratic value expansions (examples/ilqr_seeded_table.hpp). The terminal entry
+  // is the problem's own terminal cost and is kept. Both halves of a double-estimation pass start
+  // from the new table, the stall counter is reset, and any normal equations or replay batches
+  // carried over from earlier iterations are dropped, since their targets came from the old table.
+  //
+  // The new table is adopted whether or not its policy beats the one it replaces; CurrentCost()
+  // before and after says which is better. Seeding sets no exploration schedule of its own: a seeded
+  // solver should usually be built with `initial_exploration_probability` equal to the regular one,
+  // so that the first forward pass samples around the seeded policy instead of exploring blindly.
+  //
+  // Fails, leaving the solver untouched, unless `table` has one entry per control stage.
+  auto SeedValueFunctions(std::span<const ValueFunctionT> table) noexcept -> Result<> {
+    RESULT_ASSERT(table.size() == kNumControlStages,
+                  "DtFbsdeIterativeSolver::SeedValueFunctions: the table needs one entry per control stage.");
+    for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
+      current_[stage] = table[stage];
+      fitted_[stage] = table[stage];
+      trial_[stage] = table[stage];
+      halves_[0][stage] = table[stage];
+      halves_[1][stage] = table[stage];
+    }
+    for (auto& halves : accumulated_) {
+      for (auto& equations : halves) {
+        equations = NormalEquations{};
+      }
+    }
+    for (auto& halves : replay_) {
+      for (auto& kept : halves) {
+        kept.clear();
+      }
+    }
+    stall_factor_ = Scalar{1};
+    stalled_iterations_ = 0;
+    current_costs_ = Evaluate(current_);
+    if (options_.screening_rollouts > 0) {
+      current_screened_cost_ = Evaluate(current_, options_.screening_rollouts).total;
+    }
+    return SuccessResult();
+  }
+
+  // The cost of the policy over `table` -- with the terminal entry kept -- on the evaluation rollouts,
+  // which is what SeedValueFunctions() would score it at, without adopting it: for choosing among
+  // candidate seeds.
+  //
+  // Fails unless `table` has one entry per control stage.
+  [[nodiscard]] auto SeededCost(std::span<const ValueFunctionT> table) const noexcept -> Result<Scalar> {
+    RESULT_ASSERT(table.size() == kNumControlStages,
+                  "DtFbsdeIterativeSolver::SeededCost: the table needs one entry per control stage.");
+    std::vector<ValueFunctionT> candidate = current_;
+    std::ranges::copy(table, candidate.begin());
+    return SuccessResult(Evaluate(candidate).total);
+  }
+
   // The current value functions, one per stage 0..K.
   [[nodiscard]] auto ValueFunctions() const noexcept -> std::span<const ValueFunctionT> { return current_; }
 

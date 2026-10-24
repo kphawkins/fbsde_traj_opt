@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <Eigen/Core>
+#include <Eigen/Eigenvalues>
 #include <gtest/gtest.h>
 
 #include "fbsde_traj_opt/dynamics/const_diagonal_sde_diffusion_term.hpp"
@@ -113,6 +114,32 @@ TEST(BoxIlqrSolverTest, ReplanningFromTheNominalTrajectoryKeepsThePlan) {
   }
   for (std::size_t stage = kStage; stage + 1 < kNumStages; ++stage) {
     EXPECT_NEAR(solver->NominalControls()[stage], plan[stage], 1e-3);
+  }
+}
+
+// The value expansions: the terminal one is the terminal cost exactly, the values are the plan's own
+// cost-to-go, and every Hessian is positive semidefinite.
+TEST(BoxIlqrSolverTest, ValueExpansionsAreTheCostToGoAboutTheNominalTrajectory) {
+  Result<Solver> solver = MakeSolver(std::vector<double>(kNumStages - 1, 0.0));
+  ASSERT_TRUE(solver.has_value());
+  for (std::size_t iteration = 0; iteration < 200 && !solver->Iterate().converged; ++iteration) {
+  }
+  const std::vector<Solver::ValueExpansion> expansions = solver->ValueExpansions(1.0);
+  ASSERT_EQ(expansions.size(), kNumStages);
+  const Eigen::Vector2d terminal = solver->NominalStates().back();
+  EXPECT_NEAR(expansions.back().value, terminal.dot(TerminalCostMat() * terminal), 1e-12);
+  EXPECT_TRUE(expansions.back().gradient.isApprox(2.0 * TerminalCostMat() * terminal, 1e-12));
+  EXPECT_TRUE(expansions.back().hessian.isApprox(2.0 * TerminalCostMat(), 1e-12));
+  EXPECT_NEAR(expansions.front().value, solver->Cost(), 1e-12);
+  for (std::size_t stage = 0; stage < kNumStages; ++stage) {
+    EXPECT_TRUE(expansions[stage].state.isApprox(solver->NominalStates()[stage]));
+    if (stage + 1 < kNumStages) {
+      EXPECT_NEAR(expansions[stage].value - expansions[stage + 1].value,
+                  kL1Weight * std::abs(solver->NominalControls()[stage]),
+                  1e-12);
+    }
+    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> eigen(expansions[stage].hessian);
+    EXPECT_GE(eigen.eigenvalues().minCoeff(), -1e-9) << "stage " << stage;
   }
 }
 

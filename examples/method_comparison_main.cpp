@@ -22,6 +22,17 @@
 //     half the paths at six times the noise, and a screened, stop-uphill line search. On the double
 //     inverted pendulum, the configuration of the FBRRT comparison, which is the only one tried there.
 //     Charged: Iterate().
+//   * DT-FBSDE+iLQR: DT-FBSDE warm-started from iLQR. The run begins as that seed's iLQR run does,
+//     from the same random controls. At iLQR iterations spaced geometrically by --seed-growth, and at
+//     the last, iLQR's quadratic value expansions are turned into a candidate value function table
+//     (ilqr_seeded_table.hpp), scored by the DT-FBSDE solver on its own evaluation rollouts -- never
+//     the held-out ones -- and installed if it is the best candidate yet. iLQR's best iterates are not
+//     its last on the pendulums, which is why there is more than one candidate. iLQR stops once it
+//     converges or has used --seed-ilqr-budget; DT-FBSDE then iterates from the installed table for
+//     the rest of the budget, sampling around the seeded policy from the first forward pass (its
+//     initial exploration probability is the regular one, not one). Charged: the iLQR iterations,
+//     building and scoring every candidate, and Iterate(). Its iteration count is iLQR's iterations
+//     followed by DT-FBSDE's.
 //   * FBRRT: FbrrtSolver as the FBRRT comparison configures it. Charged: Iterate().
 //   * iLQR: BoxIlqrSolver from random initial controls, one draw per seed, plus one run from zero
 //     controls; scored as the closed-loop policy that tracks its nominal trajectory with its gains.
@@ -47,6 +58,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -69,6 +81,7 @@
 #include "fbsde_traj_opt/value_function/soft_min_quadratic_value_function_approx.hpp"
 #include "examples/fbrrt_comparison_experiment.hpp"
 #include "examples/fbrrt_comparison_setup.hpp"
+#include "examples/ilqr_seeded_table.hpp"
 #include "examples/l1_benchmark_models.hpp"
 #include "examples/l1_grid_dp_reference.hpp"
 
@@ -97,6 +110,7 @@ struct DriverOptions {
   bool include_pendulum = true;
   bool include_double_pendulum = true;
   bool run_dt_fbsde = true;
+  bool run_seeded_dt_fbsde = true;
   bool run_fbrrt = true;
   bool run_ilqr = true;
   bool run_mppi = true;
@@ -131,6 +145,17 @@ struct DriverOptions {
   std::size_t mpc_iterations = 2;
   double mpc_control_noise = 0.1;
   std::size_t mpc_ilqr_iterations = 2;
+
+  // DT-FBSDE+iLQR: the smoothing iLQR's value expansions are taken at (the tracking gains' by
+  // default), the cap on iLQR's charged seconds and iterations before DT-FBSDE takes over, the
+  // geometric spacing of the iLQR iterations a candidate table is built at, the soft-min model's
+  // conversion, and the first forward pass's exploration probability (negative: the regular one).
+  double seed_smoothing = 1.0;
+  double seed_ilqr_budget = 10.0;
+  std::size_t seed_max_ilqr_iterations = 2000;
+  double seed_growth = 1.25;
+  IlqrSeedOptions ilqr_seed{};
+  double seed_exploration = -1.0;
 
   // DT-FBSDE slope weights on the 2-D benchmarks (the batch sweep's best for each).
   double integrator_slope_weight = 10.0;
@@ -317,14 +342,10 @@ template <typename BenchmarkT, std::size_t NumStages>
 using IlqrSolver =
     BoxIlqrSolver<BenchmarkT::State::RowsAtCompileTime, NumStages, typename BenchmarkT::ForwardModel>;
 
-// iLQR from zero controls if `seed_index` is empty, else from a random draw for that seed.
+// iLQR from zero controls if `zero_start`, else from a random draw for `seed_index`.
 template <typename BenchmarkT, std::size_t NumStages>
-auto RunIlqr(const BenchmarkT& benchmark,
-             const DriverOptions& options,
-             double budget,
-             std::size_t seed_index,
-             bool zero_start,
-             std::unique_ptr<IlqrSolver<BenchmarkT, NumStages>>* solver_out = nullptr) -> Result<Trace> {
+auto MakeIlqr(const BenchmarkT& benchmark, const DriverOptions& options, std::size_t seed_index, bool zero_start)
+    -> Result<IlqrSolver<BenchmarkT, NumStages>> {
   const std::uint64_t seed = options.seed + (1000U * static_cast<std::uint64_t>(seed_index));
   const CounterBasedNormalSampler sampler(seed ^ kInitialControlStream);
   std::vector<double> controls(NumStages - 1, 0.0);
@@ -334,15 +355,25 @@ auto RunIlqr(const BenchmarkT& benchmark,
     }
   }
   using Solver = IlqrSolver<BenchmarkT, NumStages>;
-  RESULT_ASSIGN_OR_RETURN(Solver solver,
-                          (Solver::Make(benchmark.forward_model,
-                                                                   benchmark.running_cost.L1Weight(),
-                                                                   benchmark.terminal_cost_mat,
-                                                                   benchmark.initial_distribution.Mean(),
-                                                                   -1.0,
-                                                                   1.0,
-                                                                   controls,
-                                                                   options.ilqr)));
+  return Solver::Make(benchmark.forward_model,
+                      benchmark.running_cost.L1Weight(),
+                      benchmark.terminal_cost_mat,
+                      benchmark.initial_distribution.Mean(),
+                      -1.0,
+                      1.0,
+                      controls,
+                      options.ilqr);
+}
+
+template <typename BenchmarkT, std::size_t NumStages>
+auto RunIlqr(const BenchmarkT& benchmark,
+             const DriverOptions& options,
+             double budget,
+             std::size_t seed_index,
+             bool zero_start,
+             std::unique_ptr<IlqrSolver<BenchmarkT, NumStages>>* solver_out = nullptr) -> Result<Trace> {
+  using Solver = IlqrSolver<BenchmarkT, NumStages>;
+  RESULT_ASSIGN_OR_RETURN(Solver solver, (MakeIlqr<BenchmarkT, NumStages>(benchmark, options, seed_index, zero_start)));
   Trace trace{.method = zero_start ? "iLQR (zero init)" : "iLQR", .seed_index = seed_index};
   RESULT_RETURN_IF_ERROR(RunTimed(
       options,
@@ -357,6 +388,105 @@ auto RunIlqr(const BenchmarkT& benchmark,
   if (solver_out != nullptr) {
     *solver_out = std::make_unique<IlqrSolver<BenchmarkT, NumStages>>(std::move(solver));
   }
+  return SuccessResult(std::move(trace));
+}
+
+// DT-FBSDE+iLQR; see the file comment.
+template <typename SolverT, typename BenchmarkT, std::size_t NumStages>
+auto RunSeededDtFbsde(const BenchmarkT& benchmark,
+                      const auto& table,
+                      DtFbsdeIterativeOptions<double> solver_options,
+                      const DriverOptions& options,
+                      double budget,
+                      std::size_t seed_index) -> Result<Trace> {
+  using ValueFunction = std::decay_t<decltype(table.initial)>;
+  const std::uint64_t seed = options.seed + (1000U * static_cast<std::uint64_t>(seed_index));
+  solver_options.initial_exploration_probability =
+      options.seed_exploration >= 0.0 ? options.seed_exploration : solver_options.exploration_probability;
+  auto solver = std::make_unique<Result<SolverT>>(SolverT::Make(benchmark.forward_model,
+                                                                benchmark.running_cost,
+                                                                benchmark.terminal_cost,
+                                                                benchmark.initial_distribution,
+                                                                Control(-1.0),
+                                                                Control(1.0),
+                                                                table.initial,
+                                                                table.terminal,
+                                                                solver_options,
+                                                                seed));
+  if (!solver->has_value()) {
+    return ErrorResult(solver->error().message, solver->error().location);
+  }
+  SolverT& dt = **solver;
+  const double unseeded_cost = dt.CurrentCost();
+  using Ilqr = IlqrSolver<BenchmarkT, NumStages>;
+  RESULT_ASSIGN_OR_RETURN(Ilqr ilqr, (MakeIlqr<BenchmarkT, NumStages>(benchmark, options, seed_index, false)));
+
+  bool seeding = true;
+  std::size_t ilqr_iterations = 0;
+  double next_candidate = 1.0;
+  double ilqr_seconds = 0.0;
+  double best_cost = std::numeric_limits<double>::infinity();
+  std::size_t best_iteration = 0;
+  std::size_t candidates = 0;
+  // The iLQR phase, one iteration per step; returns whether it is over.
+  const auto seed_step = [&]() -> Result<bool> {
+    const Clock::time_point start = Clock::now();
+    const bool converged = ilqr.Iterate().converged;
+    ++ilqr_iterations;
+    const bool last = converged || ilqr_iterations >= options.seed_max_ilqr_iterations ||
+                      ilqr_seconds + std::chrono::duration<double>(Clock::now() - start).count() >=
+                          options.seed_ilqr_budget;
+    if (last || static_cast<double>(ilqr_iterations) >= next_candidate) {
+      while (next_candidate <= static_cast<double>(ilqr_iterations)) {
+        next_candidate = std::max(next_candidate * options.seed_growth, next_candidate + 1.0);
+      }
+      using Expansion = typename Ilqr::ValueExpansion;
+      const std::vector<Expansion> expansions = ilqr.ValueExpansions(options.seed_smoothing);
+      RESULT_ASSIGN_OR_RETURN(
+          const std::vector<ValueFunction> candidate,
+          IlqrSeededTable(table.initial, std::span<const Expansion>(expansions), options.ilqr_seed));
+      RESULT_ASSIGN_OR_RETURN(const double cost, dt.SeededCost(candidate));
+      ++candidates;
+      if (cost < best_cost) {
+        best_cost = cost;
+        best_iteration = ilqr_iterations;
+        RESULT_RETURN_IF_ERROR(dt.SeedValueFunctions(candidate));
+      }
+    }
+    ilqr_seconds += std::chrono::duration<double>(Clock::now() - start).count();
+    return SuccessResult(last);
+  };
+
+  Trace trace{.method = "DT-FBSDE+iLQR", .seed_index = seed_index};
+  RESULT_RETURN_IF_ERROR(RunTimed(
+      options,
+      budget,
+      [&]() -> Result<bool> {
+        if (seeding) {
+          RESULT_ASSIGN_OR_RETURN(const bool over, seed_step());
+          seeding = !over;
+          return SuccessResult(false);
+        }
+        RESULT_RETURN_IF_ERROR(dt.Iterate());
+        return SuccessResult(false);
+      },
+      [&](std::size_t iteration, double seconds) {
+        trace.iterations.push_back(iteration);
+        trace.seconds.push_back(seconds);
+        trace.held_out.push_back(HeldOutCost(benchmark, dt.CurrentPolicy(), NumStages, options.held_out_rollouts));
+      }));
+  std::cout << std::format(
+      "{:<28} {:<18} seed {:>2}: seeded from iLQR iteration {} of {} ({} candidates, {:.3f} s): solver cost {:.4f}, "
+      "unseeded {:.4f}\n",
+      benchmark.name,
+      trace.method,
+      seed_index,
+      best_iteration,
+      ilqr_iterations,
+      candidates,
+      ilqr_seconds,
+      best_cost,
+      unseeded_cost);
   return SuccessResult(std::move(trace));
 }
 
@@ -567,13 +697,20 @@ auto WriteMpc(Outputs& outputs,
 // One benchmark
 // ---------------------------------------------------------------------------------------------
 
-// Everything but DT-FBSDE, which differs by benchmark, on one benchmark; `run_dt_fbsde` runs it.
-template <std::size_t NumStages, typename FbrrtSetupT, typename BenchmarkT, typename DtFbsdeT, typename ReferenceT>
+// Everything but DT-FBSDE, which differs by benchmark, on one benchmark; `run_dt_fbsde` and
+// `run_seeded_dt_fbsde` run it, unseeded and seeded from iLQR.
+template <std::size_t NumStages,
+          typename FbrrtSetupT,
+          typename BenchmarkT,
+          typename DtFbsdeT,
+          typename SeededDtFbsdeT,
+          typename ReferenceT>
 auto CompareOn(const BenchmarkT& benchmark,
                const DriverOptions& options,
                double budget,
                double keep_fraction,
                const DtFbsdeT& run_dt_fbsde,
+               const SeededDtFbsdeT& run_seeded_dt_fbsde,
                const ReferenceT& reference,
                Outputs& outputs) -> Result<> {
   std::cout << std::format("\n=== {} ({:.0f} s per run) ===\n", benchmark.name, budget);
@@ -640,6 +777,11 @@ auto CompareOn(const BenchmarkT& benchmark,
       Report(problem, trace);
       WriteTrace(outputs.csv, problem, trace);
     }
+    if (options.run_seeded_dt_fbsde) {
+      RESULT_ASSIGN_OR_RETURN(const Trace trace, run_seeded_dt_fbsde(index));
+      Report(problem, trace);
+      WriteTrace(outputs.csv, problem, trace);
+    }
   }
   return SuccessResult();
 }
@@ -684,8 +826,18 @@ auto CompareTwoDimensional(const BenchmarkT& benchmark,
     return RunDtFbsde<DtSolver, BenchmarkT, NumStages>(
         benchmark, table, solver_options, options, options.time_budget, index);
   };
-  return CompareOn<NumStages, FbrrtSetup>(
-      benchmark, options, options.time_budget, options.comparison.keep_fraction, run_dt_fbsde, reference, outputs);
+  const auto run_seeded_dt_fbsde = [&](std::size_t index) {
+    return RunSeededDtFbsde<DtSolver, BenchmarkT, NumStages>(
+        benchmark, table, solver_options, options, options.time_budget, index);
+  };
+  return CompareOn<NumStages, FbrrtSetup>(benchmark,
+                                          options,
+                                          options.time_budget,
+                                          options.comparison.keep_fraction,
+                                          run_dt_fbsde,
+                                          run_seeded_dt_fbsde,
+                                          reference,
+                                          outputs);
 }
 
 template <std::size_t NumStages, typename BenchmarkT>
@@ -754,11 +906,19 @@ auto Run(const DriverOptions& options) -> Result<> {
                  : RunDtFbsde<typename DipSetup::DtFbsde, L1DoubleInvertedPendulum, kStages>(
                        double_pendulum, table, solver_options, options, options.double_pendulum_time_budget, index);
     };
+    const auto run_seeded_dt_fbsde = [&](std::size_t index) {
+      return options.double_pendulum_sweep_config
+                 ? RunSeededDtFbsde<SweepDtFbsde, L1DoubleInvertedPendulum, kStages>(
+                       double_pendulum, table, solver_options, options, options.double_pendulum_time_budget, index)
+                 : RunSeededDtFbsde<typename DipSetup::DtFbsde, L1DoubleInvertedPendulum, kStages>(
+                       double_pendulum, table, solver_options, options, options.double_pendulum_time_budget, index);
+    };
     RESULT_RETURN_IF_ERROR((CompareOn<kStages, DipSetup>(double_pendulum,
                                                          options,
                                                          options.double_pendulum_time_budget,
                                                          options.comparison.double_inverted_pendulum_keep_fraction,
                                                          run_dt_fbsde,
+                                                         run_seeded_dt_fbsde,
                                                          nullptr,
                                                          outputs)));
   }
@@ -782,7 +942,7 @@ auto PrintUsage() -> void {
       << "  --dip-time-budget S      charged seconds per run on the double inverted pendulum (default 120)\n"
       << "  --held-out N             held-out rollouts per checkpoint (default 1024)\n"
       << "  --only P[,P...]          integrator, pendulum, double-pendulum\n"
-      << "  --methods M[,M...]       dt-fbsde, fbrrt, ilqr, mppi (default all)\n"
+      << "  --methods M[,M...]       dt-fbsde, dt-fbsde-ilqr, fbrrt, ilqr, mppi (default all)\n"
       << "  --ilqr-spread S          std. dev. of iLQR's random initial controls (default 0.5)\n"
       << "  --ilqr-min-smoothing E   iLQR's final pseudo-Huber smoothing (default 1e-3)\n"
       << "  --ilqr-gain-smoothing E  smoothing iLQR's tracking gains are computed at (default 1; 0: its own)\n"
@@ -802,6 +962,13 @@ auto PrintUsage() -> void {
       << "  --dip-dt-config C        DT-FBSDE on the double inverted pendulum: comparison (default) or sweep\n"
       << "  --dip-slope-weight G     its slope weight under the sweep configuration (default 10)\n"
       << "  --mppi-time-budget S     cap on MPPI's charged seconds per run (default: the benchmark's)\n"
+      << "  --seed-smoothing E       smoothing DT-FBSDE+iLQR's value expansions are taken at (default 1)\n"
+      << "  --seed-ilqr-budget S     cap on DT-FBSDE+iLQR's charged seconds of iLQR (default 10)\n"
+      << "  --seed-ilqr-iterations N cap on DT-FBSDE+iLQR's iLQR iterations (default 2000)\n"
+      << "  --seed-growth G          spacing of the iLQR iterations it builds a candidate at (default 1.25)\n"
+      << "  --seed-metric-floor E    floor on a soft-min seed's curvature (default 1e-3)\n"
+      << "  --seed-center-spread C   value spread of a soft-min seed's components (default 0.5)\n"
+      << "  --seed-exploration P     its first forward pass's exploration probability (default: the regular one)\n"
       << "  --csv PATH               checkpoints (default method_comparison.csv)\n"
       << "  --mpc-csv PATH           MPC results (default method_comparison_mpc.csv)\n"
       << "  --reference-csv PATH     grid optima (default method_comparison_reference.csv)\n";
@@ -843,6 +1010,7 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
       options.include_double_pendulum = Contains(value, "double-pendulum");
     } else if (argument == "--methods") {
       options.run_dt_fbsde = Contains(value, "dt-fbsde");
+      options.run_seeded_dt_fbsde = Contains(value, "dt-fbsde-ilqr");
       options.run_fbrrt = Contains(value, "fbrrt");
       options.run_ilqr = Contains(value, "ilqr");
       options.run_mppi = Contains(value, "mppi");
@@ -886,6 +1054,20 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
       options.double_pendulum_slope_weight = number;
     } else if (argument == "--mppi-time-budget") {
       options.mppi_time_budget = number;
+    } else if (argument == "--seed-smoothing") {
+      options.seed_smoothing = number;
+    } else if (argument == "--seed-ilqr-budget") {
+      options.seed_ilqr_budget = number;
+    } else if (argument == "--seed-ilqr-iterations") {
+      options.seed_max_ilqr_iterations = count;
+    } else if (argument == "--seed-growth") {
+      options.seed_growth = number;
+    } else if (argument == "--seed-metric-floor") {
+      options.ilqr_seed.metric_floor = number;
+    } else if (argument == "--seed-center-spread") {
+      options.ilqr_seed.center_spread = number;
+    } else if (argument == "--seed-exploration") {
+      options.seed_exploration = number;
     } else if (argument == "--csv") {
       options.csv_path = value;
     } else if (argument == "--mpc-csv") {
@@ -897,6 +1079,8 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
     }
   }
   RESULT_ASSERT(options.num_seeds >= 1, "the comparison needs at least one seed.");
+  RESULT_ASSERT(options.seed_growth > 1.0 && options.seed_max_ilqr_iterations >= 1,
+                "DT-FBSDE+iLQR needs a candidate spacing above one and at least one iLQR iteration.");
   return SuccessResult();
 }
 

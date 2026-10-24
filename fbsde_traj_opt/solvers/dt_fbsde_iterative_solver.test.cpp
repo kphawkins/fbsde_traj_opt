@@ -7,6 +7,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <utility>
 
 #include <Eigen/Core>
@@ -334,6 +335,38 @@ TEST(DtFbsdeIterativeSolverInflationTest, AnExplorationBaseSetBetweenIterationsI
   // A base above the cap is used as it is: the cap bounds the stalls' growth, not the base.
   EXPECT_DOUBLE_EQ(report->diffusion_inflation, 12.0);
   EXPECT_DOUBLE_EQ(report->diffusion_scale, 1.0);
+}
+
+// A seeded solver runs the policy of the table it was given: seeding a fresh solver with another's
+// converged table reproduces that solver's cost, on the same evaluation rollouts.
+TEST(DtFbsdeIterativeSolverSeedTest, ASeededTableIsTheOneThePolicyRuns) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.target_floor = 0.0;
+  options.exploration_decay = 0.5;
+  Result<Solver> trained = MakeSolver(fixture, options);
+  ASSERT_TRUE(trained.has_value()) << trained.error();
+  for (std::size_t iteration = 0; iteration < 8; ++iteration) {
+    ASSERT_TRUE(trained->Iterate().has_value());
+  }
+  Result<Solver> seeded = MakeSolver(fixture, options);
+  ASSERT_TRUE(seeded.has_value()) << seeded.error();
+  EXPECT_GT(seeded->CurrentCost(), trained->CurrentCost());
+
+  const std::span<const ValueFunction> table = trained->ValueFunctions();
+  EXPECT_FALSE(seeded->SeedValueFunctions(table).has_value());
+  const Result<double> predicted = seeded->SeededCost(table.first(kStages - 1));
+  ASSERT_TRUE(predicted.has_value()) << predicted.error();
+  ASSERT_TRUE(seeded->SeedValueFunctions(table.first(kStages - 1)).has_value());
+  EXPECT_DOUBLE_EQ(*predicted, seeded->CurrentCost());
+  EXPECT_DOUBLE_EQ(seeded->CurrentCost(), trained->CurrentCost());
+  for (std::size_t stage = 0; stage < kStages; ++stage) {
+    EXPECT_EQ(seeded->ValueFunctions()[stage].Parameters(), table[stage].Parameters());
+  }
+  // Iterating from the seed only ever improves on it.
+  const double seeded_cost = seeded->CurrentCost();
+  ASSERT_TRUE(seeded->Iterate().has_value());
+  EXPECT_LE(seeded->CurrentCost(), seeded_cost);
 }
 
 TEST(DtFbsdeIterativeSolverSlopeTest, MatchingSlopesInClosedFormStillConverges) {
