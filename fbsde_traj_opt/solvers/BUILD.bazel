@@ -92,6 +92,7 @@ cc_library(
     deps = [
         "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
         "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:phase_profiler",
         "@eigen",
     ],
 )
@@ -126,6 +127,7 @@ cc_library(
         "//fbsde_traj_opt/sde:diffusion_scaled_forward_sde_model",
         "//fbsde_traj_opt/sde:sde_term_concepts",
         "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:phase_profiler",
         "//fbsde_traj_opt/utils:result",
         "//fbsde_traj_opt/value_function:value_function_approx_concepts",
         "//fbsde_traj_opt/value_function:value_function_gauss_newton_fitter",

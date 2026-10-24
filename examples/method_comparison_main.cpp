@@ -64,6 +64,7 @@
 #include "fbsde_traj_opt/solvers/mppi_solver.hpp"
 #include "fbsde_traj_opt/solvers/policy_rollout_evaluation.hpp"
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
+#include "fbsde_traj_opt/utils/phase_profiler.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/polynomial_value_function_approx.hpp"
 #include "fbsde_traj_opt/value_function/soft_min_quadratic_value_function_approx.hpp"
@@ -154,6 +155,8 @@ struct DriverOptions {
   std::string csv_path = "method_comparison.csv";
   std::string mpc_csv_path = "method_comparison_mpc.csv";
   std::string reference_csv_path = "method_comparison_reference.csv";
+  // Where DT-FBSDE's per-phase time goes, one row per run and phase; empty disables the phase timers.
+  std::string profile_csv_path{};
   FbrrtComparisonOptions comparison{};
 };
 
@@ -164,12 +167,16 @@ struct Trace {
   std::vector<std::size_t> iterations{};
   std::vector<double> seconds{};
   std::vector<double> held_out{};
+  // DT-FBSDE's phase timers over the run, held-out evaluation excluded, when profiling.
+  bool profiled = false;
+  profiling::PhaseTotals phases{};
 };
 
 struct Outputs {
   std::ofstream csv;
   std::ofstream mpc_csv;
   std::ofstream reference_csv;
+  std::ofstream profile_csv;
 };
 
 template <typename BenchmarkT>
@@ -231,6 +238,29 @@ auto WriteTrace(std::ofstream& csv, const std::string& problem, const Trace& tra
   csv.flush();
 }
 
+// The run's phase totals, and its charged seconds and iterations as the row `charged_total`.
+auto WriteProfile(std::ofstream& csv, const std::string& problem, const Trace& trace) -> void {
+  if (!trace.profiled || !csv.is_open()) {
+    return;
+  }
+  for (std::size_t index = 0; index < profiling::kPhaseCount; ++index) {
+    csv << std::format("{},{},{},{},{:.6e},{}\n",
+                       problem,
+                       trace.method,
+                       trace.seed_index,
+                       profiling::kPhaseNames[index],
+                       trace.phases.seconds[index],
+                       trace.phases.calls[index]);
+  }
+  csv << std::format("{},{},{},charged_total,{:.6e},{}\n",
+                     problem,
+                     trace.method,
+                     trace.seed_index,
+                     trace.seconds.back(),
+                     trace.iterations.back());
+  csv.flush();
+}
+
 auto Report(const std::string& problem, const Trace& trace) -> void {
   std::cout << std::format("{:<28} {:<18} seed {:>2}: {:9.4f} -> {:9.4f} (best {:9.4f}) in {:7.2f} s, {} iterations\n",
                            problem,
@@ -270,7 +300,11 @@ auto RunDtFbsde(const BenchmarkT& benchmark,
     return ErrorResult(solver->error().message, solver->error().location);
   }
   SolverT& dt = **solver;
-  Trace trace{.method = "DT-FBSDE", .seed_index = seed_index};
+  Trace trace{.method = "DT-FBSDE", .seed_index = seed_index, .profiled = !options.profile_csv_path.empty()};
+  if (trace.profiled) {
+    profiling::Reset();
+    profiling::SetEnabled(true);
+  }
   RESULT_RETURN_IF_ERROR(RunTimed(
       options,
       budget,
@@ -281,8 +315,15 @@ auto RunDtFbsde(const BenchmarkT& benchmark,
       [&](std::size_t iteration, double seconds) {
         trace.iterations.push_back(iteration);
         trace.seconds.push_back(seconds);
+        // The held-out evaluation is the driver's, not the solver's: keep it out of the phase totals.
+        profiling::SetEnabled(false);
         trace.held_out.push_back(HeldOutCost(benchmark, dt.CurrentPolicy(), NumStages, options.held_out_rollouts));
+        profiling::SetEnabled(trace.profiled);
       }));
+  if (trace.profiled) {
+    profiling::SetEnabled(false);
+    trace.phases = profiling::Snapshot();
+  }
   return SuccessResult(std::move(trace));
 }
 
@@ -640,6 +681,7 @@ auto CompareOn(const BenchmarkT& benchmark,
       RESULT_ASSIGN_OR_RETURN(const Trace trace, run_dt_fbsde(index));
       Report(problem, trace);
       WriteTrace(outputs.csv, problem, trace);
+      WriteProfile(outputs.profile_csv, problem, trace);
     }
   }
   return SuccessResult();
@@ -706,12 +748,18 @@ auto MakeGrid(const BenchmarkT& benchmark,
 auto Run(const DriverOptions& options) -> Result<> {
   Outputs outputs{.csv = std::ofstream(options.csv_path),
                   .mpc_csv = std::ofstream(options.mpc_csv_path),
-                  .reference_csv = std::ofstream(options.reference_csv_path)};
+                  .reference_csv = std::ofstream(options.reference_csv_path),
+                  .profile_csv = std::ofstream()};
   RESULT_ASSERT(outputs.csv.good() && outputs.mpc_csv.good() && outputs.reference_csv.good(),
                 "could not open the output files for writing.");
   outputs.csv << "problem,method,seed,iteration,seconds,held_out_cost\n";
   outputs.mpc_csv << "problem,method,seed,rollouts,cost,seconds_per_step\n";
   outputs.reference_csv << "problem,grid_optimum,grid_optimum_mpc_subset\n";
+  if (!options.profile_csv_path.empty()) {
+    outputs.profile_csv.open(options.profile_csv_path);
+    RESULT_ASSERT(outputs.profile_csv.good(), "could not open the profile file for writing.");
+    outputs.profile_csv << "problem,method,seed,phase,seconds,calls\n";
+  }
 
   // The grid boxes are the batch sweep's.
   if (options.include_integrator) {
@@ -805,7 +853,8 @@ auto PrintUsage() -> void {
       << "  --mppi-time-budget S     cap on MPPI's charged seconds per run (default: the benchmark's)\n"
       << "  --csv PATH               checkpoints (default method_comparison.csv)\n"
       << "  --mpc-csv PATH           MPC results (default method_comparison_mpc.csv)\n"
-      << "  --reference-csv PATH     grid optima (default method_comparison_reference.csv)\n";
+      << "  --reference-csv PATH     grid optima (default method_comparison_reference.csv)\n"
+      << "  --profile-csv PATH       time DT-FBSDE's phases and write the totals per run (default: off)\n";
 }
 
 auto Contains(std::string_view list, std::string_view item) -> bool {
@@ -893,6 +942,8 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
       options.mpc_csv_path = value;
     } else if (argument == "--reference-csv") {
       options.reference_csv_path = value;
+    } else if (argument == "--profile-csv") {
+      options.profile_csv_path = value;
     } else {
       return ErrorResult("unrecognized argument; run with --help for the options.");
     }

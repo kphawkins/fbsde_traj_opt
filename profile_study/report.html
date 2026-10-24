@@ -1,0 +1,207 @@
+<title>DT-FBSDE Time Profile</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap">
+<style>
+/* Layout: one reading column of prose and tables, charts allowed to run the full column width. */
+:root {
+  --bg: #f7f8f8;
+  --panel: #ffffff;
+  --fg: #16191c;
+  --fg2: #4b535b;
+  --muted: #737c85;
+  --rule: #dde1e4;
+  --accent: #1c5cab;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #9aa3ab;
+  --display: "Newsreader", Georgia, "Times New Roman", serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131618; --panel: #1b1f22; --fg: #eceef0; --fg2: #b9c0c6; --muted: #8b949c; --rule: #2e3439; --accent: #6da7ec;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #6b747c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131618; --panel: #1b1f22; --fg: #eceef0; --fg2: #b9c0c6; --muted: #8b949c; --rule: #2e3439; --accent: #6da7ec;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #6b747c;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+main { max-width: 920px; margin: 0 auto; padding-block: 40px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+section { display: grid; gap: 14px; min-width: 0; }
+h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.1; }
+h2 { font-size: 25px; line-height: 1.2; }
+h3 { font-size: 15px; font-weight: 600; margin: 6px 0 0; }
+p { margin: 0; max-width: 68ch; color: var(--fg2); }
+p b, li b { color: var(--fg); font-weight: 600; }
+.eyebrow { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+header { display: grid; gap: 12px; }
+.meta { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.findings { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; counter-reset: f; }
+.findings li { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px 12px 44px; position: relative; color: var(--fg2); }
+.findings li::before { counter-increment: f; content: counter(f); position: absolute; left: 14px; top: 12px; font-family: var(--mono); font-size: 13px; color: var(--accent); font-weight: 500; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+.figure { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart.small { max-width: 420px; }
+.chart text { font-family: var(--body); fill: var(--fg); }
+.row-label { font-size: 15px; font-weight: 600; }
+.row-sub { font-weight: 400; fill: var(--muted); font-family: var(--mono); font-size: 13px; }
+.seg-label { font-family: var(--mono) !important; font-size: 13px; fill: #ffffff !important; font-weight: 500; pointer-events: none; }
+.tick { font-family: var(--mono) !important; font-size: 12px; fill: var(--muted) !important; }
+.val { font-family: var(--mono) !important; font-size: 12px; fill: var(--fg2) !important; }
+.axis { stroke: var(--rule); stroke-width: 1; }
+[data-tip] { cursor: default; }
+[data-tip]:hover { opacity: 0.85; }
+.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--fg2); }
+.legend li { display: flex; align-items: center; gap: 7px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.pair > div { min-width: 0; display: grid; gap: 6px; align-content: start; }
+.caption { font-size: 13px; color: var(--muted); }
+.tw { overflow-x: auto; min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 500; }
+tbody th { font-weight: 400; color: var(--fg2); }
+td { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+td .ms { color: var(--muted); margin-left: 6px; }
+tr.tot td, tr.tot th { border-top: 1.5px solid var(--fg2); }
+table.perf td.fn { white-space: normal; word-break: break-word; }
+.opps { display: grid; gap: 12px; }
+.opp { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; display: grid; gap: 6px; }
+.opp h3 { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.tag { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--accent); border: 1px solid var(--rule); border-radius: 999px; padding: 1px 9px; }
+.pending { border: 1px dashed var(--rule); border-radius: 10px; padding: 18px; color: var(--fg2); background: var(--panel); }
+.tip { position: fixed; pointer-events: none; background: var(--fg); color: var(--bg); font-size: 13px; padding: 6px 9px; border-radius: 6px; max-width: 320px; z-index: 20; line-height: 1.4; }
+ul.plain { margin: 0; padding-left: 20px; color: var(--fg2); display: grid; gap: 4px; max-width: 70ch; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<main>
+<header>
+  <div class="eyebrow">fbsde_traj_opt · research branch · profiling</div>
+  <h1>Where DT-FBSDE spends its time</h1>
+  <p>The default DT-FBSDE configuration (the batch sweep's best 2-D recipe, as run by <code>method_comparison</code> and <code>value_model_study</code>) profiled on the double integrator and the pendulum swing-up, then on the double inverted pendulum, where the picture changes: there the single-threaded SGD fit in the backward pass takes two thirds of the time.</p>
+  <div class="meta">Profiled 2026-10-24 · 2-D: 4 seeds × 60 s each · DIP: 3 + 2 seeds × 120 s · phase timers + perf sampling</div>
+</header>
+
+<section>
+  <h2>Summary</h2>
+  <ol class="findings">
+    <li><b>The line search is 70–80% of every 2-D iteration</b>, and most of that is the 32-rollout screening pass. The forward pass is under 11% and the backward pass under 20%.</li>
+    <li><b>Screening runs on a single core.</b> <code>ParallelFor</code> gives each thread at least 32 items, so a 32-rollout screen never splits. Screening alone is about two thirds of wall time on both 2-D problems.</li>
+    <li><b>Almost all CPU goes to choosing controls.</b> One <code>TaylorQFunctionL1Policy::Decide</code> costs about 13 µs and calls the polynomial's value-gradient-Hessian 19 times. <code>Derivatives&lt;true&gt;</code> alone is 76–88% of CPU samples. The dynamics, the samplers and the 28×28 least-squares fit are each under 5%.</li>
+    <li><b>Letting the screening rollouts use every core doubles throughput.</b> A one-line grain change in <code>EvaluatePolicyByRollouts</code> took the 2-D iterations from 112–122 ms to 61–63 ms with identical trajectories.</li>
+    <li><b>Most iterations are rejected.</b> Only 7% of iterations accept a step. A typical iteration screens two or three candidate steps, sees the excess rising and stops, so the screening cost is paid every iteration.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Wall-clock share by phase</h2>
+  <p>Each bar is the solver's own per-iteration time (what the comparison charges), summed over all profiled iterations. Hover a segment for milliseconds per iteration.</p>
+  <div class="figure">
+    <ul class="legend"><li><span class="sw" style="background:var(--s1)"></span>Forward pass</li><li><span class="sw" style="background:var(--s2)"></span>Backward targets (Q argmin)</li><li><span class="sw" style="background:var(--s3)"></span>Backward fit</li><li><span class="sw" style="background:var(--s4)"></span>Line search: screening rollouts</li><li><span class="sw" style="background:var(--s5)"></span>Line search: full rollouts</li><li><span class="sw" style="background:var(--s6)"></span>Other</li></ul>
+    <svg viewBox="0 0 1000 148" class="chart" role="img" aria-label="Share of solver time by phase"><text x="0" y="12" class="row-label">Double integrator <tspan class="row-sub">· 127 ms per iteration</tspan></text><rect x="0.00" y="18" width="75.70" height="34" rx="3" fill="var(--s1)" data-tip="Double integrator · Forward pass: 7.8% of solver time (9.9 ms per iteration)"/><text x="6.00" y="39.0" class="seg-label">8%</text><rect x="77.70" y="18" width="111.25" height="34" rx="3" fill="var(--s2)" data-tip="Double integrator · Backward targets (Q argmin): 11.3% of solver time (14.4 ms per iteration)"/><text x="83.70" y="39.0" class="seg-label">11%</text><rect x="190.95" y="18" width="7.39" height="34" rx="3" fill="var(--s3)" data-tip="Double integrator · Backward fit: 0.9% of solver time (1.2 ms per iteration)"/><rect x="200.34" y="18" width="680.51" height="34" rx="3" fill="var(--s4)" data-tip="Double integrator · Line search: screening rollouts: 68.3% of solver time (86.6 ms per iteration)"/><text x="206.34" y="39.0" class="seg-label">68%</text><rect x="882.85" y="18" width="115.00" height="34" rx="3" fill="var(--s5)" data-tip="Double integrator · Line search: full rollouts: 11.7% of solver time (14.8 ms per iteration)"/><text x="888.85" y="39.0" class="seg-label">12%</text><rect x="999.86" y="18" width="0.50" height="34" rx="3" fill="var(--s6)" data-tip="Double integrator · Other: 0.0% of solver time (0.0 ms per iteration)"/><text x="0" y="86" class="row-label">Pendulum swing-up <tspan class="row-sub">· 112 ms per iteration</tspan></text><rect x="0.00" y="92" width="100.62" height="34" rx="3" fill="var(--s1)" data-tip="Pendulum swing-up · Forward pass: 10.3% of solver time (11.4 ms per iteration)"/><text x="6.00" y="113.0" class="seg-label">10%</text><rect x="102.62" y="92" width="180.68" height="34" rx="3" fill="var(--s2)" data-tip="Pendulum swing-up · Backward targets (Q argmin): 18.3% of solver time (20.4 ms per iteration)"/><text x="108.62" y="113.0" class="seg-label">18%</text><rect x="285.30" y="92" width="9.65" height="34" rx="3" fill="var(--s3)" data-tip="Pendulum swing-up · Backward fit: 1.2% of solver time (1.3 ms per iteration)"/><rect x="296.95" y="92" width="626.34" height="34" rx="3" fill="var(--s4)" data-tip="Pendulum swing-up · Line search: screening rollouts: 62.8% of solver time (70.1 ms per iteration)"/><text x="302.95" y="113.0" class="seg-label">63%</text><rect x="925.29" y="92" width="72.57" height="34" rx="3" fill="var(--s5)" data-tip="Pendulum swing-up · Line search: full rollouts: 7.5% of solver time (8.3 ms per iteration)"/><text x="931.29" y="113.0" class="seg-label">7%</text><rect x="999.86" y="92" width="0.50" height="34" rx="3" fill="var(--s6)" data-tip="Pendulum swing-up · Other: 0.0% of solver time (0.0 ms per iteration)"/></svg>
+  </div>
+  <div class="tw"><table><thead><tr><th>Phase (wall clock)</th><th>Double integrator</th><th>Pendulum swing-up</th></tr></thead><tbody><tr><th scope="row">Forward pass</th><td>7.8% <span class="ms">9.9 ms</span></td><td>10.3% <span class="ms">11.4 ms</span></td></tr><tr><th scope="row">Backward targets (Q argmin)</th><td>11.3% <span class="ms">14.4 ms</span></td><td>18.3% <span class="ms">20.4 ms</span></td></tr><tr><th scope="row">Backward fit</th><td>0.9% <span class="ms">1.2 ms</span></td><td>1.2% <span class="ms">1.3 ms</span></td></tr><tr><th scope="row">Line search: screening rollouts</th><td>68.3% <span class="ms">86.6 ms</span></td><td>62.8% <span class="ms">70.1 ms</span></td></tr><tr><th scope="row">Line search: full rollouts</th><td>11.7% <span class="ms">14.8 ms</span></td><td>7.5% <span class="ms">8.3 ms</span></td></tr><tr><th scope="row">Other</th><td>0.0% <span class="ms">0.0 ms</span></td><td>0.0% <span class="ms">0.0 ms</span></td></tr><tr class="tot"><th scope="row">Per iteration</th><td><b>126.9 ms</b></td><td><b>111.5 ms</b></td></tr><tr><th scope="row">Iterations profiled</th><td>1,892 over 4 seeds</td><td>2,154 over 4 seeds</td></tr></tbody></table></div>
+  <p class="caption">"Backward targets" is each half's argmin over the other half's Q-function plus the slope targets; "Backward fit" is the weighted least-squares solve and the averaging of the halves. "Other" is the blend and bookkeeping.</p>
+</section>
+
+<section>
+  <h2>Inside the phases</h2>
+  <p>Per-call costs and thread-time shares from the sub-phase timers. Rollouts and the larger batches run on worker threads, so the shares are of thread time, not wall time.</p>
+  <div class="tw"><table><thead><tr><th>Measure</th><th>Double integrator</th><th>Pendulum swing-up</th></tr></thead><tbody><tr><th scope="row">One policy decision in a rollout (µs)</th><td>12.6</td><td>13.6</td></tr><tr><th scope="row">Rollout thread time spent choosing controls</th><td>97.8%</td><td>92.9%</td></tr><tr><th scope="row">Rollout thread time stepping the dynamics</th><td>0.4%</td><td>5.5%</td></tr><tr><th scope="row">Backward target time in the chooser’s argmin</th><td>92.0%</td><td>69.9%</td></tr><tr><th scope="row">Backward target time in the slope target</th><td>1.6%</td><td>21.6%</td></tr><tr><th scope="row">Backward pass time in the least-squares / SGD fit</th><td>7.4%</td><td>5.8%</td></tr><tr><th scope="row">Iterations that accepted a step</th><td>7.2%</td><td>7.5%</td></tr><tr><th scope="row">Screening evaluations per iteration</th><td>3.34</td><td>2.36</td></tr><tr><th scope="row">Full evaluations per iteration</th><td>0.25</td><td>0.12</td></tr><tr><th scope="row">One screening evaluation (ms)</th><td>26.0</td><td>29.7</td></tr><tr><th scope="row">One full evaluation (ms)</th><td>58.5</td><td>67.4</td></tr><tr><th scope="row">Uncharged held-out evaluation, 1024 rollouts (ms)</th><td>215</td><td>254</td></tr></tbody></table></div>
+</section>
+
+<section>
+  <h2>Function-level profile</h2>
+  <p>Sampled with <code>perf record -g</code> at 499 Hz on a 30 s run of seed 0, on a build without the phase timers. Self time per function.</p>
+  <div class="pair">
+    <div><h3>Double integrator</h3><div class="tw"><table class="perf"><thead><tr><th>Function (self time)</th><th>CPU samples</th></tr></thead><tbody><tr><td class="fn">PolynomialValueFunctionApprox&lt;2,6&gt;::Derivatives&lt;true&gt;</td><td>87.6%</td></tr><tr><td class="fn">TaylorQFunctionL1Policy&lt;…&gt;::Decide</td><td>6.3%</td></tr><tr><td class="fn">PolynomialValueFunctionApprox&lt;2,6&gt;::Derivatives&lt;false&gt;</td><td>2.9%</td></tr><tr><td class="fn">PolynomialValueFunctionApprox&lt;2,6&gt;::operator()</td><td>0.4%</td></tr><tr><td class="fn">__cos_fma</td><td>0.3%</td></tr><tr><td class="fn">Eigen::selfadjoint_product_selector&lt;…&gt;::run</td><td>0.3%</td></tr><tr><td class="fn">CounterBasedNormalSampler::Sample</td><td>0.2%</td></tr><tr><td class="fn">__ieee754_log_fma</td><td>0.2%</td></tr></tbody></table></div></div>
+    <div><h3>Pendulum swing-up</h3><div class="tw"><table class="perf"><thead><tr><th>Function (self time)</th><th>CPU samples</th></tr></thead><tbody><tr><td class="fn">PolynomialValueFunctionApprox&lt;2,6&gt;::Derivatives&lt;true&gt;</td><td>76.2%</td></tr><tr><td class="fn">__sin_fma</td><td>9.1%</td></tr><tr><td class="fn">TaylorQFunctionL1Policy&lt;…&gt;::Decide</td><td>5.9%</td></tr><tr><td class="fn">IntegratePendulumStep</td><td>3.3%</td></tr><tr><td class="fn">PolynomialValueFunctionApprox&lt;2,6&gt;::Derivatives&lt;false&gt;</td><td>2.4%</td></tr><tr><td class="fn">__cos_fma</td><td>0.3%</td></tr><tr><td class="fn">PolynomialValueFunctionApprox&lt;2,6&gt;::operator()</td><td>0.3%</td></tr><tr><td class="fn">Eigen::selfadjoint_product_selector&lt;…&gt;::run</td><td>0.3%</td></tr></tbody></table></div></div>
+  </div>
+  <p>Call-graph attribution puts 72% (integrator) and 61% (pendulum) of all samples in <code>Derivatives&lt;true&gt;</code> called from <code>EvaluatePolicyByRollouts</code>, which is the line search. The pendulum's extra <code>sin</code> and <code>IntegratePendulumStep</code> time comes from <code>Decide</code> evaluating the drift and the control-drift column, which take three RK4 integrations per decision.</p>
+</section>
+
+<section>
+  <h2>How hard the line search works</h2>
+  <p>Candidate steps tried per iteration (step 1, ½, ¼, …). With the stop-uphill rule most iterations end after two screened candidates without a full evaluation.</p>
+  <div class="figure">
+    <div class="pair">
+      <div><h3>Double integrator</h3><svg viewBox="0 0 420 170" class="chart small" role="img" aria-label="Candidates per iteration, Double integrator"><line x1="0" x2="420" y1="144" y2="144" class="axis"/><rect x="4.0" y="139.9" width="44.5" height="4.1" rx="3" fill="var(--s4)" data-tip="Double integrator: 22 iterations (1.2%) tried 1 candidate step"/><text x="26.2" y="162" class="tick" text-anchor="middle">1</text><rect x="56.5" y="16.0" width="44.5" height="128.0" rx="3" fill="var(--s4)" data-tip="Double integrator: 682 iterations (36.0%) tried 2 candidate steps"/><text x="78.8" y="162" class="tick" text-anchor="middle">2</text><text x="78.8" y="12.0" class="val" text-anchor="middle">36%</text><rect x="109.0" y="48.5" width="44.5" height="95.5" rx="3" fill="var(--s4)" data-tip="Double integrator: 509 iterations (26.9%) tried 3 candidate steps"/><text x="131.2" y="162" class="tick" text-anchor="middle">3</text><text x="131.2" y="44.5" class="val" text-anchor="middle">27%</text><rect x="161.5" y="78.9" width="44.5" height="65.1" rx="3" fill="var(--s4)" data-tip="Double integrator: 347 iterations (18.3%) tried 4 candidate steps"/><text x="183.8" y="162" class="tick" text-anchor="middle">4</text><text x="183.8" y="74.9" class="val" text-anchor="middle">18%</text><rect x="214.0" y="113.2" width="44.5" height="30.8" rx="3" fill="var(--s4)" data-tip="Double integrator: 164 iterations (8.7%) tried 5 candidate steps"/><text x="236.2" y="162" class="tick" text-anchor="middle">5</text><text x="236.2" y="109.2" class="val" text-anchor="middle">9%</text><rect x="266.5" y="131.2" width="44.5" height="12.8" rx="3" fill="var(--s4)" data-tip="Double integrator: 68 iterations (3.6%) tried 6 candidate steps"/><text x="288.8" y="162" class="tick" text-anchor="middle">6</text><rect x="319.0" y="140.6" width="44.5" height="3.4" rx="3" fill="var(--s4)" data-tip="Double integrator: 18 iterations (1.0%) tried 7 candidate steps"/><text x="341.2" y="162" class="tick" text-anchor="middle">7</text><rect x="371.5" y="128.6" width="44.5" height="15.4" rx="3" fill="var(--s4)" data-tip="Double integrator: 82 iterations (4.3%) tried 8 candidate steps"/><text x="393.8" y="162" class="tick" text-anchor="middle">8</text></svg><span class="caption">Candidates tried per iteration</span></div>
+      <div><h3>Pendulum swing-up</h3><svg viewBox="0 0 420 170" class="chart small" role="img" aria-label="Candidates per iteration, Pendulum swing-up"><line x1="0" x2="420" y1="144" y2="144" class="axis"/><rect x="4.0" y="142.0" width="44.5" height="2.0" rx="3" fill="var(--s4)" data-tip="Pendulum swing-up: 27 iterations (1.3%) tried 1 candidate step"/><text x="26.2" y="162" class="tick" text-anchor="middle">1</text><rect x="56.5" y="16.0" width="44.5" height="128.0" rx="3" fill="var(--s4)" data-tip="Pendulum swing-up: 1697 iterations (78.8%) tried 2 candidate steps"/><text x="78.8" y="162" class="tick" text-anchor="middle">2</text><text x="78.8" y="12.0" class="val" text-anchor="middle">79%</text><rect x="109.0" y="127.6" width="44.5" height="16.4" rx="3" fill="var(--s4)" data-tip="Pendulum swing-up: 218 iterations (10.1%) tried 3 candidate steps"/><text x="131.2" y="162" class="tick" text-anchor="middle">3</text><text x="131.2" y="123.6" class="val" text-anchor="middle">10%</text><rect x="161.5" y="135.0" width="44.5" height="9.0" rx="3" fill="var(--s4)" data-tip="Pendulum swing-up: 119 iterations (5.5%) tried 4 candidate steps"/><text x="183.8" y="162" class="tick" text-anchor="middle">4</text><rect x="214.0" y="139.6" width="44.5" height="4.4" rx="3" fill="var(--s4)" data-tip="Pendulum swing-up: 58 iterations (2.7%) tried 5 candidate steps"/><text x="236.2" y="162" class="tick" text-anchor="middle">5</text><rect x="266.5" y="142.5" width="44.5" height="1.5" rx="3" fill="var(--s4)" data-tip="Pendulum swing-up: 20 iterations (0.9%) tried 6 candidate steps"/><text x="288.8" y="162" class="tick" text-anchor="middle">6</text><rect x="319.0" y="143.5" width="44.5" height="1.0" rx="3" fill="var(--s4)" data-tip="Pendulum swing-up: 6 iterations (0.3%) tried 7 candidate steps"/><text x="341.2" y="162" class="tick" text-anchor="middle">7</text><rect x="371.5" y="143.3" width="44.5" height="1.0" rx="3" fill="var(--s4)" data-tip="Pendulum swing-up: 9 iterations (0.4%) tried 8 candidate steps"/><text x="393.8" y="162" class="tick" text-anchor="middle">8</text></svg><span class="caption">Candidates tried per iteration</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Where the time could come back</h2>
+  <div class="opps">
+    
+<div class="opp"><h3>Run the screening rollouts in parallel <span class="tag">measured: 1.8–2.0× faster</span></h3>
+<p>Screening runs on one core because <code>ParallelFor</code> keeps at least 32 items per thread (<code>kMinimumPerThread</code>). A 64-stage rollout costs about 0.8 ms, far more than starting a thread, so I tried a grain of 4 rollouts per thread in <code>EvaluatePolicyByRollouts</code> only (a template parameter on <code>ParallelFor</code>, everything else unchanged). On seeds 0 and 1 with the same 60 s budget:</p>
+<div class="tw"><table><thead><tr><th>Problem</th><th>Before</th><th>After</th><th>Iterations in 60 s</th></tr></thead><tbody>
+<tr><th scope="row">Double integrator</th><td>122 ms/it</td><td>61 ms/it</td><td>492 → 983</td></tr>
+<tr><th scope="row">Pendulum swing-up</th><td>112 ms/it</td><td>63 ms/it</td><td>539 → 955</td></tr>
+</tbody></table></div>
+<p>The trajectories are unchanged: the solver's cost at every iteration both runs reached matched exactly (2,061 iterations compared), since each rollout's noise is addressed by its index. Screening falls from about two thirds of wall time to 34–43%. On a machine with more cores the gain is larger.</p></div>
+<div class="opp"><h3>Make each control decision cheaper <span class="tag">~76–88% of CPU</span></h3>
+<p><code>Decide</code> runs 3 coordinate sweeps, each with a gradient, a Hessian, and 5 candidate Q-values, and every Q-value calls both <code>operator()</code> and <code>Hessian()</code>, so the polynomial's derivatives are rebuilt 19 times per decision. With one control, the bound and zero candidates land on the same states in every sweep, and the "current" candidate repeats a value already known, so caching those and taking value and Hessian from one <code>ValueGradientAndHessian</code> call would roughly halve the calls. A specialized <code>Derivatives</code> (precomputed exponent and coefficient tables, no per-term array copies) would cut the cost of each call as well. This speeds up the forward pass, the backward targets and every rollout together.</p></div>
+<div class="opp"><h3>Pay less for rejected iterations <span class="tag">algorithmic</span></h3>
+<p>93% of iterations accept nothing, and a typical iteration screens two or three candidates to learn that. Cheaper rejection (fewer screening rollouts, or reusing the previous iteration's screened excess) would trade evaluation noise for speed; it changes the algorithm, so it needs a convergence study rather than a profile.</p></div>
+<div class="opp"><h3>Note the uncharged held-out evaluations <span class="tag">study wall time only</span></h3>
+<p>The comparison scores 1,024 held-out rollouts at each of about 80 checkpoints in a 60 s run, about 0.22 s each, so roughly 17 s of extra wall time per run. It is not charged to the solver, but it adds about 30% to how long a study takes.</p></div>
+
+  </div>
+</section>
+
+<section id="dip"><h2>Double inverted pendulum</h2>
+<p>Two configurations. The standard one is what <code>method_comparison</code> runs by default (<code>--dip-dt-config comparison</code>): 4,096 samples, 101 stages, soft-min value functions with 4 components fitted by 50 epochs of SGD, no screening, no slope matching. The second carries the 2-D recipe over (<code>--dip-dt-config sweep</code>): 256 samples, screening, 6× inflation on half the paths, slope weight 10. Seeds 0–2 (standard) and 0–1 (2-D recipe), 120 s each.</p>
+<ol class="findings">
+<li><b>The bottleneck moves from the line search to the backward fit.</b> On the standard configuration the backward pass is 85% of wall time and the SGD fit alone is 66%. The line search is under 4%.</li>
+<li><b>The SGD fit runs on one thread.</b> Each iteration fits 200 tables (100 stages × 2 halves), each about 30 ms of single-threaded SGD over 2,048 samples. The two halves of a stage are independent, so fitting them concurrently would cut the fit's wall time up to 2×; parallelizing the minibatch gradient would go further.</li>
+<li><b>Across all cores, fitting and deciding share the work.</b> In CPU samples the SGD fitter is 43% and control decisions (soft-min value, gradient and Hessian inside <code>Decide</code>) 39%. The pendulum's RK integration (<code>IntegrateReferenceStep</code>, <code>sin</code>, <code>sincos</code>) is about 21%, much of it the drift evaluations inside those decisions.</li>
+<li><b>The 2-D recipe is 7× cheaper per iteration and has the same bottleneck.</b> At 1.3 s per iteration its fit is 61% and its targets 25% of wall time; the slope targets (a finite-difference Jacobian through the RK step) are 62% of target thread time, about 15% of wall time. Screening is under 6% here, because the backward pass dominates.</li>
+</ol>
+<div class="figure"><ul class="legend"><li><span class="sw" style="background:var(--s1)"></span>Forward pass</li><li><span class="sw" style="background:var(--s2)"></span>Backward targets (Q argmin)</li><li><span class="sw" style="background:var(--s3)"></span>Backward fit</li><li><span class="sw" style="background:var(--s4)"></span>Line search: screening rollouts</li><li><span class="sw" style="background:var(--s5)"></span>Line search: full rollouts</li><li><span class="sw" style="background:var(--s6)"></span>Other</li></ul><svg viewBox="0 0 1000 148" class="chart" role="img" aria-label="Share of solver time by phase"><text x="0" y="12" class="row-label">Double inverted pendulum <tspan class="row-sub">· 8917 ms per iteration</tspan></text><rect x="0.00" y="18" width="115.25" height="34" rx="3" fill="var(--s1)" data-tip="Double inverted pendulum · Forward pass: 11.7% of solver time (1045.5 ms per iteration)"/><text x="6.00" y="39.0" class="seg-label">12%</text><rect x="117.25" y="18" width="181.32" height="34" rx="3" fill="var(--s2)" data-tip="Double inverted pendulum · Backward targets (Q argmin): 18.3% of solver time (1634.6 ms per iteration)"/><text x="123.25" y="39.0" class="seg-label">18%</text><rect x="300.57" y="18" width="662.10" height="34" rx="3" fill="var(--s3)" data-tip="Double inverted pendulum · Backward fit: 66.4% of solver time (5921.6 ms per iteration)"/><text x="306.57" y="39.0" class="seg-label">66%</text><rect x="964.67" y="18" width="33.27" height="34" rx="3" fill="var(--s5)" data-tip="Double inverted pendulum · Line search: full rollouts: 3.5% of solver time (314.5 ms per iteration)"/><rect x="999.94" y="18" width="0.50" height="34" rx="3" fill="var(--s6)" data-tip="Double inverted pendulum · Other: 0.0% of solver time (0.5 ms per iteration)"/><text x="0" y="86" class="row-label">Double inverted pendulum (2-D recipe) <tspan class="row-sub">· 1316 ms per iteration</tspan></text><rect x="0.00" y="92" width="75.85" height="34" rx="3" fill="var(--s1)" data-tip="Double inverted pendulum (2-D recipe) · Forward pass: 7.8% of solver time (102.4 ms per iteration)"/><text x="6.00" y="113.0" class="seg-label">8%</text><rect x="77.85" y="92" width="246.59" height="34" rx="3" fill="var(--s2)" data-tip="Double inverted pendulum (2-D recipe) · Backward targets (Q argmin): 24.9% of solver time (327.1 ms per iteration)"/><text x="83.85" y="113.0" class="seg-label">25%</text><rect x="326.45" y="92" width="610.30" height="34" rx="3" fill="var(--s3)" data-tip="Double inverted pendulum (2-D recipe) · Backward fit: 61.2% of solver time (805.7 ms per iteration)"/><text x="332.45" y="113.0" class="seg-label">61%</text><rect x="938.75" y="92" width="54.22" height="34" rx="3" fill="var(--s4)" data-tip="Double inverted pendulum (2-D recipe) · Line search: screening rollouts: 5.6% of solver time (74.0 ms per iteration)"/><rect x="994.97" y="92" width="2.83" height="34" rx="3" fill="var(--s5)" data-tip="Double inverted pendulum (2-D recipe) · Line search: full rollouts: 0.5% of solver time (6.4 ms per iteration)"/><rect x="999.80" y="92" width="0.50" height="34" rx="3" fill="var(--s6)" data-tip="Double inverted pendulum (2-D recipe) · Other: 0.0% of solver time (0.3 ms per iteration)"/></svg></div>
+<div class="tw"><table><thead><tr><th>Phase (wall clock)</th><th>Double inverted pendulum</th><th>Double inverted pendulum (2-D recipe)</th></tr></thead><tbody><tr><th scope="row">Forward pass</th><td>11.7% <span class="ms">1045.5 ms</span></td><td>7.8% <span class="ms">102.4 ms</span></td></tr><tr><th scope="row">Backward targets (Q argmin)</th><td>18.3% <span class="ms">1634.6 ms</span></td><td>24.9% <span class="ms">327.1 ms</span></td></tr><tr><th scope="row">Backward fit</th><td>66.4% <span class="ms">5921.6 ms</span></td><td>61.2% <span class="ms">805.7 ms</span></td></tr><tr><th scope="row">Line search: screening rollouts</th><td>0.0% <span class="ms">0.0 ms</span></td><td>5.6% <span class="ms">74.0 ms</span></td></tr><tr><th scope="row">Line search: full rollouts</th><td>3.5% <span class="ms">314.5 ms</span></td><td>0.5% <span class="ms">6.4 ms</span></td></tr><tr><th scope="row">Other</th><td>0.0% <span class="ms">0.5 ms</span></td><td>0.0% <span class="ms">0.3 ms</span></td></tr><tr class="tot"><th scope="row">Per iteration</th><td><b>8916.7 ms</b></td><td><b>1315.8 ms</b></td></tr><tr><th scope="row">Iterations profiled</th><td>42 over 3 seeds</td><td>183 over 2 seeds</td></tr></tbody></table></div>
+<h3>Inside the phases</h3>
+<div class="tw"><table><thead><tr><th>Measure</th><th>Double inverted pendulum</th><th>Double inverted pendulum (2-D recipe)</th></tr></thead><tbody><tr><th scope="row">One policy decision in a rollout (µs)</th><td>9.7</td><td>9.4</td></tr><tr><th scope="row">Rollout thread time spent choosing controls</th><td>79.1%</td><td>79.1%</td></tr><tr><th scope="row">Rollout thread time stepping the dynamics</th><td>17.9%</td><td>17.9%</td></tr><tr><th scope="row">Backward target time in the chooser’s argmin</th><td>77.0%</td><td>28.7%</td></tr><tr><th scope="row">Backward target time in the slope target</th><td>0.0%</td><td>62.4%</td></tr><tr><th scope="row">Backward pass time in the least-squares / SGD fit</th><td>78.3%</td><td>71.1%</td></tr><tr><th scope="row">Iterations that accepted a step</th><td>78.6%</td><td>6.6%</td></tr><tr><th scope="row">Screening evaluations per iteration</th><td>0.00</td><td>1.98</td></tr><tr><th scope="row">Full evaluations per iteration</th><td>3.55</td><td>0.07</td></tr><tr><th scope="row">One screening evaluation (ms)</th><td>0.0</td><td>37.4</td></tr><tr><th scope="row">One full evaluation (ms)</th><td>88.6</td><td>89.5</td></tr><tr><th scope="row">Uncharged held-out evaluation, 1024 rollouts (ms)</th><td>330</td><td>303</td></tr></tbody></table></div>
+<h3>Function-level profile, standard configuration</h3>
+<p>perf at 499 Hz over 60 s of seed 0, self time per function.</p>
+<div class="tw"><table class="perf"><thead><tr><th>Function (self time)</th><th>CPU samples</th></tr></thead><tbody><tr><td class="fn">SoftMinQuadraticValueFunctionApprox&lt;…&gt;::ComponentQuadratics&lt;…&gt;</td><td>13.5%</td></tr><tr><td class="fn">SoftMinQuadraticValueFunctionApprox&lt;…&gt;::ValuesAndParameterGradients&lt;…&gt;</td><td>11.1%</td></tr><tr><td class="fn">__sin_fma</td><td>9.4%</td></tr><tr><td class="fn">__ieee754_exp_fma</td><td>9.0%</td></tr><tr><td class="fn">Eigen::internal::call_dense_assignment_loop&lt;…&gt;</td><td>5.4%</td></tr><tr><td class="fn">SoftMinQuadraticValueFunctionApprox&lt;…&gt;::SoftMin&lt;…&gt;</td><td>5.3%</td></tr><tr><td class="fn">DoubleInvertedPendulumDynamics::JointAccelerations</td><td>4.4%</td></tr><tr><td class="fn">__sincos_fma</td><td>4.2%</td></tr></tbody></table></div>
+<p class="caption">On this 4-vCPU container the standard configuration ran at 8.6–9.2 s per iteration, about twice the 4.5 s figure from earlier studies, so only 14 iterations fit in a 120 s budget. The shares above should carry over to a faster machine.</p>
+</section>
+
+<section>
+  <h2>Method</h2>
+  <ul class="plain">
+    <li>Configuration: <code>SweepDtFbsdeOptions</code> from <code>method_comparison_main.cpp</code>, which is <code>DtFbsdeOptions</code> (double-greedy targets, entropy weights, ε 1 → 0.03) plus the screened stop-uphill line search, 6× noise inflation on half the paths, and slope weight 10 (integrator) or 1 (pendulum). 16 samples per batch, 65 stages, degree-6 polynomial value functions, 256 evaluation rollouts with 32 screening rollouts.</li>
+    <li>Runs: seeds 0–3 of the comparison's seed scheme, 60 s of solver time each, the comparison's 2-D budget. Held-out evaluation was timed separately and not charged, as in the comparison.</li>
+    <li>Timers: the phase profiler in <code>fbsde_traj_opt/utils/phase_profiler.hpp</code> wraps each phase and sub-phase. Each thread keeps its own totals, and they are merged when the thread exits. A profiled and an unprofiled build ran at 0.130 and 0.132 s per iteration on the same seed, so the timers cost less than the run-to-run noise. <code>method_comparison --profile-csv PATH</code> turns them on.</li>
+    <li>Build: g++ 13.3, <code>-O2 -DNDEBUG -g -fno-omit-frame-pointer</code>, Eigen 5.0.0, on a 4-vCPU cloud container. Bazel could not reach its module registry from the container, so this is not the repository's clang toolchain; absolute times will differ on your machine, the shares should not move much. More cores would shrink the parallel full evaluation but not the single-threaded screening.</li>
+    <li>The results, the scripts that build this page, and a README are in <code>profile_study/</code> on the <code>research</code> branch. The faster screening rollouts (a grain of 4 rollouts per thread) were an experiment and have not been merged.</li>
+  </ul>
+</section>
+</main>
+<div class="tip" id="tip" hidden></div>
+<script>
+(() => {
+  const tip = document.getElementById('tip');
+  document.addEventListener('mousemove', (e) => {
+    const t = e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (!t) { tip.hidden = true; return; }
+    tip.textContent = t.getAttribute('data-tip');
+    tip.hidden = false;
+    const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+    tip.style.left = x + 'px';
+    tip.style.top = (e.clientY + 16) + 'px';
+  });
+  document.addEventListener('mouseleave', () => { tip.hidden = true; });
+})();
+</script>
