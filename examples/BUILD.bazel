@@ -371,7 +371,8 @@ cc_binary(
 cc_binary(
     name = "l1_pendulum_gap_diagnosis",
     srcs = ["l1_pendulum_gap_diagnosis_main.cpp"],
-    copts = FBSDE_COPTS,
+    # Fixed-size Eigen tables on the stack trip Eigen's size assert outside -c opt.
+    copts = FBSDE_COPTS + ["-DEIGEN_STACK_ALLOCATION_LIMIT=0"],
     deps = [
         ":fbrrt_comparison_experiment",
         ":l1_benchmark_models",
@@ -414,7 +415,8 @@ cc_binary(
 cc_binary(
     name = "value_model_study",
     srcs = ["value_model_study_main.cpp"],
-    copts = FBSDE_COPTS,
+    # Fixed-size Eigen tables on the stack trip Eigen's size assert outside -c opt.
+    copts = FBSDE_COPTS + ["-DEIGEN_STACK_ALLOCATION_LIMIT=0"],
     deps = [
         ":fbrrt_comparison_experiment",
         ":l1_benchmark_models",
