@@ -128,6 +128,33 @@ struct HeatmapStyle {
   bool centered_on_zero = false;
 };
 
+// How one cloud of points is drawn: markers with no connecting line, for a set of samples whose
+// order means nothing -- a particle swarm, say.
+struct ScatterStyle {
+  // The name shown in the legend and the hover label.
+  std::string name{};
+
+  // The markers' color, when they are all one color.
+  PlotColorRole color_role = PlotColorRole::kSeries1;
+
+  // Marker diameter in pixels, and opacity in [0, 1]. Small and translucent by default, so that a
+  // dense cloud shows its density rather than a solid blot.
+  double marker_size = 4.0;
+  double opacity = 0.6;
+
+  bool show_in_legend = true;
+  std::string legend_group{};
+
+  // Off by default: hovering a cloud of thousands of points reports one of them, which is rarely
+  // what the reader wanted.
+  bool show_on_hover = false;
+
+  // When the markers are colored by a value instead: the scale and what it encodes, named on the
+  // colorbar.
+  PlotColorscaleRole colorscale_role = PlotColorscaleRole::kSequential;
+  std::string value_label{};
+};
+
 // One step of an animation: what every animated trace holds at that step.
 struct AnimationFrame {
   // Shown in the slider's readout. Short -- "450 epochs", "stage 7".
@@ -142,6 +169,11 @@ struct AnimationFrame {
   // points move in both coordinates -- a mechanism drawn in the plane rather than a curve over a
   // fixed axis. Empty means every trace keeps its x values. Line traces only.
   std::vector<std::vector<double>> trace_x_values{};
+
+  // Optionally, one entry per animated trace giving its marker color values at this step, for a
+  // scatter colored by value. Empty means every trace keeps its colors, and so does an empty entry
+  // for one trace -- a line animated alongside a recolored cloud, say.
+  std::vector<std::vector<double>> trace_color_values{};
 };
 
 // How an animation is played.
@@ -165,6 +197,22 @@ class PlotlyFigure {
   // holds a heatmap.
   auto AddLine(std::span<const double> x_values, std::span<const double> y_values, const LineStyle& style) noexcept
       -> Result<>;
+
+  // Adds a cloud of points in one color, or, with `color_values`, colored one value per point on
+  // the style's color scale.
+  //
+  // Scatters are not tabulated in the figure's table twin: a table of thousands of sample points
+  // tells a reader nothing the picture does not.
+  //
+  // Fails if the value ranges differ in length, or if this figure already holds a heatmap or is
+  // already animated.
+  auto AddScatter(std::span<const double> x_values,
+                  std::span<const double> y_values,
+                  const ScatterStyle& style) noexcept -> Result<>;
+  auto AddScatter(std::span<const double> x_values,
+                  std::span<const double> y_values,
+                  std::span<const double> color_values,
+                  const ScatterStyle& style) noexcept -> Result<>;
 
   // Adds a heatmap over the grid `x_values` by `y_values`.
   //

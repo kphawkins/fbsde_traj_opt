@@ -3,6 +3,7 @@
 
 #include "fbsde_traj_opt/solvers/dt_fbsde_iterative_solver.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -18,6 +19,7 @@
 #include "fbsde_traj_opt/sde/composed_forward_sde_model.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/polynomial_value_function_approx.hpp"
+#include "fbsde_traj_opt/value_function/soft_min_quadratic_value_function_approx.hpp"
 
 namespace fbsde_traj_opt {
 namespace {
@@ -135,6 +137,71 @@ TEST_P(DtFbsdeIterativeSolverTest, ControlsStayWithinTheirBoundsAndCoastSomewher
   // The minimum-fuel solution of a double integrator decelerates, coasts, and brakes: some stage
   // must spend no fuel at all.
   EXPECT_GT(coasting, 0U);
+}
+
+class DtFbsdeIterativeSolverSoftMinTest : public ::testing::TestWithParam<ValueFunctionFitMethod> {};
+
+TEST_P(DtFbsdeIterativeSolverSoftMinTest, FitsANonlinearRepresentation) {
+  // The soft-min quadratic model has no closed-form fit; the solver falls back to SGD or
+  // Gauss-Newton.
+  using SoftMin = SoftMinQuadraticValueFunctionApprox<2, 3>;
+  using SoftMinSolver = DtFbsdeIterativeSolver<2, 1, 256, kStages, 64, Model, TerminalCost, SoftMin>;
+  constexpr double kSharpness = 1.0;
+  constexpr double kDiagonalOffset = 1e-3;
+  const Fixture fixture = MakeFixture();
+  const Eigen::Matrix2d terminal_matrix = Eigen::Vector2d(5.0, 2.0).asDiagonal();
+
+  const auto terminal_parameters =
+      SoftMin::QuadraticParameters(terminal_matrix, Eigen::Vector2d::Zero(), 0.0, kSharpness, kDiagonalOffset);
+  const auto initial_parameters =
+      SoftMin::QuadraticParametersAt(terminal_matrix,
+                                     {Eigen::Vector2d(0.0, 0.0), Eigen::Vector2d(1.0, 0.0), Eigen::Vector2d(-0.5, 0.5)},
+                                     0.0,
+                                     kSharpness,
+                                     kDiagonalOffset);
+  ASSERT_TRUE(terminal_parameters.has_value() && initial_parameters.has_value());
+  const auto terminal = SoftMin::Make(*terminal_parameters, kSharpness, kDiagonalOffset);
+  const auto initial = SoftMin::Make(*initial_parameters, kSharpness, kDiagonalOffset);
+  ASSERT_TRUE(terminal.has_value() && initial.has_value());
+
+  DtFbsdeIterativeOptions<double> options;
+  options.target_floor = 0.0;
+  options.exploration_decay = 0.5;
+  options.sgd.learning_rate = 0.05;
+  options.sgd_epochs = 20;
+  options.nonlinear_fit_method = GetParam();
+  Result<SoftMinSolver> solver = SoftMinSolver::Make(fixture.model,
+                                                     fixture.running_cost,
+                                                     fixture.terminal_cost,
+                                                     fixture.initial,
+                                                     Eigen::Matrix<double, 1, 1>(-1.0),
+                                                     Eigen::Matrix<double, 1, 1>(1.0),
+                                                     *initial,
+                                                     *terminal,
+                                                     options,
+                                                     7);
+  ASSERT_TRUE(solver.has_value()) << solver.error();
+
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  double previous = solver->CurrentCost();
+  for (std::size_t iteration = 0; iteration < 8; ++iteration) {
+    const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+    ASSERT_TRUE(report.has_value()) << report.error();
+    EXPECT_LE(report->mean_cost, previous + 1e-12);
+    previous = report->mean_cost;
+  }
+  EXPECT_LT(solver->CurrentCost(), 0.05 * coasting_cost);
+}
+
+INSTANTIATE_TEST_SUITE_P(FitMethods,
+                         DtFbsdeIterativeSolverSoftMinTest,
+                         ::testing::Values(ValueFunctionFitMethod::kSgd, ValueFunctionFitMethod::kGaussNewton));
+
+TEST(DtFbsdeIterativeSolverOptionsSoftMinTest, MakeRejectsZeroSgdEpochs) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.sgd_epochs = 0;
+  EXPECT_FALSE(MakeSolver(fixture, options).has_value());
 }
 
 INSTANTIATE_TEST_SUITE_P(BackwardTargets,

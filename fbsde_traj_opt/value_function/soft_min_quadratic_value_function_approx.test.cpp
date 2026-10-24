@@ -3,6 +3,7 @@
 
 #include "fbsde_traj_opt/value_function/soft_min_quadratic_value_function_approx.hpp"
 
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -178,6 +179,30 @@ TEST(SoftMinQuadraticValueFunctionApproxTest, IdenticalComponentsReproduceTheirS
     EXPECT_LT(((*model).Gradient(state) - (2.0 * metric * centered)).norm(), 1e-9);
     EXPECT_LT(((*model).Hessian(state) - (2.0 * metric)).norm(), 1e-9);
   }
+}
+
+TEST(SoftMinQuadraticValueFunctionApproxTest, QuadraticParametersAtGivesEachComponentItsOwnCenter) {
+  Eigen::Matrix2d metric;
+  metric << 2.0, 0.75, 0.75, 1.5;
+  const std::array<Eigen::Vector2d, 3> centers{
+      Eigen::Vector2d(-0.25, 1.75), Eigen::Vector2d(-0.25, 1.75), Eigen::Vector2d(-0.25, 1.75)};
+  constexpr double kOffset = 4.0;
+
+  // Equal centers are exactly QuadraticParameters().
+  const auto same = Plane2x3::QuadraticParametersAt(metric, centers, kOffset, kSharpness, kDiagonalOffset);
+  const auto reference = Plane2x3::QuadraticParameters(metric, centers[0], kOffset, kSharpness, kDiagonalOffset);
+  ASSERT_TRUE(same.has_value() && reference.has_value());
+  EXPECT_EQ(*same, *reference);
+
+  // Spread centers: far from all but one bowl, the model follows that bowl, raised by the
+  // log(NumComponents)/beta the constant carries.
+  const std::array<Eigen::Vector2d, 3> spread{
+      Eigen::Vector2d(-10.0, 0.0), Eigen::Vector2d(10.0, 0.0), Eigen::Vector2d(0.0, 10.0)};
+  const auto parameters = Plane2x3::QuadraticParametersAt(metric, spread, kOffset, kSharpness, kDiagonalOffset);
+  ASSERT_TRUE(parameters.has_value());
+  const auto model = Plane2x3::Make(*parameters, kSharpness, kDiagonalOffset);
+  ASSERT_TRUE(model.has_value());
+  EXPECT_NEAR((*model)(spread[1]), kOffset + (std::log(3.0) / kSharpness), 1e-9);
 }
 
 TEST(SoftMinQuadraticValueFunctionApproxTest, QuadraticParametersFailsOnAnIndefiniteMetric) {

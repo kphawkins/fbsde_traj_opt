@@ -1,0 +1,217 @@
+"""The FBRRT method: RRT-style branched forward sampling, a Taylor-noiseless SGD backward pass, and
+path-integral erosion, each a swappable component the solver composes.
+
+Follows the layout convention described in the README: headers, sources, and unit tests live
+together, and a test for `foo.cpp` is named `foo.test.cpp`.
+"""
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//bazel:copts.bzl", "FBSDE_COPTS", "FBSDE_TEST_COPTS")
+
+package(
+    default_visibility = ["//visibility:public"],
+    # Compile every header standalone to catch missing includes.
+    features = ["parse_headers"],
+)
+
+cc_library(
+    name = "fbrrt_particle_set",
+    hdrs = ["fbrrt_particle_set.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "fbrrt_particle_set_test",
+    size = "small",
+    srcs = ["fbrrt_particle_set.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":fbrrt_particle_set",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "brute_force_nearest_neighbor",
+    hdrs = ["brute_force_nearest_neighbor.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "brute_force_nearest_neighbor_test",
+    size = "small",
+    srcs = ["brute_force_nearest_neighbor.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":brute_force_nearest_neighbor",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "rrt_expansion_selector",
+    hdrs = ["rrt_expansion_selector.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":brute_force_nearest_neighbor",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:l1_exploratory_control",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "rrt_expansion_selector_test",
+    size = "small",
+    srcs = ["rrt_expansion_selector.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":brute_force_nearest_neighbor",
+        ":rrt_expansion_selector",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "epsilon_greedy_l1_control_sampler",
+    hdrs = ["epsilon_greedy_l1_control_sampler.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:l1_exploratory_control",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "epsilon_greedy_l1_control_sampler_test",
+    size = "small",
+    srcs = ["epsilon_greedy_l1_control_sampler.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":epsilon_greedy_l1_control_sampler",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "forward_expansion",
+    hdrs = ["forward_expansion.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "forward_expansion_test",
+    size = "small",
+    srcs = ["forward_expansion.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":epsilon_greedy_l1_control_sampler",
+        ":fbrrt_particle_set",
+        ":forward_expansion",
+        ":rrt_expansion_selector",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "taylor_backward_pass",
+    hdrs = ["taylor_backward_pass.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/solvers:taylor_noiseless_backward_step_estimator",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:value_function_approx_concepts",
+        "//fbsde_traj_opt/value_function:value_function_gauss_newton_fitter",
+        "//fbsde_traj_opt/value_function:value_function_sgd_fitter",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "taylor_backward_pass_test",
+    size = "medium",
+    srcs = ["taylor_backward_pass.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":fbrrt_particle_set",
+        ":taylor_backward_pass",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sde:composed_cost_sde_model",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/solvers:finite_horizon_lqr",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "path_integral_erode",
+    hdrs = ["path_integral_erode.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:l1_exploratory_control",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "path_integral_erode_test",
+    size = "small",
+    srcs = ["path_integral_erode.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":fbrrt_particle_set",
+        ":path_integral_erode",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

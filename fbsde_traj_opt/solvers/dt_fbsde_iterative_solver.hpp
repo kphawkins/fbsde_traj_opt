@@ -10,7 +10,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <numbers>
 #include <span>
 #include <utility>
 #include <vector>
@@ -21,11 +20,15 @@
 #include "fbsde_traj_opt/costs/l1_control_sde_running_cost_term.hpp"
 #include "fbsde_traj_opt/policies/taylor_q_function_l1_policy.hpp"
 #include "fbsde_traj_opt/sampling/counter_based_normal_sampler.hpp"
+#include "fbsde_traj_opt/sampling/l1_exploratory_control.hpp"
 #include "fbsde_traj_opt/sampling/normal_distribution_concepts.hpp"
 #include "fbsde_traj_opt/sde/sde_term_concepts.hpp"
+#include "fbsde_traj_opt/solvers/policy_rollout_evaluation.hpp"
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/value_function_approx_concepts.hpp"
+#include "fbsde_traj_opt/value_function/value_function_gauss_newton_fitter.hpp"
+#include "fbsde_traj_opt/value_function/value_function_sgd_fitter.hpp"
 
 namespace fbsde_traj_opt {
 
@@ -75,9 +78,12 @@ namespace fbsde_traj_opt {
 //     comparison use the same noise for every candidate -- the evaluation seed is fixed -- so a
 //     difference in cost is a difference between policies and not between noise draws.
 //
-// The value function representation must be a linear-in-parameters model whose coefficient
-// vectors can be blended (PolynomialValueFunctionApprox with its fixed normalization is one) and
-// that can fit itself by weighted least squares.
+// The value function representation is fitted by its own closed-form weighted least squares when
+// it offers one (PolynomialValueFunctionApprox does), and otherwise -- for a model that is not
+// linear in its parameters, such as SoftMinQuadraticValueFunctionApprox -- by `sgd_epochs` epochs
+// of minibatch SGD warm-started from the current fit, which stands in for the same solve. Blending
+// is coefficient by coefficient either way; for a linear model that blends the functions exactly,
+// and for a nonlinear one it is a path in parameter space that the line search still checks.
 //
 // `N` and `M` are the state and control dimensions, `NumSamples` the width of the forward batch,
 // `NumStages` the number of stages including the terminal one, `NumEvaluationSamples` the
@@ -116,8 +122,21 @@ struct DtFbsdeIterativeOptions {
   // The per-iteration decay of the schedule, in [0, 1).
   Scalar exploration_decay = Scalar{0};
 
-  // The ridge weight of the least-squares fit; see PolynomialValueFunctionApprox.
+  // The ridge weight of the closed-form least-squares fit; see PolynomialValueFunctionApprox.
   Scalar ridge = Scalar{1e-6};
+
+  // How a representation without a closed-form fit is fitted instead, from the current value
+  // function, every iteration: by `sgd_epochs` epochs of ValueFunctionSgdFitter with `sgd`, or by
+  // ValueFunctionGaussNewtonFitter with `gauss_newton` -- whose default, no trust region and several
+  // steps, is a near-exact nonlinear least-squares solve, the closest stand-in for the closed form.
+  ValueFunctionFitMethod nonlinear_fit_method = ValueFunctionFitMethod::kSgd;
+  ValueFunctionSgdOptions<Scalar> sgd{};
+  std::size_t sgd_epochs = 50;
+  ValueFunctionGaussNewtonOptions<Scalar> gauss_newton = [] {
+    ValueFunctionGaussNewtonOptions<Scalar> defaults;
+    defaults.max_steps = 8;
+    return defaults;
+  }();
 
   // The fraction of the batch given over to one-step probes rather than full paths; see
   // SampleForwardPass() for what a probe is and why. In [0, 1).
@@ -226,6 +245,7 @@ class DtFbsdeIterativeSolver {
                   "DtFbsdeIterativeSolver::Make: the exploration decay must lie in [0, 1).");
     RESULT_ASSERT(std::isfinite(options.ridge) && options.ridge >= Scalar{0},
                   "DtFbsdeIterativeSolver::Make: the ridge weight must be finite and non-negative.");
+    RESULT_ASSERT(options.sgd_epochs >= 1, "DtFbsdeIterativeSolver::Make: an SGD fit needs at least one epoch.");
     RESULT_ASSERT(options.probe_fraction >= Scalar{0} && options.probe_fraction < Scalar{1},
                   "DtFbsdeIterativeSolver::Make: the probe fraction must lie in [0, 1).");
     RESULT_ASSERT(std::isfinite(options.entropy_temperature) && options.entropy_temperature >= Scalar{0},
@@ -317,21 +337,17 @@ class DtFbsdeIterativeSolver {
   [[nodiscard]] auto SampledControls() const noexcept -> std::span<const ControlBlock> { return controls_; }
 
  private:
-  struct Costs {
-    Scalar total = Scalar{0};
-    Scalar running = Scalar{0};
-    Scalar terminal = Scalar{0};
-  };
-
-  // Seeds for the forward passes and the evaluation rollouts, kept apart so that no forward pass
-  // ever reuses the evaluation's noise and the evaluation's noise never changes.
-  static constexpr std::uint64_t kEvaluationStream = 0xD1B54A32D192ED03ULL;
+  using Costs = PolicyRolloutCosts<Scalar>;
 
   // The sampler components the forward pass draws its non-noise randomness from, past the N used
   // for the state noise.
   static constexpr std::size_t kExploreComponent = static_cast<std::size_t>(N);
   static constexpr std::size_t kParentPickComponent = static_cast<std::size_t>(N) + 1;
   static constexpr std::size_t kControlPickComponent = static_cast<std::size_t>(N) + 2;
+
+  // The minibatch of an SGD fit, and the accumulation block of a Gauss-Newton one, for a
+  // representation without a closed-form fit.
+  static constexpr int kSgdMinibatch = 64;
 
   DtFbsdeIterativeSolver(ForwardModelT forward_model,
                          RunningCost running_cost,
@@ -386,32 +402,6 @@ class DtFbsdeIterativeSolver {
     return *Policy::Make(forward_model_, running_cost_.L1Weight(), lower_bounds_, upper_bounds_, table);
   }
 
-  // A standard normal variate mapped to a uniform on (0, 1) through the normal CDF, so that the
-  // one coordinate-addressed sampler supplies both kinds of randomness.
-  [[nodiscard]] static auto UniformFromNormal(Scalar normal) noexcept -> Scalar {
-    return Scalar{0.5} * std::erfc(-normal / std::numbers::sqrt2_v<Scalar>);
-  }
-
-  // One exploratory control: each coordinate drawn uniformly from {lower, 0, upper}, the set an
-  // L1-optimal policy's values lie in.
-  [[nodiscard]] auto ExploratoryControl(const CounterBasedNormalSampler& sampler,
-                                        std::size_t sample,
-                                        std::size_t stage) const noexcept -> Control {
-    Control control;
-    for (std::size_t coordinate = 0; coordinate < kControlDim; ++coordinate) {
-      const auto index = static_cast<Eigen::Index>(coordinate);
-      const Scalar pick = UniformFromNormal(sampler.Sample(sample, stage, kControlPickComponent + coordinate));
-      if (pick < Scalar{1} / Scalar{3}) {
-        control[index] = lower_bounds_[index];
-      } else if (pick < Scalar{2} / Scalar{3}) {
-        control[index] = Scalar{0};
-      } else {
-        control[index] = upper_bounds_[index];
-      }
-    }
-    return control;
-  }
-
   // The forward pass. Returns the mean cost the path columns incurred.
   //
   // The batch's columns are of two kinds. The first `PathCount()` are *paths*: trajectories from
@@ -453,14 +443,17 @@ class DtFbsdeIterativeSolver {
         // A path steps from its own state; a probe from a path's.
         std::size_t parent = sample;
         if (!is_path) {
-          const Scalar pick = UniformFromNormal(sampler.Sample(sample, stage + 1, kParentPickComponent));
+          const auto pick = SampleUniform<Scalar>(sampler, sample, stage + 1, kParentPickComponent);
           parent = std::min(static_cast<std::size_t>(pick * static_cast<Scalar>(path_count)), path_count - 1);
         }
         const State state = states_[stage].col(static_cast<Eigen::Index>(parent));
 
         const bool explore =
-            !is_path || UniformFromNormal(sampler.Sample(sample, stage + 1, kExploreComponent)) < exploration;
-        const Control control = explore ? ExploratoryControl(sampler, sample, stage + 1) : policy(stage, state);
+            !is_path || SampleUniform<Scalar>(sampler, sample, stage + 1, kExploreComponent) < exploration;
+        const Control control =
+            explore ? ExploratoryL1Control<M>(
+                          sampler, sample, stage + 1, kControlPickComponent, lower_bounds_, upper_bounds_)
+                    : policy(stage, state);
 
         State noise;
         sampler.FillNoise(sample, stage + 1, noise);
@@ -518,7 +511,8 @@ class DtFbsdeIterativeSolver {
             std::max(continuation.QValue(stage, state, target_policy(stage, state)), options_.target_floor);
       });
       fitted_[stage] = current_[stage];
-      if (const Result<> fitted = FitStage<kSampleCount>(fitted_[stage], states, targets, accrued_before_[stage]);
+      if (const Result<> fitted =
+              FitStage<kSampleCount>(fitted_[stage], states, targets, accrued_before_[stage], FitSeed(stage, 0));
           !fitted.has_value()) {
         return fitted;
       }
@@ -556,7 +550,8 @@ class DtFbsdeIterativeSolver {
           targets[column] = std::max(scorer.QValue(stage, state, chooser(stage, state)), options_.target_floor);
         });
         halves_[half][stage] = current_[stage];
-        if (const Result<> fitted = FitStage<kHalf>(halves_[half][stage], states, targets, accrued);
+        if (const Result<> fitted =
+                FitStage<kHalf>(halves_[half][stage], states, targets, accrued, FitSeed(stage, half + 1));
             !fitted.has_value()) {
           return fitted;
         }
@@ -600,7 +595,8 @@ class DtFbsdeIterativeSolver {
   auto FitStage(ValueFunctionT& value_function,
                 const ValueFunctionStateBatch<State, Count>& states,
                 const ValueFunctionValueBatch<State, Count>& targets,
-                const ValueFunctionValueBatch<State, Count>& accrued) const noexcept -> Result<> {
+                const ValueFunctionValueBatch<State, Count>& accrued,
+                std::uint64_t seed) const noexcept -> Result<> {
     ValueFunctionValueBatch<State, Count> weights = ValueFunctionValueBatch<State, Count>::Ones();
     if (options_.entropy_temperature > Scalar{0}) {
       const ValueFunctionValueBatch<State, Count> heuristic = accrued + targets;
@@ -609,39 +605,41 @@ class DtFbsdeIterativeSolver {
           std::sqrt((heuristic.array() - mean).square().mean()) + std::numeric_limits<Scalar>::epsilon();
       weights = (-(heuristic.array() - heuristic.minCoeff()) / (spread * options_.entropy_temperature)).exp();
     }
-    return value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, options_.ridge);
+    if constexpr (requires {
+                    value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, Scalar{});
+                  }) {
+      return value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, options_.ridge);
+    } else if (options_.nonlinear_fit_method == ValueFunctionFitMethod::kGaussNewton) {
+      using Fitter = ValueFunctionGaussNewtonFitter<ValueFunctionT, kSgdMinibatch>;
+      RESULT_ASSIGN_OR_RETURN(const Fitter fitter, Fitter::Make(options_.gauss_newton));
+      ValueFunctionGaussNewtonReport<Scalar> report;
+      return fitter.template Fit<Count>(value_function, states, targets, weights, report);
+    } else {
+      using Fitter = ValueFunctionSgdFitter<ValueFunctionT, kSgdMinibatch>;
+      RESULT_ASSIGN_OR_RETURN(Fitter fitter, Fitter::Make(options_.sgd, value_function.Parameters()));
+      std::vector<typename Fitter::StepReport> history;
+      return fitter.template FitEpochs<Count>(
+          value_function, states, targets, weights, options_.sgd_epochs, seed, history);
+    }
+  }
+
+  // The minibatch shuffling seed of one stage's SGD fit: distinct per iteration, stage, and half.
+  [[nodiscard]] auto FitSeed(std::size_t stage, std::size_t half) const noexcept -> std::uint64_t {
+    return SamplingSeed(iteration_) ^ ((static_cast<std::uint64_t>(stage) * 3U + half) * 0xBF58476D1CE4E5B9ULL);
   }
 
   // The mean cost of the policy over `table`, on NumEvaluationSamples rollouts with no exploration
   // and a fixed noise seed.
   [[nodiscard]] auto Evaluate(const std::vector<ValueFunctionT>& table) const noexcept -> Costs {
-    const CounterBasedNormalSampler sampler(seed_ ^ kEvaluationStream);
-    const Policy policy = MakePolicy(table);
-
-    std::vector<Scalar> running(NumEvaluationSamples, Scalar{0});
-    std::vector<Scalar> terminal(NumEvaluationSamples, Scalar{0});
-    ParallelFor(NumEvaluationSamples, [&](std::size_t sample) noexcept {
-      State noise;
-      sampler.FillNoise(sample, 0, noise);
-      State state = initial_mean_ + (initial_covariance_factor_ * noise);
-      for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
-        const Control control = policy(stage, state);
-        running[sample] += running_cost_(stage, state, control);
-        sampler.FillNoise(sample, stage + 1, noise);
-        state = forward_model_(stage, state, control, noise);
-      }
-      terminal[sample] = terminal_cost_(state);
-    });
-
-    Costs costs;
-    for (std::size_t sample = 0; sample < NumEvaluationSamples; ++sample) {
-      costs.running += running[sample];
-      costs.terminal += terminal[sample];
-    }
-    costs.running /= static_cast<Scalar>(NumEvaluationSamples);
-    costs.terminal /= static_cast<Scalar>(NumEvaluationSamples);
-    costs.total = costs.running + costs.terminal;
-    return costs;
+    return EvaluatePolicyByRollouts(forward_model_,
+                                    MakePolicy(table),
+                                    running_cost_,
+                                    terminal_cost_,
+                                    initial_mean_,
+                                    initial_covariance_factor_,
+                                    NumEvaluationSamples,
+                                    kNumControlStages,
+                                    seed_ ^ kPolicyEvaluationStream);
   }
 
   ForwardModelT forward_model_;

@@ -35,3 +35,6 @@ __pycache__/
 # The HTML report written by //examples:double_inverted_pendulum with its default output
 # directory.
 /double_inverted_pendulum_report/
+
+# The HTML reports written by //examples:fbrrt_particle_swarms with its default output directory.
+/fbrrt_particle_swarms_report/

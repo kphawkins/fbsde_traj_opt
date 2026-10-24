@@ -119,6 +119,54 @@ auto PlotlyFigure::AddLine(std::span<const double> x_values,
   return SuccessResult();
 }
 
+auto PlotlyFigure::AddScatter(std::span<const double> x_values,
+                              std::span<const double> y_values,
+                              const ScatterStyle& style) noexcept -> Result<> {
+  return AddScatter(x_values, y_values, {}, style);
+}
+
+auto PlotlyFigure::AddScatter(std::span<const double> x_values,
+                              std::span<const double> y_values,
+                              std::span<const double> color_values,
+                              const ScatterStyle& style) noexcept -> Result<> {
+  RESULT_ASSERT(x_values.size() == y_values.size(),
+                "PlotlyFigure::AddScatter: the x and y value ranges must have the same length.");
+  const bool colors_match = color_values.empty() || color_values.size() == x_values.size();
+  RESULT_ASSERT(colors_match, "PlotlyFigure::AddScatter: there must be one color value per point, or none.");
+  RESULT_ASSERT(!holds_heatmap_,
+                "PlotlyFigure::AddScatter: this figure already holds a heatmap, and a figure holds either points and "
+                "lines or a heatmap but not both.");
+  RESULT_ASSERT(frames_.empty(),
+                "PlotlyFigure::AddScatter: this figure is already animated, and its frames were sized against the "
+                "traces it had at the time.");
+
+  nlohmann::json trace = {
+      {"type", "scatter"},
+      {"mode", "markers"},
+      {"x", std::vector<double>(x_values.begin(), x_values.end())},
+      {"y", std::vector<double>(y_values.begin(), y_values.end())},
+      {"name", style.name},
+      {"showlegend", style.show_in_legend},
+      {"legendgroup", style.legend_group},
+      {"hoverinfo", style.show_on_hover ? "all" : "skip"},
+      {"marker", {{"size", style.marker_size}, {"opacity", style.opacity}}},
+  };
+  if (color_values.empty()) {
+    // Resolved by the page into `marker.color`, as `colorRole` is into a line's color.
+    trace["colorRole"] = PlotColorRoleName(style.color_role);
+  } else {
+    const auto [lowest, highest] = std::ranges::minmax(color_values);
+    trace["marker"]["color"] = std::vector<double>(color_values.begin(), color_values.end());
+    trace["marker"]["cmin"] = lowest;
+    trace["marker"]["cmax"] = highest > lowest ? highest : lowest + 1.0;
+    trace["marker"]["colorbar"] = {{"title", {{"text", style.value_label}}}};
+    // Resolved by the page into `marker.colorscale`, as `colorscaleRole` is for a heatmap.
+    trace["markerColorscaleRole"] = PlotColorscaleRoleName(style.colorscale_role);
+  }
+  traces_.push_back(std::move(trace));
+  return SuccessResult();
+}
+
 auto PlotlyFigure::AddHeatmap(std::span<const double> x_values,
                               std::span<const double> y_values,
                               std::span<const double> z_values_row_major,
@@ -229,6 +277,20 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
                       "PlotlyFigure::Animate: a frame's x values are not the length of the data the trace holds.");
       }
     }
+    if (!frame.trace_color_values.empty()) {
+      RESULT_ASSERT(frame.trace_color_values.size() == trace_indices.size(),
+                    "PlotlyFigure::Animate: a frame that recolors must carry one set of colors per animated trace.");
+      for (std::size_t slot = 0; slot < trace_indices.size(); ++slot) {
+        if (frame.trace_color_values[slot].empty()) {
+          continue;
+        }
+        const nlohmann::json& trace = traces_[trace_indices[slot]];
+        RESULT_ASSERT(trace.contains("markerColorscaleRole"),
+                      "PlotlyFigure::Animate: only a scatter colored by value can be recolored.");
+        RESULT_ASSERT(frame.trace_color_values[slot].size() == trace.at("x").size(),
+                      "PlotlyFigure::Animate: a frame's colors are not the length of the data the trace holds.");
+      }
+    }
   }
 
   // The range every frame shares. Computed before anything is written, over the frames and over
@@ -280,6 +342,21 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
     }
   }
 
+  // The color range, for frames that recolor: pinned over every frame, so that a color means the
+  // same value throughout.
+  double color_lowest = std::numeric_limits<double>::infinity();
+  double color_highest = -std::numeric_limits<double>::infinity();
+  for (const AnimationFrame& frame : frames) {
+    for (const std::vector<double>& values : frame.trace_color_values) {
+      for (const double value : values) {
+        if (std::isfinite(value)) {
+          color_lowest = std::min(color_lowest, value);
+          color_highest = std::max(color_highest, value);
+        }
+      }
+    }
+  }
+
   // The figure rests on the last frame; see the header for why.
   const AnimationFrame& resting = frames.back();
   for (std::size_t slot = 0; slot < trace_indices.size(); ++slot) {
@@ -287,6 +364,13 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
     AssignFrameValues(trace, resting.trace_values[slot], trace);
     if (!resting.trace_x_values.empty()) {
       trace["x"] = resting.trace_x_values[slot];
+    }
+    if (!resting.trace_color_values.empty() && !resting.trace_color_values[slot].empty()) {
+      trace["marker"]["color"] = resting.trace_color_values[slot];
+      if (std::isfinite(color_lowest) && std::isfinite(color_highest)) {
+        trace["marker"]["cmin"] = color_lowest;
+        trace["marker"]["cmax"] = color_highest > color_lowest ? color_highest : color_lowest + 1.0;
+      }
     }
   }
 
@@ -331,6 +415,9 @@ auto PlotlyFigure::Animate(std::span<const std::size_t> trace_indices,
       AssignFrameValues(traces_[trace_indices[slot]], frames[index].trace_values[slot], frame_trace);
       if (!frames[index].trace_x_values.empty()) {
         frame_trace["x"] = frames[index].trace_x_values[slot];
+      }
+      if (!frames[index].trace_color_values.empty() && !frames[index].trace_color_values[slot].empty()) {
+        frame_trace["marker"] = {{"color", frames[index].trace_color_values[slot]}};
       }
       frame_traces.push_back(std::move(frame_trace));
     }

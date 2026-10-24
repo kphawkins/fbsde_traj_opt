@@ -82,3 +82,27 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "l1_exploratory_control",
+    hdrs = ["l1_exploratory_control.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":counter_based_normal_sampler",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "l1_exploratory_control_test",
+    size = "small",
+    srcs = ["l1_exploratory_control.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":counter_based_normal_sampler",
+        ":l1_exploratory_control",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

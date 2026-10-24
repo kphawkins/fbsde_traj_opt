@@ -421,6 +421,112 @@ TEST(PlotlyFigureTest, AnimateRejectsFramesThatDoNotMatchTheTracesTheyReplace) {
   EXPECT_FALSE(figure.AddLine(kStages, kValues, LineStyle{.name = "Late"}).has_value());
 }
 
+TEST(PlotlyFigureTest, AddScatterDrawsMarkersInOneColorRole) {
+  PlotlyFigure figure("Particles", "Position", "Velocity");
+  ASSERT_TRUE(
+      figure.AddScatter(kStages, kValues, ScatterStyle{.name = "particles", .color_role = PlotColorRole::kSeries3})
+          .has_value());
+
+  const nlohmann::json trace = figure.ToJson().at("data").at(0);
+  EXPECT_EQ(trace.at("type"), "scatter");
+  EXPECT_EQ(trace.at("mode"), "markers");
+  EXPECT_EQ(trace.at("colorRole"), "series-3");
+  EXPECT_EQ(trace.at("hoverinfo"), "skip");
+  EXPECT_FALSE(trace.at("marker").contains("color"));
+  const std::string serialized = figure.ToJson().dump();
+  EXPECT_EQ(serialized.find('#'), std::string::npos) << "a hex color leaked into the figure spec";
+  EXPECT_EQ(serialized.find("rgb"), std::string::npos) << "an rgb color leaked into the figure spec";
+}
+
+TEST(PlotlyFigureTest, AScatterColoredByValueCarriesValuesAndAScaleRoleNeverColors) {
+  PlotlyFigure figure("Particles", "Position", "Velocity");
+  constexpr std::array<double, 4> kHeuristic{3.0, 1.0, 4.0, 1.5};
+  ASSERT_TRUE(figure.AddScatter(kStages, kValues, kHeuristic, ScatterStyle{.name = "particles", .value_label = "rho"})
+                  .has_value());
+
+  const nlohmann::json marker = figure.ToJson().at("data").at(0).at("marker");
+  EXPECT_EQ(marker.at("color").get<std::vector<double>>(), std::vector<double>(kHeuristic.begin(), kHeuristic.end()));
+  EXPECT_DOUBLE_EQ(marker.at("cmin").get<double>(), 1.0);
+  EXPECT_DOUBLE_EQ(marker.at("cmax").get<double>(), 4.0);
+  EXPECT_EQ(marker.at("colorbar").at("title").at("text"), "rho");
+  EXPECT_EQ(figure.ToJson().at("data").at(0).at("markerColorscaleRole"), "scale-sequential");
+  EXPECT_EQ(figure.ToJson().dump().find('#'), std::string::npos) << "a hex color leaked into the figure spec";
+}
+
+TEST(PlotlyFigureTest, AddScatterRejectsMismatchedCountsAndHeatmapFigures) {
+  PlotlyFigure figure("Particles", "Position", "Velocity");
+  constexpr std::array<double, 2> kShort{1.0, 2.0};
+  EXPECT_FALSE(figure.AddScatter(kStages, kShort, ScatterStyle{}).has_value());
+  EXPECT_FALSE(figure.AddScatter(kStages, kValues, kShort, ScatterStyle{}).has_value());
+
+  PlotlyFigure heatmap("Grid", "x", "y");
+  constexpr std::array<double, 1> kOne{1.0};
+  ASSERT_TRUE(heatmap.AddHeatmap(kOne, kOne, kOne, HeatmapStyle{}).has_value());
+  EXPECT_FALSE(heatmap.AddScatter(kStages, kValues, ScatterStyle{}).has_value());
+}
+
+TEST(PlotlyFigureTest, AnimatingAColoredScatterMovesAndRecolorsItAndPinsTheColorRange) {
+  PlotlyFigure figure("Particles", "Position", "Velocity");
+  constexpr std::array<double, 4> kColors{0.0, 1.0, 2.0, 3.0};
+  ASSERT_TRUE(figure.AddScatter(kStages, kValues, kColors, ScatterStyle{.value_label = "rho"}).has_value());
+
+  const std::vector<AnimationFrame> frames{
+      {.label = "iteration 0",
+       .trace_values = {{0.0, 0.0, 0.0, 0.0}},
+       .trace_x_values = {{1.0, 2.0, 3.0, 4.0}},
+       .trace_color_values = {{-5.0, 0.0, 0.0, 0.0}}},
+      {.label = "iteration 1",
+       .trace_values = {{1.0, 1.0, 1.0, 1.0}},
+       .trace_x_values = {{0.0, 0.0, 0.0, 0.0}},
+       .trace_color_values = {{0.0, 0.0, 0.0, 7.0}}},
+  };
+  constexpr std::array<std::size_t, 1> kAnimated{0};
+  ASSERT_TRUE(figure.Animate(kAnimated, frames, AnimationStyle{}).has_value());
+
+  const nlohmann::json json = figure.ToJson();
+  const nlohmann::json marker = json.at("data").at(0).at("marker");
+  // Rests on the last frame, with the color range spanning every frame.
+  EXPECT_EQ(marker.at("color").get<std::vector<double>>(), (std::vector<double>{0.0, 0.0, 0.0, 7.0}));
+  EXPECT_DOUBLE_EQ(marker.at("cmin").get<double>(), -5.0);
+  EXPECT_DOUBLE_EQ(marker.at("cmax").get<double>(), 7.0);
+  EXPECT_EQ(json.at("frames").at(0).at("data").at(0).at("marker").at("color").get<std::vector<double>>(),
+            (std::vector<double>{-5.0, 0.0, 0.0, 0.0}));
+}
+
+TEST(PlotlyFigureTest, ALineCanBeAnimatedAlongsideARecoloredScatter) {
+  PlotlyFigure figure("Particles", "Position", "Velocity");
+  constexpr std::array<double, 4> kColors{0.0, 1.0, 2.0, 3.0};
+  ASSERT_TRUE(figure.AddScatter(kStages, kValues, kColors, ScatterStyle{}).has_value());
+  ASSERT_TRUE(figure.AddLine(kStages, kValues, LineStyle{}).has_value());
+  const std::vector<AnimationFrame> frames{{.label = "0",
+                                            .trace_values = {{0.0, 0.0, 0.0, 0.0}, {1.0, 1.0, 1.0, 1.0}},
+                                            .trace_x_values = {{1.0, 2.0, 3.0, 4.0}, {4.0, 3.0, 2.0, 1.0}},
+                                            .trace_color_values = {{9.0, 9.0, 9.0, 9.0}, {}}}};
+  constexpr std::array<std::size_t, 2> kAnimated{0, 1};
+  ASSERT_TRUE(figure.Animate(kAnimated, frames, AnimationStyle{}).has_value());
+  const nlohmann::json frame = figure.ToJson().at("frames").at(0).at("data");
+  EXPECT_TRUE(frame.at(0).contains("marker"));
+  EXPECT_FALSE(frame.at(1).contains("marker"));
+  EXPECT_EQ(figure.ToJson().at("data").at(1).at("x").get<std::vector<double>>(),
+            (std::vector<double>{4.0, 3.0, 2.0, 1.0}));
+}
+
+TEST(PlotlyFigureTest, AnimateRejectsColorsForALineOrOfTheWrongLength) {
+  PlotlyFigure line("Trajectories", "Stage", "Position");
+  ASSERT_TRUE(line.AddLine(kStages, kValues, LineStyle{}).has_value());
+  constexpr std::array<std::size_t, 1> kAnimated{0};
+  const std::vector<AnimationFrame> recolor{
+      {.label = "0", .trace_values = {{0.0, 0.0, 0.0, 0.0}}, .trace_color_values = {{0.0, 0.0, 0.0, 0.0}}}};
+  EXPECT_FALSE(line.Animate(kAnimated, recolor, AnimationStyle{}).has_value());
+
+  PlotlyFigure scatter("Particles", "Position", "Velocity");
+  constexpr std::array<double, 4> kColors{0.0, 1.0, 2.0, 3.0};
+  ASSERT_TRUE(scatter.AddScatter(kStages, kValues, kColors, ScatterStyle{}).has_value());
+  const std::vector<AnimationFrame> short_colors{
+      {.label = "0", .trace_values = {{0.0, 0.0, 0.0, 0.0}}, .trace_color_values = {{0.0, 0.0}}}};
+  EXPECT_FALSE(scatter.Animate(kAnimated, short_colors, AnimationStyle{}).has_value());
+}
+
 TEST(PlotlyFigureTest, AnUnanimatedFigureCarriesNoFrames) {
   PlotlyFigure figure("Plain", "State", "Value");
   ASSERT_TRUE(figure.AddLine(kStages, kValues, LineStyle{.name = "a"}).has_value());
