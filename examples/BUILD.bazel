@@ -338,3 +338,52 @@ cc_binary(
         "//fbsde_traj_opt/viz:plotly_report",
     ],
 )
+
+cc_library(
+    name = "l1_grid_dp_reference",
+    hdrs = ["l1_grid_dp_reference.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_binary(
+    name = "dt_fbsde_batch_sweep",
+    srcs = ["dt_fbsde_batch_sweep_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":fbrrt_comparison_experiment",
+        ":l1_benchmark_models",
+        ":l1_grid_dp_reference",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/solvers:policy_rollout_evaluation",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "@eigen",
+    ],
+)
+
+cc_binary(
+    name = "l1_pendulum_gap_diagnosis",
+    srcs = ["l1_pendulum_gap_diagnosis_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":fbrrt_comparison_experiment",
+        ":l1_benchmark_models",
+        ":l1_grid_dp_reference",
+        "//fbsde_traj_opt/policies:taylor_q_function_l1_policy",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/solvers:policy_rollout_evaluation",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "//fbsde_traj_opt/value_function:value_function_sgd_fitter",
+        "@eigen",
+    ],
+)
