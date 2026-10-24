@@ -52,6 +52,24 @@ cc_test(
 )
 
 cc_library(
+    name = "phase_profiler",
+    hdrs = ["phase_profiler.hpp"],
+    copts = FBSDE_COPTS,
+)
+
+cc_test(
+    name = "phase_profiler_test",
+    size = "small",
+    srcs = ["phase_profiler.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":phase_profiler",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "eigen_concepts",
     hdrs = ["eigen_concepts.hpp"],
     copts = FBSDE_COPTS,

@@ -12,6 +12,7 @@
 
 #include "fbsde_traj_opt/sampling/counter_based_normal_sampler.hpp"
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
+#include "fbsde_traj_opt/utils/phase_profiler.hpp"
 
 namespace fbsde_traj_opt {
 
@@ -58,13 +59,18 @@ template <typename ForwardModelT,
   std::vector<Scalar> running(num_rollouts, Scalar{0});
   std::vector<Scalar> terminal(num_rollouts, Scalar{0});
   ParallelFor(num_rollouts, [&](std::size_t rollout) noexcept {
+    const profiling::ScopedPhase rollout_phase(profiling::Phase::kRolloutSample);
     State noise;
     sampler.FillNoise(rollout, 0, noise);
     State state = initial_mean + (initial_covariance_factor * noise);
     for (std::size_t stage = 0; stage < num_control_stages; ++stage) {
-      const auto control = policy(stage, state);
+      const auto control = [&] {
+        const profiling::ScopedPhase policy_phase(profiling::Phase::kRolloutPolicy);
+        return policy(stage, state);
+      }();
       running[rollout] += running_cost(stage, state, control);
       sampler.FillNoise(rollout, stage + 1, noise);
+      const profiling::ScopedPhase dynamics_phase(profiling::Phase::kRolloutDynamics);
       state = forward_model(stage, state, control, noise);
     }
     terminal[rollout] = terminal_cost(state);

@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <deque>
 #include <limits>
+#include <optional>
 #include <span>
 #include <utility>
 #include <vector>
@@ -34,6 +35,7 @@
 #include "fbsde_traj_opt/solvers/taylor_gradient_target.hpp"
 #include "fbsde_traj_opt/solvers/taylor_noiseless_backward_step_estimator.hpp"
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
+#include "fbsde_traj_opt/utils/phase_profiler.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/value_function_approx_concepts.hpp"
 #include "fbsde_traj_opt/value_function/value_function_gauss_newton_fitter.hpp"
@@ -576,21 +578,29 @@ class DtFbsdeIterativeSolver {
     // the screening rollouts when screening, so that every excess compared is on the same rollouts.
     auto previous_excess = Scalar{0};
     auto step = Scalar{1};
+    std::optional<profiling::ScopedPhase> line_search_phase(std::in_place, profiling::Phase::kLineSearch);
     for (std::size_t halving = 0; halving <= options_.max_step_halvings; ++halving, step *= Scalar{0.5}) {
-      if (const Result<> blended = BlendIntoTrial(step); !blended.has_value()) {
-        return ErrorResult(blended.error().message, blended.error().location);
+      {
+        const profiling::ScopedPhase blend_phase(profiling::Phase::kLineSearchBlend);
+        if (const Result<> blended = BlendIntoTrial(step); !blended.has_value()) {
+          return ErrorResult(blended.error().message, blended.error().location);
+        }
       }
       ++report.candidates_tried;
       auto excess = Scalar{0};
       Scalar screened_cost = Scalar{0};
       bool confirm = true;
       if (screening) {
+        const profiling::ScopedPhase screen_phase(profiling::Phase::kLineSearchScreen);
         screened_cost = Evaluate(trial_, options_.screening_rollouts).total;
         excess = screened_cost - current_screened_cost_;
         confirm = excess < Scalar{0};
       }
       if (confirm) {
-        const Costs trial_costs = Evaluate(trial_);
+        const Costs trial_costs = [&] {
+          const profiling::ScopedPhase full_phase(profiling::Phase::kLineSearchFull);
+          return Evaluate(trial_);
+        }();
         if (!screening) {
           excess = trial_costs.total - current_costs_.total;
         }
@@ -609,6 +619,7 @@ class DtFbsdeIterativeSolver {
       }
       previous_excess = excess;
     }
+    line_search_phase.reset();
     report.line_search_seconds = lap();
 
     if (options_.reset_normal_equations_on_acceptance && report.accepted_step > Scalar{0}) {
@@ -803,6 +814,7 @@ class DtFbsdeIterativeSolver {
   // TrajectoryBatch. Components 0..N-1 are the state noise, the next decides whether a path
   // explores, the next picks a probe's parent, and the last M pick an exploratory control.
   auto SampleForwardPass(Scalar exploration, Scalar inflation, std::uint64_t seed) noexcept -> Scalar {
+    const profiling::ScopedPhase forward_phase(profiling::Phase::kForwardPass);
     if (options_.sigma_point_rule != SigmaPointRule::kNone) {
       return SampleSigmaPointForwardPass(inflation, seed);
     }
@@ -826,6 +838,7 @@ class DtFbsdeIterativeSolver {
     for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
       accrued_before_[stage] = accrued;
       ParallelFor(NumSamples, [&](std::size_t sample) noexcept {
+        const profiling::ScopedPhase sample_phase(profiling::Phase::kForwardSample);
         const auto column = static_cast<Eigen::Index>(sample);
         const bool is_path = sample < path_count;
 
@@ -858,6 +871,7 @@ class DtFbsdeIterativeSolver {
             hold_remaining_[sample] = options_.exploration_hold_stages - 1;
           }
         } else {
+          const profiling::ScopedPhase policy_phase(profiling::Phase::kForwardPolicy);
           control = policy(stage, state);
         }
 
@@ -1093,6 +1107,7 @@ class DtFbsdeIterativeSolver {
   // realized cost stays where it was. With mu fixed, the controls are chosen independently of the
   // errors in the table being fitted, and the bias has nothing to select.
   auto BackwardPass() noexcept -> Result<> {
+    const profiling::ScopedPhase backward_phase(profiling::Phase::kBackwardPass);
     if (options_.backward_target == DtFbsdeBackwardTarget::kDoubleGreedy) {
       return DoubleGreedyBackwardPass();
     }
@@ -1286,13 +1301,22 @@ class DtFbsdeIterativeSolver {
         // The targets and slopes of a block of states, from the current tables: the control chosen
         // by this half's table and scored -- value and slope -- by the other's.
         const auto targets_of = [&](const HalfStates& states, HalfValues& targets, SlopeTargets<kHalf>& slopes) {
+          const profiling::ScopedPhase targets_phase(profiling::Phase::kBackwardTargets);
           ParallelFor(static_cast<std::size_t>(kHalf), [&](std::size_t slot) noexcept {
+            const profiling::ScopedPhase sample_phase(profiling::Phase::kBackwardTargetSample);
             const auto column = static_cast<Eigen::Index>(slot);
             const State state = states.col(column);
-            const Control control = chooser(stage, state);
-            const Scalar q_value = scorer.QValue(stage, state, control);
+            const Control control = [&] {
+              const profiling::ScopedPhase argmin_phase(profiling::Phase::kBackwardArgmin);
+              return chooser(stage, state);
+            }();
+            const Scalar q_value = [&] {
+              const profiling::ScopedPhase q_value_phase(profiling::Phase::kBackwardQValue);
+              return scorer.QValue(stage, state, control);
+            }();
             targets[column] = std::max(q_value, options_.target_floor);
             if (slopes_wanted) {
+              const profiling::ScopedPhase slope_phase(profiling::Phase::kBackwardSlopeTarget);
               const State gradient = q_value < options_.target_floor
                                          ? State(State::Zero())
                                          : GradientTarget(stage, state, control, halves_[1 - half][stage + 1]);
@@ -1335,6 +1359,7 @@ class DtFbsdeIterativeSolver {
           }
         }
         targets_of(states, targets, slopes);
+        const profiling::ScopedPhase fit_phase(profiling::Phase::kBackwardFit);
         if (const Result<> fitted = FitStage<kHalf>(halves_[half][stage],
                                                     states,
                                                     targets,
@@ -1346,6 +1371,7 @@ class DtFbsdeIterativeSolver {
           return fitted;
         }
       }
+      const profiling::ScopedPhase average_phase(profiling::Phase::kBackwardAverage);
       fitted_[stage] = current_[stage];
       if (const Result<> averaged = fitted_[stage].SetParameters(
               Scalar{0.5} * (halves_[0][stage].Parameters() + halves_[1][stage].Parameters()));
