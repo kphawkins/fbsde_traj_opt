@@ -139,8 +139,9 @@ struct DriverOptions {
   // DT-FBSDE on the double inverted pendulum: "comparison" is the FBRRT comparison's configuration
   // (4096 paths, soft-min); "sweep" carries the 2-D recipe over -- slope matching at
   // `double_pendulum_slope_weight`, mixed exploration, the screened stop-uphill line search -- on
-  // the soft-min model with batches of kDoublePendulumSweepBatch.
-  bool double_pendulum_sweep_config = false;
+  // the soft-min model with batches of kDoublePendulumSweepBatch. "sweep" is the default: a profile
+  // put it at about a seventh of the comparison configuration's time per iteration.
+  bool double_pendulum_sweep_config = true;
   double double_pendulum_slope_weight = 10.0;
 
   // A cap on MPPI's budget below the benchmark's, for runs where its curve has long since flattened.
@@ -799,7 +800,7 @@ auto PrintUsage() -> void {
       << "  --mpc-iterations N       MPPI-MPC iterations per control step (default 2)\n"
       << "  --mpc-noise S            MPPI-MPC control noise (default 0.1)\n"
       << "  --mpc-ilqr-iterations N  iLQR-MPC iterations per control step (default 2)\n"
-      << "  --dip-dt-config C        DT-FBSDE on the double inverted pendulum: comparison (default) or sweep\n"
+      << "  --dip-dt-config C        DT-FBSDE on the double inverted pendulum: sweep (default) or comparison\n"
       << "  --dip-slope-weight G     its slope weight under the sweep configuration (default 10)\n"
       << "  --mppi-time-budget S     cap on MPPI's charged seconds per run (default: the benchmark's)\n"
       << "  --csv PATH               checkpoints (default method_comparison.csv)\n"
