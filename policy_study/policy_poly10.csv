@@ -1,0 +1,23 @@
+problem,value_function,policy,held_out_cost,grid_optimum
+L1 double integrator,"grid V","grid's own policy (reference)",4.136748,4.136748
+L1 double integrator,"grid V","exact expectation, 41 controls",4.136748,4.136748
+L1 double integrator,"grid V","exact expectation, controls {-1,0,1}",4.145822,4.136748
+L1 double integrator,"grid V, differences over 1 cells","Taylor Q-function",4.140833,4.136748
+L1 double integrator,"grid V, differences over 2 cells","Taylor Q-function",4.140088,4.136748
+L1 double integrator,"grid V, differences over 2 cells","Taylor Q-function, no curvature term",4.143660,4.136748
+L1 double integrator,"grid V, differences over 4 cells","Taylor Q-function",4.137997,4.136748
+L1 double integrator,"grid V, differences over 8 cells","Taylor Q-function",4.144082,4.136748
+L1 double integrator,"poly10 fitted to grid V (oracle)","Taylor Q-function",4.455489,4.136748
+L1 double integrator,"poly10 fitted to grid V (oracle)","exact expectation, 41 controls",4.456764,4.136748
+L1 double integrator,"poly10 fitted to grid V (oracle)","exact expectation, controls {-1,0,1}",4.456551,4.136748
+L1 inverted pendulum,"grid V","grid's own policy (reference)",2.297722,2.297722
+L1 inverted pendulum,"grid V","exact expectation, 41 controls",2.297722,2.297722
+L1 inverted pendulum,"grid V","exact expectation, controls {-1,0,1}",2.319257,2.297722
+L1 inverted pendulum,"grid V, differences over 1 cells","Taylor Q-function",2.315831,2.297722
+L1 inverted pendulum,"grid V, differences over 2 cells","Taylor Q-function",2.314182,2.297722
+L1 inverted pendulum,"grid V, differences over 2 cells","Taylor Q-function, no curvature term",2.319860,2.297722
+L1 inverted pendulum,"grid V, differences over 4 cells","Taylor Q-function",2.303601,2.297722
+L1 inverted pendulum,"grid V, differences over 8 cells","Taylor Q-function",2.307724,2.297722
+L1 inverted pendulum,"poly10 fitted to grid V (oracle)","Taylor Q-function",2.535872,2.297722
+L1 inverted pendulum,"poly10 fitted to grid V (oracle)","exact expectation, 41 controls",2.535856,2.297722
+L1 inverted pendulum,"poly10 fitted to grid V (oracle)","exact expectation, controls {-1,0,1}",2.564563,2.297722

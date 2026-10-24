@@ -220,6 +220,30 @@ TEST(TaylorNoiselessBackwardStepEstimatorTest, TheBatchedPathAgreesWithThePointw
 // The backward recursion against the exact LQR value function
 // ---------------------------------------------------------------------------------------------
 
+// The parts-based entry point is the same estimate when handed the policy's own control and the
+// next stage's derivatives at the sampled mean.
+TEST(TaylorNoiselessBackwardStepEstimatorTest, EstimateFromPartsAgreesWithThePointwiseForm) {
+  const Eigen::Matrix<double, kControlDim, kStateDim> gain =
+      (Eigen::Matrix<double, kControlDim, kStateDim>() << -0.45, -0.8).finished();
+  const Estimator estimator = MakeEstimator(gain);
+  using MultiWell = SoftMinQuadraticValueFunctionApprox<kStateDim, 3>;
+  MultiWell::ParameterVector parameters;
+  Spread spread(53);
+  for (Eigen::Index index = 0; index < MultiWell::kNumParameters; ++index) {
+    parameters[index] = spread.Next(1.0);
+  }
+  const auto next = MultiWell::Make(parameters, kSharpness, kDiagonalOffset);
+  ASSERT_TRUE(next.has_value()) << next.error();
+  for (std::uint64_t index = 0; index < 6; ++index) {
+    const State state = SpreadState(index + 500, 2.0);
+    const State drift = SpreadState(index + 600, 0.5);
+    const State mean = state + drift;
+    const double from_parts = estimator.EstimateFromParts(
+        2, state, drift, estimator.policy()(2, state), (*next)(mean), next->Gradient(mean), next->Hessian(mean));
+    EXPECT_NEAR(from_parts, estimator(2, state, drift, *next), 1e-12) << "sample " << index;
+  }
+}
+
 TEST(TaylorNoiselessBackwardStepEstimatorTest, ReproducesTheRiccatiValueFunctionStageByStage) {
   // The sharpest check available: on an LQR problem the true value function is exactly
   // x' P_k x + s_k, the second-order model is therefore exact, and the estimator must reproduce

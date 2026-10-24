@@ -1,0 +1,10 @@
+
+=== L1 double inverted pendulum ===
+random:batch=128,model=poly4         batch 128 (asked 128)
+random:batch=128,model=poly4         seed 0: cost    2.9796 (gap    +nan%), V0 estimate   46.1496, 252 iterations (86 accepted), fwd/bwd/ls 9/20/71%
+random:batch=128,model=poly4         seed 1: cost    3.7869 (gap    +nan%), V0 estimate    1.0841, 234 iterations (83 accepted), fwd/bwd/ls 9/20/71%
+random:batch=128,model=poly4         seed 2: cost    3.0130 (gap    +nan%), V0 estimate    1.9969, 239 iterations (88 accepted), fwd/bwd/ls 8/20/72%
+ut:rotate=random,model=poly4         batch 128 (asked 72)
+ut:rotate=random,model=poly4         seed 0: cost    4.0818 (gap    +nan%), V0 estimate   64.1974, 253 iterations (89 accepted), fwd/bwd/ls 4/22/74%
+ut:rotate=random,model=poly4         seed 1: cost    6.5731 (gap    +nan%), V0 estimate   17.4903, 243 iterations (64 accepted), fwd/bwd/ls 3/22/75%
+ut:rotate=random,model=poly4         seed 2: cost    6.0402 (gap    +nan%), V0 estimate   79.0019, 248 iterations (64 accepted), fwd/bwd/ls 4/22/75%

@@ -106,3 +106,23 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "sigma_point_rules",
+    hdrs = ["sigma_point_rules.hpp"],
+    copts = FBSDE_COPTS,
+    deps = ["@eigen"],
+)
+
+cc_test(
+    name = "sigma_point_rules_test",
+    size = "small",
+    srcs = ["sigma_point_rules.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":sigma_point_rules",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

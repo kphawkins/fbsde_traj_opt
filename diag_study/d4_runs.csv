@@ -1,0 +1,16 @@
+problem,model,seed,iterations,accepted,failures,seconds,final_cost
+L1 inverted pendulum,"poly4:replay=2",0,1372,36,0,30.019911,2.391373
+L1 inverted pendulum,"poly4:replay=2",1,1383,44,0,30.016731,2.391137
+L1 inverted pendulum,"poly4:replay=2",2,1380,36,0,30.000858,2.403569
+L1 inverted pendulum,"poly4:replay=2",3,1347,45,0,30.001288,2.397685
+L1 inverted pendulum,"poly4:replay=2",4,1383,30,0,30.006642,2.377213
+L1 inverted pendulum,"poly4:replay=5",0,778,43,0,30.034874,2.642450
+L1 inverted pendulum,"poly4:replay=5",1,760,39,0,30.031921,2.697718
+L1 inverted pendulum,"poly4:replay=5",2,794,41,0,30.000802,2.659114
+L1 inverted pendulum,"poly4:replay=5",3,813,26,0,30.005670,2.708485
+L1 inverted pendulum,"poly4:replay=5",4,778,35,0,30.034484,2.646718
+L1 inverted pendulum,"poly4:replay=10",0,466,30,0,30.049969,2.895961
+L1 inverted pendulum,"poly4:replay=10",1,479,33,0,30.023281,2.751652
+L1 inverted pendulum,"poly4:replay=10",2,464,28,0,30.010560,2.849010
+L1 inverted pendulum,"poly4:replay=10",3,462,32,0,30.009314,2.859902
+L1 inverted pendulum,"poly4:replay=10",4,460,20,0,30.058877,3.136362

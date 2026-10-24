@@ -1,0 +1,369 @@
+<title>DT-FBSDE Equations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+<style>
+:root {
+  --bg: #f6f7f5;
+  --surface: #fcfcfb;
+  --ink: #15191b;
+  --ink-2: #4b5357;
+  --ink-3: #737b7f;
+  --rule: #dadedb;
+  --grid: #e8ebe8;
+  --accent: #0f5c63;
+  --band: rgba(21, 25, 27, 0.06);
+  --good: #0b7a3e;
+  --warn: #9a6400;
+  --bad: #b3261e;
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s4: #eda100;
+  --s5: #e87ba4;
+  --s6: #008300;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #141716;
+    --surface: #1a1d1c;
+    --ink: #eef1ef;
+    --ink-2: #b9c0bd;
+    --ink-3: #8b9390;
+    --rule: #333836;
+    --grid: #262a29;
+    --accent: #6cc3cb;
+    --band: rgba(238, 241, 239, 0.07);
+    --good: #4cc27f;
+    --warn: #e0a73a;
+    --bad: #f0857d;
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s4: #c98500;
+    --s5: #d55181;
+    --s6: #2f9a2f;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #141716;
+  --surface: #1a1d1c;
+  --ink: #eef1ef;
+  --ink-2: #b9c0bd;
+  --ink-3: #8b9390;
+  --rule: #333836;
+  --grid: #262a29;
+  --accent: #6cc3cb;
+  --band: rgba(238, 241, 239, 0.07);
+  --good: #4cc27f;
+  --warn: #e0a73a;
+  --bad: #f0857d;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #c98500;
+  --s5: #d55181;
+  --s6: #2f9a2f;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.6 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.page { max-width: 1040px; margin: 0 auto; padding: 48px 20px 80px; display: grid; gap: 40px; }
+.prose { max-width: 68ch; }
+h1, h2, h3 { font-family: "Source Serif 4", Georgia, "Times New Roman", serif; font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 2.3rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.55rem; }
+h3 { font-size: 1.15rem; }
+p { margin: 0; }
+.stack { display: grid; gap: 14px; }
+.eyebrow { font: 500 0.75rem/1.2 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.lede { font-size: 1.12rem; color: var(--ink-2); }
+.meta { font-size: 0.85rem; color: var(--ink-3); }
+code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.88em; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.verdict { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 22px 24px; display: grid; gap: 12px; }
+.verdict ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; }
+section { display: grid; gap: 18px; }
+section + section { border-top: 1px solid var(--rule); padding-top: 36px; }
+.problem-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; align-items: start; }
+@media (max-width: 820px) { .problem-grid { grid-template-columns: minmax(0, 1fr); } }
+.chart-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 14px 8px; position: relative; }
+.chart-title { font-size: 0.85rem; color: var(--ink-2); margin-bottom: 6px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--ink-2); padding: 4px 2px 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 16px; height: 2px; border-radius: 1px; display: inline-block; }
+.tooltip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 8px 10px; font-size: 0.8rem; box-shadow: 0 4px 14px rgba(0,0,0,0.12); min-width: 150px; z-index: 2; }
+.tooltip .t-head { color: var(--ink-3); margin-bottom: 4px; font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; }
+.tooltip .t-row { display: flex; align-items: center; gap: 8px; }
+.tooltip .t-row b { font-variant-numeric: tabular-nums; color: var(--ink); min-width: 56px; text-align: right; }
+.tooltip .t-row i { width: 12px; height: 2px; display: inline-block; }
+.tooltip .t-row span { color: var(--ink-2); }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 500; color: var(--ink-3); font-size: 0.76rem; letter-spacing: 0.03em; }
+td.method { display: flex; align-items: center; gap: 8px; }
+td.method i { width: 14px; height: 2px; display: inline-block; }
+.pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.76rem; font-weight: 500; border: 1px solid currentColor; }
+.pill.good { color: var(--good); }
+.pill.warn { color: var(--warn); }
+.pill.bad { color: var(--bad); }
+.note { font-size: 0.86rem; color: var(--ink-2); }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px 32px; }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; }
+ol.steps { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<style>
+details { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 14px; background: var(--surface); }
+details summary { cursor: pointer; font-weight: 500; color: var(--ink-2); }
+details[open] summary { margin-bottom: 10px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 20px; }
+.pending { border: 1px dashed var(--rule); border-radius: 6px; padding: 14px 16px; color: var(--ink-2); font-size: 0.9rem; }
+.legend i.dot { width: 9px; height: 9px; border-radius: 50%; }
+.fail-mark { stroke: var(--bad); stroke-width: 2; }
+td.num { font-variant-numeric: tabular-nums; }
+.tag { font: 500 0.7rem/1 "IBM Plex Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 6px; border-radius: 3px; border: 1px solid var(--rule); color: var(--ink-3); }
+</style><style>
+#lit-table td, #lit-table th { white-space: normal; text-align: left; vertical-align: top; min-width: 9rem; }
+#lit-table td:first-child { font-weight: 500; }
+</style>
+<style>
+.eq { overflow-x: auto; padding: 4px 0; }
+.where { font-size: 0.92rem; color: var(--ink-2); }
+.code-ref { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.8rem; color: var(--ink-3); }
+.flag { border-left: 3px solid var(--warn); padding: 6px 0 6px 14px; }
+.flag strong { color: var(--ink); }
+h3 { margin-top: 8px; }
+mjx-container { color: var(--ink); }
+ol.tight, ul.tight { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+</style>
+<script>
+window.MathJax = { tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]] }, svg: { fontCache: "global" } };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg-full.js"></script>
+
+<main class="page">
+  <header class="stack prose">
+    <div class="eyebrow">DT-FBSDE · equations as implemented</div>
+    <h1>From value function to policy, and back to targets</h1>
+    <p class="lede">The equations DT-FBSDE uses to turn a value function into a policy, and to turn that policy into regression targets for the next value function, written from the code in the <code>exp/ilqr-mppi-comparison</code> worktree. Each equation names where it lives. The last sections cover the grid reference and the oracle experiment whose result prompted this page, and where they differ from DT-FBSDE.</p>
+    <p class="meta">Notation: stage \(k = 0,\dots,K\); state \(x \in \mathbb{R}^n\); one control \(u \in [-1, 1]\); \(\tilde V_k\) is the fitted value function at stage \(k\). A <em>set of value functions</em> means all of \(\tilde V_0,\dots,\tilde V_K\) together (the code calls it a value-function table). For a degree-4 polynomial on the 2-D problems that's 65 polynomials of 15 coefficients each.</p>
+  </header>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>1. The problem every method solves</h2>
+      <p>One step of the discrete-time model is control-affine with additive Gaussian noise:</p>
+      <div class="eq">\[ x_{k+1} = x_k + f_k(x_k) + B_k(x_k)\,u_k + \Sigma_k\,w_k, \qquad w_k \sim \mathcal N(0, I). \]</div>
+      <p class="code-ref">ComposedForwardSdeModel::operator(), sde/composed_forward_sde_model.hpp:60</p>
+      <ul class="tight where">
+        <li><strong>Double integrator:</strong> \(f\) and \(B\) come from zero-order-hold discretization of a unit mass, with \(\Delta t = 1/16\) s.</li>
+        <li><strong>Pendulum:</strong> \(f\) and \(B\) come from the held-control flow map \(\Phi(x, u)\), integrated by RK4 with 2 substeps: \(f(x) = \Phi(x, 0) - x\) and \(B(x) = \tfrac12[\Phi(x, 1) - \Phi(x, -1)]\). This is exact at \(u = 0\), and at \(u = \pm1\) up to the map's curvature in \(u\). <span class="code-ref">examples/l1_benchmark_models.hpp:159–186</span></li>
+        <li><strong>Noise:</strong> \(\Sigma = \operatorname{diag}(\sigma)\sqrt{\Delta t}\), with \(\sigma = (0.01, 0.1)\) for the double integrator and \((0.04, 0.4)\) for the pendulum. <span class="code-ref">l1_benchmark_models.hpp:91, 200</span></li>
+      </ul>
+      <p>The cost is fuel plus a quadratic terminal penalty:</p>
+      <div class="eq">\[ J = \mathbb E\Big[\sum_{k=0}^{K-1} c\,|u_k| \;+\; x_K^\top F\, x_K\Big], \qquad c = \Delta t, \]</div>
+      <p class="where">\(F = \operatorname{diag}(20, 10)\) for the double integrator and \(\operatorname{diag}(10, 1)\) for the pendulum; \(K = 64\) for both. <span class="code-ref">l1_benchmark_models.hpp:92–96, 201–205</span></p>
+      <p>All methods, the grid reference included, use this same discrete model, so their costs are directly comparable.</p>
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>2. Policy from the value function</h2>
+      <h3>The Taylor Q-function</h3>
+      <p>The policy at stage \(k\) reads only the next stage's fitted value function \(\tilde V_{k+1}\). With \(m(x, u) = x + f_k(x) + B_k(x)\,u\) the noise-free landing point and \(S_k = \Sigma_k\Sigma_k^\top\) the step's noise covariance,</p>
+      <div class="eq">\[ \tilde Q_k(x, u) \;=\; c\,|u| \;+\; \tilde V_{k+1}\big(m(x,u)\big) \;+\; \tfrac12 \operatorname{tr}\!\big(S_k\,\nabla^2 \tilde V_{k+1}(m(x,u))\big). \]</div>
+      <p class="code-ref">TaylorQFunctionL1Policy::QValue, policies/taylor_q_function_l1_policy.hpp:203–210 (thesis eq. 4.65)</p>
+      <p class="where">This is the second-order expansion of \(\mathbb E_w[\tilde V_{k+1}(m + \Sigma w)]\). It is exact when \(\tilde V_{k+1}\) is quadratic. For a degree-4 polynomial it drops the fourth-order term \(\tfrac{1}{8}\,\mathbb E[(w^\top\Sigma^\top \nabla^4 \tilde V\,\Sigma w)]\)-type contributions, which scale with \(\|\Sigma\|^4\) and are tiny here (\(\Sigma\) is at most 0.1 per step).</p>
+      <h3>The minimization</h3>
+      <div class="eq">\[ \mu_k(x) \;=\; \operatorname*{arg\,min}_{u \in [-1,1]} \tilde Q_k(x, u). \]</div>
+      <p class="code-ref">TaylorQFunctionL1Policy::Decide, taylor_q_function_l1_policy.hpp:123–173 (thesis eq. 4.67)</p>
+      <p>Starting from \(u = 0\), the code makes 3 sweeps. Each sweep builds a local model of \(\tilde Q\) around the current control \(t_0\), using the gradient \(g\) and Hessian \(H\) of \(\tilde V_{k+1}\) at the current landing point and the control column \(b = B_k(x)\):</p>
+      <div class="eq">\[ \phi(t) = c|t| + \beta\,(t - t_0) + \tfrac{\alpha}{2}(t - t_0)^2, \qquad \beta = g^\top b,\quad \alpha = b^\top H b. \]</div>
+      <p>The candidates are \(\{-1,\ 0,\ 1\}\) and, when \(\alpha > 0\), the stationary point on each side of the kink, clamped to the box and kept only if it lies on that side:</p>
+      <div class="eq">\[ t_+ = t_0 - \frac{\beta + c}{\alpha}\ \ (\text{kept if } t_+ > 0), \qquad t_- = t_0 - \frac{\beta - c}{\alpha}\ \ (\text{kept if } t_- < 0). \]</div>
+      <p>Every candidate is scored by the <em>exact</em> \(\tilde Q_k\), not by \(\phi\), and the lowest wins. So the local model only proposes candidates and never decides.</p>
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>3. Targets for the next value function</h2>
+      <p>The backward pass runs from \(k = K-1\) down to 0. \(\tilde V_K\) is the terminal cost, exactly, and is never refit. At every sampled state \(x_s\) of stage \(k\), the target is a Q-value from the tables of stage \(k+1\). Which tables, and which control, depends on the backward target. The configuration used throughout (ff's) is double estimation.</p>
+      <h3>Double estimation (the default here)</h3>
+      <p>The batch is split into two halves, \(h \in \{0, 1\}\). Each half has its own table \(\tilde V^{(h)}\). For a sample in half \(h\), the control is chosen by that half's policy and the target is <em>scored</em> by the other half's Q-function:</p>
+      <div class="eq">\[ u_s = \mu^{(h)}_k(x_s), \qquad y_s = \max\!\Big(\tilde Q^{(1-h)}_k(x_s, u_s),\ y_{\min}\Big), \qquad y_{\min} = 0. \]</div>
+      <p class="code-ref">DtFbsdeIterativeSolver::DoubleGreedyBackwardPass, solvers/dt_fbsde_iterative_solver.hpp:1054–1130</p>
+      <p class="where">Both \(\mu^{(h)}_k\) and \(\tilde Q^{(1-h)}_k\) read stage \(k+1\) of the half-tables, which were fitted earlier in the <em>same</em> backward pass. The two half-fits are averaged coefficient by coefficient into the pass's result: \(\theta_k = \tfrac12(\theta^{(0)}_k + \theta^{(1)}_k)\). <span class="code-ref">:1127</span></p>
+      <h3>Single table (option <code>kCurrentPolicy</code>)</h3>
+      <div class="eq">\[ u_s = \mu^{\text{cur}}_k(x_s), \qquad y_s = \max\!\Big(\tilde Q^{\text{fit}}_k(x_s, u_s),\ 0\Big), \]</div>
+      <p class="where">The control comes from the current, accepted table. The Q-value comes from the table fitted earlier in this pass. <span class="code-ref">BackwardPass, :1005–1050</span></p>
+      <h3>Slope targets (slope matching)</h3>
+      <p>The target's gradient, holding the control fixed and dropping the noise term's third-derivative part, is the discrete costate recursion:</p>
+      <div class="eq">\[ G_s = J(x_s, u_s)^\top\, \nabla \tilde V^{(1-h)}_{k+1}\big(m(x_s, u_s)\big), \qquad J = \frac{\partial\,[x + f_k(x) + B_k(x)u]}{\partial x}\Big|_{x_s,\,u_s}. \]</div>
+      <p class="code-ref">TaylorGradientTarget, solvers/taylor_gradient_target.hpp:30–49. J is by central differences of the noise-free step, with relative half-width 10⁻⁵.</p>
+      <p>Only the slope along a control column is matched:</p>
+      <div class="eq">\[ t_s = b_s^\top G_s, \qquad b_s = B_{k-1}(x_s)\ \ (B_0(x_s) \text{ at } k = 0). \]</div>
+      <p class="code-ref">SetSlopeTargets, dt_fbsde_iterative_solver.hpp:1253–1265</p>
+      <p class="where">The direction is the <em>previous</em> stage's control column, because stage \(k-1\)'s policy compares \(\tilde V_k\) along it. A target below the floor gets a zero gradient.</p>
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>4. The fit, the blend and the line search</h2>
+      <p>Each stage (each half, under double estimation) is fitted by weighted least squares with slope rows and a ridge. With \(\phi\) the basis and \(S\) the number of samples:</p>
+      <div class="eq">\[ \theta_k = \operatorname*{arg\,min}_\theta \sum_{s} \omega_s\Big[\big(\phi(x_s)^\top\theta - y_s\big)^2 + \gamma\,\big(b_s^\top \nabla\phi(x_s)^\top \theta - t_s\big)^2\Big] + \lambda S\,\|\theta\|^2 . \]</div>
+      <p class="code-ref">LinearBasisValueFunctionApprox::AccumulateNormalEquations / FitNormalEquations, value_function/linear_basis_value_function_approx.hpp:188–245, 395–420; the same for PolynomialValueFunctionApprox:202–280</p>
+      <p class="where">Settings: \(\gamma = 1\) (pendulum) or 10 (double integrator), and \(\lambda = 10^{-6}\). The basis is the monomials of total degree ≤ 4 in \(z = (x - \text{center}) \oslash \text{scale}\), with gradients carried back by the chain rule.</p>
+      <p>The sample weights are local-entropy weights on the path-integrated heuristic \(\rho_s = a_s + y_s\), where \(a_s\) is the running cost the sample accrued to reach its state:</p>
+      <div class="eq">\[ \omega_s = \exp\!\Big(-\frac{\rho_s - \min_r \rho_r}{T\cdot \operatorname{sd}(\rho)}\Big), \qquad T = 2. \]</div>
+      <p class="code-ref">SampleWeights, dt_fbsde_iterative_solver.hpp:1150–1162 (thesis eq. 5.12, 5.15)</p>
+      <p>The fitted table is not adopted outright. It's blended with the current one, \(\theta \leftarrow (1-\eta)\,\theta^{\text{cur}} + \eta\,\theta^{\text{fit}}\), with \(\eta = 1, \tfrac12, \dots, \tfrac1{128}\). The first blend whose policy has a lower mean cost on 256 fixed evaluation rollouts is accepted. <span class="code-ref">BlendIntoTrial :1137; line search :490–530</span></p>
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>5. The grid reference (the "optimum")</h2>
+      <p>On a 401 × 401 node grid with bilinear interpolation, backward from \(V_K(x) = x^\top F x\):</p>
+      <div class="eq">\[ V_k(x) = \min_{u \in \mathcal U_{41}} \Big[ c|u| + \sum_{j=1}^{9} \omega_j\, V_{k+1}\big(x + f_k(x) + B_k(x)u + \Sigma\,\xi_j\big) \Big], \]</div>
+      <p class="where">\(\mathcal U_{41}\) is 41 evenly spaced controls in \([-1, 1]\). \((\xi_j, \omega_j)\) is the 3 × 3 tensor Gauss–Hermite rule, with nodes \(\{-\sqrt3, 0, \sqrt3\}\) and weights \(\{\tfrac16, \tfrac23, \tfrac16\}\) per axis. States off the grid read its nearest boundary value. The grid's policy is the same minimization evaluated at the actual state. <span class="code-ref">examples/l1_grid_dp_reference.hpp:154–193</span></p>
+      <p>Its expectation is a quadrature, not the Taylor expansion of section 2. With bilinear interpolation, \(V_k\) is only piecewise linear between nodes, so its curvature exists only at cell boundaries and averages out through the quadrature.</p>
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>6. The oracle experiment that raised the question</h2>
+      <p>The oracle fit each stage's \(\tilde V_k\) directly to the grid's \(V_k\), then scored the policy of section 2 on that table:</p>
+      <div class="eq">\[ y_s = V_k(x_s), \qquad t_s = b_s^\top \widehat{\nabla V_k}(x_s), \qquad \widehat{\nabla V_k} \text{ by central differences of the grid}. \]</div>
+      <p class="code-ref">MakeOracleData / RunOracle, examples/value_model_study_main.cpp:386–522</p>
+      <ul class="tight where">
+        <li><strong>States:</strong> 512 per stage, from rollouts of the grid's own policy, half at the problem's noise and half at 6×, clipped to the grid box.</li>
+        <li><strong>Fit:</strong> the same weighted fit as section 4, with the same entropy weights, \(\gamma = 1\) and \(\lambda = 10^{-6}\).</li>
+        <li><strong>Slope directions:</strong> stage \(k\)'s own column \(B_k(x_s)\). That's identical here to DT-FBSDE's \(B_{k-1}(x_s)\), because \(B\) doesn't depend on the stage in either benchmark.</li>
+      </ul>
+      <p>Results on the pendulum:</p>
+      <ul class="tight where">
+        <li><strong>Degree 4:</strong> a policy 81% above optimal, with value RMSE 0.73.</li>
+        <li><strong>Degree 10:</strong> +10%, with RMSE 0.49.</li>
+        <li><strong>Best of any model:</strong> about +9%.</li>
+        <li><strong>DT-FBSDE with degree 4:</strong> +3.6%.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>7. Differences and suspects found while writing this</h2>
+      <p>None of these is confirmed as the cause; section 9 tests them. They're the places where what's fitted, or how it's used, differs between the oracle and DT-FBSDE, or between theory and code.</p>
+      <div class="flag"><p><strong>Degree 4 was not well fitted in the oracle.</strong> Its pendulum value RMSE (0.73) is the worst of the polynomial models, on values of order 1–3. So the +81% may simply be a capacity limit. The puzzle that remains is narrower: no model's oracle fit got below about +9%, while DT-FBSDE's own degree-4 fits reach +3.6%.</p></div>
+      <div class="flag"><p><strong>The oracle had no probes.</strong> DT-FBSDE adds one-step branches under \(u \in \{-1, 0, 1\}\) from its paths, which put samples exactly where the policy's minimization reads \(\tilde V_{k+1}\). The oracle sampled only the grid policy's rollouts (half at 6× noise). If the fit is poor at the landing points of controls the optimal policy doesn't choose, the oracle's policy can pick them.</p></div>
+      <div class="flag"><p><strong>The oracle fits values, DT-FBSDE fits Q-values of its own policy.</strong> DT-FBSDE's targets are \(\tilde Q\) evaluated with the next stage's fitted table. They are consistent with how the policy reads that table, including its Taylor approximation and its errors. The oracle's targets are the true \(V_k\), with no such consistency. The two only coincide if the model can represent \(V\) well.</p></div>
+      <div class="flag"><p><strong>The grid's own slopes are unreliable.</strong> The oracle's slope targets are finite differences of a bilinear interpolant, piecewise constant between nodes and steppy across them. Matching them may pull the fit's slopes away from the smooth truth, and slopes are what the policy reads.</p></div>
+      <div class="flag"><p><strong>Untested equation paths.</strong> Section 8 lists which of the equations above have a unit test that checks their value directly, and which are only exercised indirectly.</p></div>
+      <p>Two experiments would separate these:</p>
+      <ul class="tight">
+        <li><strong>Oracle with probes:</strong> add DT-FBSDE-style probe states to the oracle's training data.</li>
+        <li><strong>Exact-expectation policy:</strong> score the oracle tables with an exact-expectation policy (Gauss–Hermite, as the grid does) instead of the Taylor Q-function. That isolates the Taylor step from the fit.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="stack" id="tests">
+    <div class="prose stack">
+      <h2>8. Unit test coverage of these equations</h2>
+      <p>Every equation above was checked for a unit test that compares its value with an independent calculation. Where none existed, I added one. All 51 tests in the library and these examples pass.</p>
+<div class="table-wrap"><table>
+<tr><th>Equation</th><th>Test</th><th>What it checks</th><th>Status</th></tr>
+<tr><td>Model step (§1)</td><td><code>ComposedForwardSdeModelTest.*</code>, <code>L1BenchmarkModelsTest.*</code></td><td>The step sums drift, control and noise. The double integrator is exact kinematics. The pendulum step matches a fine RK4 reference.</td><td>Existing, passes</td></tr>
+<tr><td>Fuel cost (§1)</td><td><code>L1ControlSdeRunningCostTermTest.*</code></td><td>c‖u‖₁, independent of stage and state.</td><td>Existing, passes</td></tr>
+<tr><td>Taylor Q-value, including ½tr(SH) (§2)</td><td><code>TaylorQFunctionL1PolicyTest.QValueIsTheExpectedNextValueForACubic</code></td><td>Q-value equals c|u| + E[V(x + f + Bu + Σw)], computed by exact Gauss–Hermite quadrature from values of V alone, for a cubic V. Agrees to 10⁻¹⁰. This is the only test that checks the noise-curvature term and its covariance.</td><td><strong>Added</strong>, passes</td></tr>
+<tr><td>Minimization (§2)</td><td><code>…SingleControlMatchesBruteForceMinimum</code>, <code>…SoftThresholdedMinimizer</code>, <code>…LargeL1WeightMakesTheControlCoast</code></td><td>Never worse than a 4,001-point grid over u. Equals the closed-form soft threshold for quadratic V. Coasts when fuel is dear.</td><td>Existing, passes</td></tr>
+<tr><td>Target assembly (§3): chooser, scorer, stage index, half-averaging</td><td><code>DtFbsdeIterativeSolverTargetTest.FitsAreExactBellmanBackupsOnALinearQuadraticProblem</code></td><td>On a linear-quadratic problem every target is an exact Bellman backup. The fitted tables equal Pₖ = AᵀPₖ₊₁A at all 30 stages when coasting, and the one-step Riccati backup with free fuel. Both backward targets, with and without slope rows; agreement to 10⁻⁶.</td><td><strong>Added</strong>, passes</td></tr>
+<tr><td>Slope target G = Jᵀ∇V (§3)</td><td><code>TaylorGradientTargetTest.*</code></td><td>Exact for linear dynamics. Matches a finite difference of the minimized Q-value away from control switches.</td><td>Existing, passes</td></tr>
+<tr><td>Slope rows in the fit (§4)</td><td><code>LinearBasisValueFunctionApproxTest.SlopeRowsAreTheDirectionalDerivative</code>, <code>…SlopeMatchedFitRecoversAFunctionInTheSpan</code>; <code>PolynomialValueFunctionApproxSlopeTest.*</code></td><td>A slope row equals d·∇V(x) through the normalization's chain rule, for all four bases. A slope-matched fit recovers a function in its span from fewer samples than coefficients.</td><td><strong>Added</strong> for the linear model; existing for the polynomial; passes</td></tr>
+<tr><td>Fit and ridge (§4)</td><td><code>…LeastSquaresRecoversAPolynomialInTheBasis</code>, <code>…MonomialFitMatchesThePolynomialModel</code>, <code>…AccumulatedNormalEquationsFitTheUnionOfTheirBatches</code></td><td>Exact recovery, agreement between the two model classes, and the accumulate/solve split.</td><td>Existing, passes</td></tr>
+<tr><td>Entropy sample weights (§4)</td><td>none</td><td>The weights are private to the solver. They're exercised by every solver test but not checked against the formula.</td><td><strong>Gap remains</strong></td></tr>
+<tr><td>Grid Bellman step (§5)</td><td><code>L1GridDpReferenceTest.OneStepIsTheBellmanBackupOfTheTerminalCost</code>, <code>…CoastingValueConvergesToTheLinearRecursionAtSecondOrder</code></td><td>One step equals the closed-form backup within the bilinear-interpolation bound, and picks the same control. Over the full horizon, the value converges to the closed form at second order in the cell size.</td><td><strong>Added</strong>, passes</td></tr>
+</table></div>
+<div class="flag"><p><strong>A side finding from the grid tests.</strong> Bilinear interpolation always overestimates a convex value function, and the grid applies it at every stage, so its error compounds. On the coasting double integrator the error is +0.59 at 140 cells, +0.17 at 280 and +0.043 at 560, on a value of 6.78. That's clean second-order convergence, so the Bellman step is correct. At the 400 cells used throughout, the grid's value function is about 1% high on that problem. The reported "optimum" is the held-out cost of the grid's <em>policy</em>, so it remains an honest upper bound on the true optimum. But gaps of a few tenths of a percent, like DT-FBSDE's +0.2–0.3% on the double integrator, are within the reference's own accuracy.</p></div>
+<p><strong>Conclusion of the audit:</strong> no implementation error was found in the policy, the targets, the slope targets, the fit, or the grid reference. That makes the oracle result more likely to come from the theory or the experiment's design than from a bug, which the next investigation addresses directly.</p>
+    </div>
+  </section>
+
+  <section class="stack" id="followups">
+    <div class="prose stack">
+      <h2>9. Follow-up experiments: is it the Q-function, the weights, or the fit?</h2>
+      <p>Section 8 found no implementation error, so these experiments asked where the oracle's poor policies come from. All use the degree-4, 6 and 10 monomial polynomials and the same 1,024 held-out rollouts; gaps are against the grid's policy.</p>
+
+      <h3>9.1 The Q-function policy is not the limit</h3>
+      <p>The same sets of value functions were scored with the Taylor Q-function policy (section 2) and with an exact-expectation minimization: a 3 × 3 Gauss–Hermite expectation over 41 controls, as the grid does.</p>
+    </div>
+    <div class="table-wrap"><table>
+      <tr><th>Set of value functions</th><th>Problem</th><th>Taylor Q-function</th><th>Exact expectation, 41 controls</th><th>Exact expectation, {−1, 0, 1}</th></tr>
+      <tr><td>Grid's true V (finite differences over 1–8 cells)</td><td>Double integrator</td><td>+0.03% to +0.18%</td><td>+0.00% (the grid's policy)</td><td>+0.22%</td></tr>
+      <tr><td>Grid's true V (finite differences over 1–8 cells)</td><td>Pendulum</td><td>+0.26% to +0.79%</td><td>+0.00%</td><td>+0.94%</td></tr>
+      <tr><td>Degree 4 fitted to grid V (oracle)</td><td>Pendulum</td><td>+81.0%</td><td>+80.8%</td><td>+89.3%</td></tr>
+      <tr><td>Degree 10 fitted to grid V (oracle)</td><td>Pendulum</td><td>+10.4%</td><td>+10.4%</td><td>+11.6%</td></tr>
+      <tr><td>Degree 4 from DT-FBSDE, 30 s, 3 seeds</td><td>Pendulum</td><td>+3.0%, +3.4%, +5.2%</td><td>+3.0%, +3.4%, +5.2%</td><td>+4.1% to +5.8%</td></tr>
+      <tr><td>Degree 4 from DT-FBSDE, 30 s, 3 seeds</td><td>Double integrator</td><td>+0.22% to +0.33%</td><td>+0.22% to +0.34%</td><td>+0.42% to +0.51%</td></tr>
+    </table></div>
+    <div class="prose stack">
+      <p>Given the true value function, the Q-function policy is within 0.3–0.8% of optimal, inside the reference's own accuracy. On every set of value functions, the Taylor and exact-expectation policies agree to within 0.2 points, so the Taylor expansion and its noise-curvature term cost nothing measurable. Allowing interior controls helps a little: restricting to {−1, 0, 1} costs about a point on the pendulum. <strong>The policy's quality is decided by the set of value functions, not by how the policy is computed from it.</strong></p>
+
+      <h3>9.2 Entropy weights: decisive for the oracle, minor for DT-FBSDE</h3>
+      <p>Sweeping the temperature \(T\) of section 4's weights, from 0 (equal weights) to 16:</p>
+      <ul class="tight">
+        <li><strong>Oracle fits, pendulum:</strong> concentrated weights (\(T\) = 0.25–0.5) gave the <em>best</em> value error on the optimal trajectories (RMSE 0.19–0.24) and catastrophic policies (+1,100% to +2,300%). On the states those policies actually visited, the fits were off by 18–31. The fit is accurate where the weights concentrate and badly biased elsewhere; once noise pushes a rollout off the well-fitted region, its decisions run away. \(T\) = 2 was best for every degree.</li>
+        <li><strong>Oracle fits, double integrator:</strong> the opposite. Lower temperature helps steadily (degree 4: +42% equal weights, +12.7% at \(T\) = 2, +5.2% at \(T\) = 0.25). Its linear dynamics don't run away.</li>
+        <li><strong>DT-FBSDE (degree 4, 5 seeds):</strong> pendulum medians are +4.0%, +5.7%, +5.0%, +3.6%, +3.4% and +3.4% for \(T\) = 0, 0.5, 1, 2, 4 and 8. Only \(T\) = 0.5–1 is worse, with one seed at +16%. On the double integrator every setting lands within 0.1 points. The current \(T\) = 2 is fine.</li>
+      </ul>
+
+      <h3>9.3 Training on the policy's own states (DAgger) doesn't fix the oracle</h3>
+      <p>The oracle was refit for six rounds, each adding 512 states per stage from rollouts of its own current policy, labeled with the grid's values and slopes. The policy did not improve:</p>
+      <ul class="tight">
+        <li><strong>Pendulum, degree 10:</strong> +10.4% before, +10.7% after six rounds.</li>
+        <li><strong>Pendulum, degree 4:</strong> +81% before, +84% after (+43% to +128% in between).</li>
+        <li><strong>Double integrator, degree 4:</strong> worse, from +12.7% to +24.5%.</li>
+      </ul>
+      <p>Adding DT-FBSDE-style probes improved the first round by about a point, without a lasting effect. So the oracle wasn't failing because it trained on the wrong states.</p>
+
+      <h3>9.4 Fit accuracy doesn't predict decision quality</h3>
+      <p>On the states each policy itself visits, the error of the value, and of the slope along the control column (the quantity the policy compares):</p>
+    </div>
+    <div class="table-wrap"><table>
+      <tr><th>Set of value functions</th><th>Policy gap</th><th>Value RMSE</th><th>Slope RMSE along control</th></tr>
+      <tr><td>Pendulum, oracle degree 4</td><td>+81%</td><td>1.88</td><td>1.27</td></tr>
+      <tr><td>Pendulum, oracle degree 6</td><td>+18%</td><td>0.65</td><td>0.26</td></tr>
+      <tr><td>Pendulum, oracle degree 10</td><td>+10%</td><td>0.45</td><td>0.29</td></tr>
+      <tr><td>Pendulum, DT-FBSDE degree 4 (3 seeds)</td><td>+3.0% to +5.2%</td><td>0.63–0.79</td><td><strong>0.10–0.13</strong></td></tr>
+      <tr><td>Double integrator, oracle degree 4 / 10</td><td>+12.7% / +7.7%</td><td>0.26 / 0.09</td><td>0.063 / 0.038</td></tr>
+      <tr><td>Double integrator, DT-FBSDE degree 4 (3 seeds)</td><td>+0.2% to +0.3%</td><td><strong>1.06–1.76</strong></td><td>0.058–0.17</td></tr>
+    </table></div>
+    <div class="prose stack">
+      <ul class="tight">
+        <li><strong>Double integrator:</strong> DT-FBSDE's value functions are 4–7× <em>less</em> accurate than the oracle's, yet give a policy 25–40× closer to optimal. Much of their error is a constant offset (DT-FBSDE's estimate of the optimal cost was 148% high here), which no decision sees. Even the slope error, averaged over visited states, doesn't explain the difference. In a bang-off-bang problem what matters is the slope exactly where it crosses the fuel weight \(c\), at the switching boundary, and an average dilutes that.</li>
+        <li><strong>Pendulum:</strong> the slope error along the control column does track policy quality, and DT-FBSDE's is the smallest, 2–10× below the oracle fits'.</li>
+      </ul>
+      <div class="flag"><p><strong>Current explanation.</strong> The oracle's least-squares fit minimizes an error that isn't the one decisions depend on, and with a model too simple to represent the true value function, the best-fitting coefficients and the best-deciding coefficients differ. DT-FBSDE's line search accepts a set of value functions only when its rollouts get cheaper, so it effectively searches coefficients for decision quality. That would also explain the earlier findings: more data per fit, memory, replay and deterministic sigma points all made each fit more accurate, and all made DT-FBSDE worse. There's a known parallel in reinforcement learning: on Tetris, Szita and Lőrincz (2006) found that searching a linear value function's weights directly by rollout cost, with the noisy cross-entropy method, beat regression-based approximate dynamic programming by orders of magnitude.</p></div>
+      <p><strong>What this suggests trying:</strong></p>
+      <ul class="tight">
+        <li>Fits that weight errors by their effect on decisions: slope accuracy near switching boundaries, \(|b^\top\nabla\tilde V| \approx c\).</li>
+        <li>Making DT-FBSDE's implicit policy search explicit: several proposals per iteration, kept or dropped by rollout cost.</li>
+      </ul>
+    </div>
+  </section>
+</main>

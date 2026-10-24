@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <limits>
 #include <span>
 #include <utility>
@@ -17,16 +18,21 @@
 
 #include <Eigen/Cholesky>
 #include <Eigen/Core>
+#include <Eigen/Eigenvalues>
+#include <Eigen/LU>
+#include <Eigen/QR>
 
 #include "fbsde_traj_opt/costs/l1_control_sde_running_cost_term.hpp"
 #include "fbsde_traj_opt/policies/taylor_q_function_l1_policy.hpp"
 #include "fbsde_traj_opt/sampling/counter_based_normal_sampler.hpp"
 #include "fbsde_traj_opt/sampling/l1_exploratory_control.hpp"
 #include "fbsde_traj_opt/sampling/normal_distribution_concepts.hpp"
+#include "fbsde_traj_opt/sampling/sigma_point_rules.hpp"
 #include "fbsde_traj_opt/sde/diffusion_scaled_forward_sde_model.hpp"
 #include "fbsde_traj_opt/sde/sde_term_concepts.hpp"
 #include "fbsde_traj_opt/solvers/policy_rollout_evaluation.hpp"
 #include "fbsde_traj_opt/solvers/taylor_gradient_target.hpp"
+#include "fbsde_traj_opt/solvers/taylor_noiseless_backward_step_estimator.hpp"
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/value_function_approx_concepts.hpp"
@@ -133,6 +139,14 @@ namespace fbsde_traj_opt {
 // the forward model's own noise-free step, so no model has to supply derivatives; it costs 2N
 // extra steps per sample. docs/derivations/gradient_target.html has the derivation.
 //
+// Sigma-point sampling (`sigma_point_rule`, off by default) replaces the random forward pass with a
+// deterministic one; see SampleSigmaPointForwardPass(). The batch at each stage is then a point set
+// shaped by the stage's state covariance -- the unscented transform's or a higher-degree rule's (see
+// sigma_point_rules.hpp) -- and the mean and covariance are carried from stage to stage through the
+// closed-loop dynamics, as a sigma-point filter's prediction step carries them. Only where the
+// samples sit changes. The targets, the fit, the policy, and the line search are as above, and the
+// line search still scores every candidate on random rollouts.
+//
 // The value function representation is fitted by its own closed-form weighted least squares when
 // it offers one (PolynomialValueFunctionApprox does), and otherwise -- for a model that is not
 // linear in its parameters, such as SoftMinQuadraticValueFunctionApprox -- by `sgd_epochs` epochs
@@ -145,6 +159,9 @@ namespace fbsde_traj_opt {
 // number of rollouts used to score a candidate policy, and `ForwardModelT` a
 // ComposedForwardSdeModel of dimensions `N` and `M`.
 
+// Which policy the Taylor noiseless target evaluates; see DtFbsdeIterativeOptions::taylor_target_policy.
+enum class DtFbsdeTaylorTargetPolicy : std::uint8_t { kCurrent, kGreedy };
+
 // Which control the backward pass's targets are taken at; see BackwardPass().
 enum class DtFbsdeBackwardTarget : std::uint8_t {
   // The current policy's control: the targets estimate V^mu, and improvement happens between
@@ -152,6 +169,12 @@ enum class DtFbsdeBackwardTarget : std::uint8_t {
   kCurrentPolicy,
   // The greedy control, chosen and evaluated by two independently fitted halves of the batch.
   kDoubleGreedy,
+  // The off-policy drifted Taylor noiseless estimator of Hawkins (2021), Chapter 3, Table 3.1
+  // (TaylorNoiselessBackwardStepEstimator), for the current policy: a second-order model of the next
+  // stage's value function built where each sample actually went -- its state plus the drift K the
+  // forward pass used from it -- and evaluated where the current policy would go. The targets
+  // estimate V^mu; see TaylorNoiselessBackwardPass().
+  kTaylorNoiseless,
 };
 
 // The knobs of the method.
@@ -241,6 +264,84 @@ struct DtFbsdeIterativeOptions {
   // The fraction of the paths sampled at the problem's own noise whatever the inflation, in [0, 1].
   // They are the first paths, so both halves of a double-estimation pass get their share.
   Scalar uninflated_path_fraction = Scalar{0};
+
+  // Deterministic sigma-point sampling in place of random paths; kNone samples paths. See
+  // SampleSigmaPointForwardPass(). The exploration probability, the probe fraction, and the sampling
+  // seed play no part in it; the diffusion inflation and the uninflated path fraction decide its
+  // point sets, and `sigma_point_probes` its probes.
+  SigmaPointRule sigma_point_rule = SigmaPointRule::kNone;
+  bool sigma_point_probes = true;
+  // Give the second half of a double-estimation pass the same rule turned by a fixed rotation, so
+  // that the two halves are fitted on different states, as their random batches would be.
+  bool rotate_sigma_point_halves = true;
+  // Turn each half's points by a fresh random rotation every iteration -- the randomized unscented
+  // transform of the stochastic integration filter (Dunik, Straka and Simandl, IEEE TAC 2013) --
+  // which keeps every iteration's set matched to the covariance but varies where the points sit from
+  // one iteration to the next.
+  bool randomize_sigma_point_rotation = false;
+
+  // Recursive least squares across iterations, for a representation fitted in closed form that
+  // exposes its normal equations (LinearBasisValueFunctionApprox does). With a positive memory `rho`,
+  // each stage keeps its normal equations -- one set per half of a double-estimation pass -- and
+  // every iteration multiplies them by `rho` before adding its own batch's rows, then solves them:
+  // a fit to the last ~1 / (1 - rho) batches rather than to this one alone. Zero, the default,
+  // fits each batch afresh. A batch is kept whether or not the line search accepts the update it
+  // produced, so a rejected iteration still contributes its samples. With
+  // `reset_normal_equations_on_acceptance`, the kept equations are cleared whenever an update is
+  // accepted: the targets are computed from the current tables, which change only then, so between
+  // acceptances even `rho = 1` accumulates targets that are all current.
+  Scalar normal_equation_memory = Scalar{0};
+  bool reset_normal_equations_on_acceptance = false;
+
+  // Experience replay, for the same representations: each stage fits the states of its last
+  // `replay_batches` forward passes (this one included) together, with every target and slope
+  // recomputed from the current tables, so the fit sees more samples and none of them stale. One,
+  // like zero, fits this pass's batch alone. Needs the double-estimation backward target, and cannot
+  // be combined with a normal equation memory.
+  std::size_t replay_batches = 0;
+
+  // The Taylor noiseless target's policy: the current one, whose value the pass then estimates, or
+  // the greedy policy of the value functions this pass is fitting -- the improved policy, whose
+  // value the off-policy samples estimate instead.
+  DtFbsdeTaylorTargetPolicy taylor_target_policy = DtFbsdeTaylorTargetPolicy::kCurrent;
+  // With the Taylor noiseless target, multiply each sample's fit weight by exp(-kappa ||D||^2 / 2),
+  // D = Sigma^-1 (F^mu - K): the estimator's bias bound grows as exp(||D||^2 / 2), so a sample
+  // taken far off the target policy is trusted less. Zero leaves the weights alone.
+  Scalar girsanov_weight = Scalar{0};
+  // How many consecutive stages a path keeps an exploratory control once it draws one: one is a
+  // fresh draw every stage; more holds a random bang-off-bang arc, reaching the states a genuinely
+  // different policy would.
+  std::size_t exploration_hold_stages = 1;
+  // The fraction of paths that explore at all; the rest always follow the policy, so that however
+  // large epsilon is, part of the batch still covers the policy's own state distribution. The
+  // exploring paths are spread evenly over the path indices, and so over the inflated and
+  // uninflated halves alike. Probes explore regardless.
+  Scalar exploring_path_fraction = Scalar{1};
+  // How many orders of the Taylor noiseless target's expansion in dF = F^mu - K are kept: two, the
+  // estimator itself; one drops the curvature term 1/2 dF' H dF; zero drops the first-order term
+  // g' dF too, leaving the value of where the sample actually went, uncorrected for the control it
+  // took. An ablation of the off-policy correction, not a recommended setting.
+  std::size_t taylor_correction_order = 2;
+  // With the Taylor noiseless target, also measure how far each estimate is from the exact
+  // re-evaluation of its own expansion, l + V~(x + F^mu) + 1/2 tr(Sigma' H(x + F^mu) Sigma) -- the
+  // Taylor residual the bias bound multiplies. It costs a second evaluation of the next stage per
+  // off-policy sample, so it is off unless a study asks for it.
+  bool measure_taylor_residual = false;
+};
+
+// The normal equations a representation lets DtFbsdeIterativeSolver carry across iterations, if it
+// has any; see DtFbsdeIterativeOptions::normal_equation_memory.
+template <typename ValueFunctionT>
+struct DtFbsdeNormalEquationsOf {
+  static constexpr bool kSupported = false;
+  using type = char;
+};
+
+template <typename ValueFunctionT>
+  requires requires { typename ValueFunctionT::NormalEquations; }
+struct DtFbsdeNormalEquationsOf<ValueFunctionT> {
+  static constexpr bool kSupported = true;
+  using type = typename ValueFunctionT::NormalEquations;
 };
 
 // What one iteration did.
@@ -269,6 +370,28 @@ struct DtFbsdeIterationReport {
 
   // The scale of the problem's diffusion the iteration worked on; see SetDiffusionScale().
   Scalar diffusion_scale = Scalar{1};
+
+  // With the Taylor noiseless target, the mean over every sample and stage of the Girsanov drift
+  // norm || Sigma^-1 (F^mu - K) ||, the thesis's measure of how far off-policy the sampling was:
+  // the estimator's bias is bounded by exp(|| D ||^2 / 2) times the Taylor residual. Zero otherwise.
+  Scalar mean_girsanov_drift = Scalar{0};
+  // With the Taylor noiseless target, the mean over samples and stages of the first-order correction
+  // |g' (F^mu - K)| -- the term the off-policy sampling contributes -- and of the target itself, so the
+  // correction can be read relative to it.
+  Scalar mean_first_order_correction = Scalar{0};
+  Scalar mean_target_magnitude = Scalar{0};
+  // The same correction's mean signed value, g' (F^mu - K), and its curvature companion
+  // |1/2 dF' H dF|: a negative mean says the samples' own drifts led somewhere the target policy's
+  // value function rates higher, so the correction is lowering the targets toward them.
+  Scalar mean_signed_first_order_correction = Scalar{0};
+  Scalar mean_second_order_correction = Scalar{0};
+  // The fraction of samples whose drift was not the target policy's, and the mean first-order
+  // correction over those samples alone -- the correction's size where it is in play at all.
+  Scalar off_policy_fraction = Scalar{0};
+  Scalar mean_off_policy_correction = Scalar{0};
+  // With `measure_taylor_residual`, the mean over off-policy samples of | Y^ - Y_exact |; zero
+  // otherwise.
+  Scalar mean_taylor_residual = Scalar{0};
 
   // How many candidate steps were rolled out before one was accepted or the halvings ran out.
   std::size_t candidates_tried = 0;
@@ -340,6 +463,9 @@ class DtFbsdeIterativeSolver {
                       options.initial_exploration_probability >= Scalar{0} &&
                       options.initial_exploration_probability <= Scalar{1},
                   "DtFbsdeIterativeSolver::Make: exploration probabilities must lie in [0, 1].");
+    RESULT_ASSERT(options.exploring_path_fraction >= Scalar{0} && options.exploring_path_fraction <= Scalar{1},
+                  "the exploring path fraction is in [0, 1].");
+    RESULT_ASSERT(options.taylor_correction_order <= 2, "the Taylor correction order is zero, one, or two.");
     RESULT_ASSERT(options.exploration_decay >= Scalar{0} && options.exploration_decay < Scalar{1},
                   "DtFbsdeIterativeSolver::Make: the exploration decay must lie in [0, 1).");
     RESULT_ASSERT(std::isfinite(options.ridge) && options.ridge >= Scalar{0},
@@ -370,6 +496,17 @@ class DtFbsdeIterativeSolver {
         "DtFbsdeIterativeSolver::Make: the Gauss-Newton fitter does not support slope matching.");
     RESULT_ASSERT(options.uninflated_path_fraction >= Scalar{0} && options.uninflated_path_fraction <= Scalar{1},
                   "DtFbsdeIterativeSolver::Make: the uninflated path fraction must lie in [0, 1].");
+    RESULT_ASSERT(options.normal_equation_memory >= Scalar{0} && options.normal_equation_memory <= Scalar{1},
+                  "DtFbsdeIterativeSolver::Make: the normal equation memory must lie in [0, 1].");
+    RESULT_ASSERT(options.normal_equation_memory == Scalar{0} || DtFbsdeNormalEquationsOf<ValueFunctionT>::kSupported,
+                  "DtFbsdeIterativeSolver::Make: carrying normal equations across iterations needs a representation "
+                  "that exposes them.");
+    RESULT_ASSERT(options.replay_batches <= 1 ||
+                      (DtFbsdeNormalEquationsOf<ValueFunctionT>::kSupported &&
+                       options.backward_target == DtFbsdeBackwardTarget::kDoubleGreedy &&
+                       options.normal_equation_memory == Scalar{0}),
+                  "DtFbsdeIterativeSolver::Make: replay needs a representation that exposes its normal equations, the "
+                  "double-estimation backward target, and no normal equation memory.");
     RESULT_ASSERT((lower_bounds.array() <= Scalar{0}).all() && (upper_bounds.array() >= Scalar{0}).all() &&
                       lower_bounds.allFinite() && upper_bounds.allFinite(),
                   "DtFbsdeIterativeSolver::Make: every control's bounds must be finite and contain zero.");
@@ -424,6 +561,14 @@ class DtFbsdeIterativeSolver {
       return ErrorResult(fitted.error().message, fitted.error().location);
     }
     report.backward_seconds = lap();
+    report.mean_girsanov_drift = last_girsanov_drift_;
+    report.mean_first_order_correction = last_first_order_correction_;
+    report.mean_target_magnitude = last_target_magnitude_;
+    report.mean_signed_first_order_correction = last_correction_stats_.signed_first_order;
+    report.mean_second_order_correction = last_correction_stats_.second_order;
+    report.off_policy_fraction = last_correction_stats_.off_policy_fraction;
+    report.mean_off_policy_correction = last_correction_stats_.off_policy_first_order;
+    report.mean_taylor_residual = last_correction_stats_.taylor_residual;
 
     const Scalar previous_cost = current_costs_.total;
     const bool screening = options_.screening_rollouts > 0;
@@ -465,6 +610,14 @@ class DtFbsdeIterativeSolver {
       previous_excess = excess;
     }
     report.line_search_seconds = lap();
+
+    if (options_.reset_normal_equations_on_acceptance && report.accepted_step > Scalar{0}) {
+      for (auto& halves : accumulated_) {
+        for (auto& equations : halves) {
+          equations = NormalEquations{};
+        }
+      }
+    }
 
     if (previous_cost - current_costs_.total > options_.stall_relative_improvement * std::abs(previous_cost)) {
       stall_factor_ = Scalar{1};
@@ -555,6 +708,19 @@ class DtFbsdeIterativeSolver {
   template <int Count>
   using SlopeTargets = ValueFunctionSlopeTargets<State, Count, M>;
 
+  using NormalEquations = typename DtFbsdeNormalEquationsOf<ValueFunctionT>::type;
+
+  // One half of a double-estimation batch.
+  static constexpr int kHalf = kSampleCount / 2;
+  using HalfStates = ValueFunctionStateBatch<State, kHalf>;
+  using HalfValues = ValueFunctionValueBatch<State, kHalf>;
+
+  // A half-batch's states and accrued costs, kept for replay; targets are recomputed when replayed.
+  struct ReplayBlock {
+    HalfStates states;
+    HalfValues accrued;
+  };
+
   DtFbsdeIterativeSolver(ForwardModelT forward_model,
                          RunningCost running_cost,
                          TerminalCostT terminal_cost,
@@ -637,6 +803,9 @@ class DtFbsdeIterativeSolver {
   // TrajectoryBatch. Components 0..N-1 are the state noise, the next decides whether a path
   // explores, the next picks a probe's parent, and the last M pick an exploratory control.
   auto SampleForwardPass(Scalar exploration, Scalar inflation, std::uint64_t seed) noexcept -> Scalar {
+    if (options_.sigma_point_rule != SigmaPointRule::kNone) {
+      return SampleSigmaPointForwardPass(inflation, seed);
+    }
     const CounterBasedNormalSampler sampler(seed);
     const Policy policy = MakePolicy(current_);
     const std::size_t path_count = PathCount();
@@ -653,6 +822,7 @@ class DtFbsdeIterativeSolver {
     // because a probe reads its parent path's total while the paths are updating theirs.
     ValueBlock accrued = ValueBlock::Zero();
     ValueBlock next_accrued = ValueBlock::Zero();
+    std::ranges::fill(hold_remaining_, std::size_t{0});
     for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
       accrued_before_[stage] = accrued;
       ParallelFor(NumSamples, [&](std::size_t sample) noexcept {
@@ -667,12 +837,29 @@ class DtFbsdeIterativeSolver {
         }
         const State state = states_[stage].col(static_cast<Eigen::Index>(parent));
 
-        const bool explore =
-            !is_path || SampleUniform<Scalar>(sampler, sample, stage + 1, kExploreComponent) < exploration;
-        const Control control =
-            explore ? ExploratoryL1Control<M>(
-                          sampler, sample, stage + 1, kControlPickComponent, lower_bounds_, upper_bounds_)
-                    : policy(stage, state);
+        // A path still inside a held exploratory arc keeps its control; otherwise it explores with
+        // the scheduled probability and, when it does, holds the drawn control for
+        // `exploration_hold_stages` stages in all.
+        const bool holding = is_path && hold_remaining_[sample] > 0;
+        const auto index = static_cast<Scalar>(sample);
+        const bool explorer = std::floor((index + Scalar{1}) * options_.exploring_path_fraction) >
+                              std::floor(index * options_.exploring_path_fraction);
+        const bool explore = !is_path || holding ||
+                             (explorer && SampleUniform<Scalar>(sampler, sample, stage + 1, kExploreComponent) < exploration);
+        Control control;
+        if (holding) {
+          control = held_controls_[sample];
+          --hold_remaining_[sample];
+        } else if (explore) {
+          control = ExploratoryL1Control<M>(
+              sampler, sample, stage + 1, kControlPickComponent, lower_bounds_, upper_bounds_);
+          if (is_path && options_.exploration_hold_stages > 1) {
+            held_controls_[sample] = control;
+            hold_remaining_[sample] = options_.exploration_hold_stages - 1;
+          }
+        } else {
+          control = policy(stage, state);
+        }
 
         State noise;
         sampler.FillNoise(sample, stage + 1, noise);
@@ -691,6 +878,197 @@ class DtFbsdeIterativeSolver {
       total += accrued[column] + terminal_cost_(State(states_[kNumControlStages].col(column)));
     }
     return total / static_cast<Scalar>(path_count);
+  }
+
+  // The deterministic forward pass. The state distribution at each stage is represented as a
+  // Gaussian N(m, L L') -- or two, one at the problem's noise and one at `inflation` times it, as the
+  // random pass's uninflated and inflated paths are -- and its states are the rule's points,
+  // `m + L xi_j`. Stepping every point under the current policy without noise, the next stage's
+  // mean and covariance are the points' weighted moments plus the (inflated) noise covariance:
+  //
+  //   m' = sum_j w_j x'_j,   P' = sum_j w_j (x'_j - m')(x'_j - m')' + c^2 S S',   x'_j = x_j + F(x_j, mu(x_j)),
+  //
+  // the prediction step of a sigma-point filter. With `sigma_point_probes`, every point is also
+  // followed by one-step branches under each control of the L1 set {lower, 0, upper} per control,
+  // stepped without noise from the point at the stage before -- the random pass's probes, made
+  // deterministic. A point's accrued cost is its Gaussian's expected running cost so far, and a
+  // probe's is that at the stage before plus its own step's cost.
+  //
+  // The columns cycle through these items, half by half: column s belongs to half s % 2, and both
+  // halves see every item when the batch is at least twice their number. The second half's points
+  // are the rule's turned by a fixed rotation (`rotate_sigma_point_halves`), so the two independent
+  // fits of a double-estimation pass see different states. Returns the expected cost of the
+  // problem-noise Gaussian under the current policy, as the rule estimates it.
+  auto SampleSigmaPointForwardPass(Scalar inflation, std::uint64_t seed) noexcept -> Scalar {
+    const Policy policy = MakePolicy(current_);
+    const std::size_t point_count = sigma_points_.points.size();
+    std::array<StateMat, 2> turns{identity_, options_.rotate_sigma_point_halves ? sigma_rotation_ : identity_};
+    if (options_.randomize_sigma_point_rotation) {
+      const CounterBasedNormalSampler sampler(seed);
+      for (std::size_t half = 0; half < 2; ++half) {
+        turns[half] = RandomRotation(sampler, half);
+      }
+    }
+
+    std::vector<Scalar> component_inflations;
+    if (options_.uninflated_path_fraction > Scalar{0} || inflation <= Scalar{1}) {
+      component_inflations.push_back(Scalar{1});
+    }
+    if (inflation > Scalar{1} && options_.uninflated_path_fraction < Scalar{1}) {
+      component_inflations.push_back(inflation);
+    }
+    const std::size_t component_count = component_inflations.size();
+
+    std::vector<Control> branch_controls;
+    if (options_.sigma_point_probes) {
+      branch_controls.push_back(Control::Zero());
+      for (std::size_t index = 0; index < kControlDim; ++index) {
+        const auto axis = static_cast<Eigen::Index>(index);
+        Control low = Control::Zero();
+        Control high = Control::Zero();
+        low[axis] = lower_bounds_[axis];
+        high[axis] = upper_bounds_[axis];
+        branch_controls.push_back(low);
+        branch_controls.push_back(high);
+      }
+    }
+    const std::size_t branches = 1 + branch_controls.size();
+    const std::size_t items = component_count * point_count * branches;
+
+    // Each Gaussian's mean, square-root covariance, and expected accrued cost.
+    std::vector<State> means(component_count, initial_mean_);
+    std::vector<StateMat> factors(component_count, initial_covariance_factor_);
+    std::vector<Scalar> accrued(component_count, Scalar{0});
+    // The points of the stage before, per half, component, and point: a probe's parent.
+    std::array<std::vector<State>, 2> previous_points{std::vector<State>(component_count * point_count),
+                                                      std::vector<State>(component_count * point_count)};
+    std::vector<Scalar> previous_accrued(component_count, Scalar{0});
+
+    Scalar expected_cost = Scalar{0};
+    for (std::size_t stage = 0; stage < NumStages; ++stage) {
+      std::array<std::vector<State>, 2> points{std::vector<State>(component_count * point_count),
+                                               std::vector<State>(component_count * point_count)};
+      for (std::size_t half = 0; half < 2; ++half) {
+        const StateMat& turn = turns[half];
+        for (std::size_t component = 0; component < component_count; ++component) {
+          for (std::size_t point = 0; point < point_count; ++point) {
+            points[half][(component * point_count) + point] =
+                means[component] + (factors[component] * (turn * sigma_points_.points[point]));
+          }
+        }
+      }
+
+      // Fill the stage's columns.
+      for (std::size_t sample = 0; sample < NumSamples; ++sample) {
+        const auto column = static_cast<Eigen::Index>(sample);
+        const std::size_t half = sample % 2;
+        const std::size_t item = (sample / 2) % items;
+        const std::size_t component = item / (point_count * branches);
+        const std::size_t point = (item / branches) % point_count;
+        const std::size_t branch = item % branches;
+        const std::size_t index = (component * point_count) + point;
+        if (branch == 0 || stage == 0) {
+          states_[stage].col(column) = points[half][index];
+          accrued_before_[stage][column] = accrued[component];
+        } else {
+          const State& parent = previous_points[half][index];
+          const Control& control = branch_controls[branch - 1];
+          states_[stage].col(column) = forward_model_(stage - 1, parent, control, State::Zero());
+          accrued_before_[stage][column] = previous_accrued[component] + running_cost_(stage - 1, parent, control);
+          controls_[stage - 1].col(column) = control;
+        }
+        if (branch == 0 && stage > 0) {
+          // Points are drawn from a Gaussian, not stepped from a parent: no control produced them.
+          controls_[stage - 1].col(column).setZero();
+        }
+      }
+      if (stage == kNumControlStages) {
+        for (std::size_t point = 0; point < point_count; ++point) {
+          expected_cost += sigma_points_.weights[point] * terminal_cost_(points[0][point]);
+        }
+        expected_cost += accrued[0];
+        break;
+      }
+
+      // Carry each Gaussian to the next stage through the closed loop.
+      previous_points = points;
+      previous_accrued = accrued;
+      // Moments are carried with half 0's points, whatever their rotation: any rotation of a
+      // symmetric rule matches the same moments.
+      for (std::size_t component = 0; component < component_count; ++component) {
+        std::vector<State> next(point_count);
+        std::vector<Control> chosen(point_count);
+        ParallelFor(point_count, [&](std::size_t point) noexcept {
+          const State& x = points[0][(component * point_count) + point];
+          chosen[point] = policy(stage, x);
+          next[point] = forward_model_(stage, x, chosen[point], State::Zero());
+        });
+        State mean = State::Zero();
+        Scalar running = Scalar{0};
+        for (std::size_t point = 0; point < point_count; ++point) {
+          mean += sigma_points_.weights[point] * next[point];
+          running += sigma_points_.weights[point] *
+                     running_cost_(stage, State(points[0][(component * point_count) + point]), chosen[point]);
+        }
+        StateMat covariance = StateMat::Zero();
+        for (std::size_t point = 0; point < point_count; ++point) {
+          const State offset = next[point] - mean;
+          covariance += sigma_points_.weights[point] * (offset * offset.transpose());
+        }
+        const StateMat diffusion = forward_model_.diffusion()(stage, means[component]);
+        const Scalar scale = component_inflations[component];
+        covariance += (scale * scale) * (diffusion * diffusion.transpose());
+        means[component] = mean;
+        factors[component] = SquareRoot(covariance);
+        accrued[component] += running;
+      }
+    }
+    return expected_cost;
+  }
+
+  // A square root of a symmetric positive semidefinite matrix, robust to the slightly indefinite
+  // covariance that negative weights or rounding can leave: negative eigenvalues are clipped to zero.
+  [[nodiscard]] static auto SquareRoot(const StateMat& covariance) noexcept -> StateMat {
+    const Eigen::SelfAdjointEigenSolver<StateMat> eigen(Scalar{0.5} * (covariance + covariance.transpose()));
+    return eigen.eigenvectors() * eigen.eigenvalues().cwiseMax(Scalar{0}).cwiseSqrt().asDiagonal();
+  }
+
+  // A rotation drawn uniformly from the orthogonal group: the Q of a Gaussian matrix's QR
+  // factorization, its columns' signs fixed by R's diagonal.
+  [[nodiscard]] static auto RandomRotation(const CounterBasedNormalSampler& sampler, std::size_t half) noexcept
+      -> StateMat {
+    StateMat gaussian;
+    for (int row = 0; row < N; ++row) {
+      for (int column = 0; column < N; ++column) {
+        gaussian(row, column) = static_cast<Scalar>(
+            sampler.Sample(half, static_cast<std::size_t>(row), static_cast<std::size_t>(column) + 1000U));
+      }
+    }
+    const Eigen::HouseholderQR<StateMat> qr(gaussian);
+    StateMat q = qr.householderQ();
+    const StateMat r = qr.matrixQR().template triangularView<Eigen::Upper>();
+    for (int column = 0; column < N; ++column) {
+      if (r(column, column) < Scalar{0}) {
+        q.col(column) = -q.col(column);
+      }
+    }
+    return q;
+  }
+
+  // The fixed rotation the second half's points are turned by: pi/8 in each plane of consecutive
+  // axes, an angle that maps none of the rules' symmetric sets onto itself.
+  [[nodiscard]] static auto SigmaRotation() noexcept -> StateMat {
+    StateMat rotation = StateMat::Identity();
+    const Scalar angle = Scalar{0.39269908169872414};
+    for (int axis = 0; axis + 1 < N; ++axis) {
+      StateMat plane = StateMat::Identity();
+      plane(axis, axis) = std::cos(angle);
+      plane(axis + 1, axis + 1) = std::cos(angle);
+      plane(axis, axis + 1) = -std::sin(angle);
+      plane(axis + 1, axis) = std::sin(angle);
+      rotation = plane * rotation;
+    }
+    return rotation;
   }
 
   // The number of path columns; the rest of the batch is probes. At least one, whatever the
@@ -717,6 +1095,9 @@ class DtFbsdeIterativeSolver {
   auto BackwardPass() noexcept -> Result<> {
     if (options_.backward_target == DtFbsdeBackwardTarget::kDoubleGreedy) {
       return DoubleGreedyBackwardPass();
+    }
+    if (options_.backward_target == DtFbsdeBackwardTarget::kTaylorNoiseless) {
+      return TaylorNoiselessBackwardPass();
     }
     const Policy target_policy = MakePolicy(current_);
     const Policy continuation = MakePolicy(fitted_);
@@ -745,11 +1126,143 @@ class DtFbsdeIterativeSolver {
                                                          targets,
                                                          accrued_before_[stage],
                                                          FitSeed(stage, 0),
-                                                         slopes_wanted ? &slopes : nullptr);
+                                                         slopes_wanted ? &slopes : nullptr,
+                                                         Accumulator(stage, 0));
           !fitted.has_value()) {
         return fitted;
       }
     }
+    return SuccessResult();
+  }
+
+  // The backward pass with the off-policy drifted Taylor noiseless estimator (Hawkins (2021),
+  // Chapter 3, Table 3.1; TaylorNoiselessBackwardStepEstimator), evaluating the current policy mu:
+  //
+  //   Y^_i = l(X_i, mu(X_i)) + V~_{i+1}(xbar) + g' dF + 1/2 dF' H dF + 1/2 tr(Sigma' H Sigma),
+  //
+  // with xbar = X_i + K_i the mean of where the sample went, g and H the gradient and Hessian of
+  // V~_{i+1} there, and dF = F^mu_i - K_i. A path sample's K_i is the drift f + B u of the control
+  // the forward pass actually took from it, exploratory or not; a probe is never stepped onward, so
+  // it has no drift of its own and is evaluated on-policy, K_i = F^mu_i. With slope matching, the
+  // slope target is the gradient of the same second-order model at the policy's landing point,
+  // carried back through the step: G = J' (g + H dF), J = d(x + F(x, mu(x)))/dx at fixed control.
+  // V~_{i+1} is the table this pass has just fitted, as in BackwardPass(). The pass also measures
+  // the Girsanov drift || Sigma^-1 dF || it ran at, which IterationReport::mean_girsanov_drift
+  // reports.
+  auto TaylorNoiselessBackwardPass() noexcept -> Result<> {
+    // The target policy: the current one, or the greedy policy of the value functions this pass is
+    // fitting, whose stage-k decision reads the stage k + 1 fit made just before it.
+    const Policy target_policy = options_.taylor_target_policy == DtFbsdeTaylorTargetPolicy::kGreedy
+                                     ? MakePolicy(fitted_)
+                                     : MakePolicy(current_);
+    using Estimator = TaylorNoiselessBackwardStepEstimator<N, M, Model, Policy, RunningCost, Scalar>;
+    const Estimator estimator(forward_model_, target_policy, running_cost_);
+    const std::size_t path_count =
+        options_.sigma_point_rule == SigmaPointRule::kNone ? PathCount() : std::size_t{0};
+    const bool slopes_wanted = options_.slope_weight > Scalar{0};
+    Scalar drift_norm_sum = Scalar{0};
+    Scalar correction_sum = Scalar{0};
+    Scalar target_sum = Scalar{0};
+    CorrectionStats stats;
+    for (std::size_t stage = kNumControlStages; stage-- > 0;) {
+      const StateBlock& states = states_[stage];
+      const ValueFunctionT& next = fitted_[stage + 1];
+      ValueBlock targets;
+      ValueBlock norms;
+      ValueBlock corrections;
+      ValueBlock signed_corrections;
+      ValueBlock curvature_corrections;
+      ValueBlock off_policy;
+      ValueBlock residuals = ValueBlock::Zero();
+      ValueBlock girsanov_weights = ValueBlock::Ones();
+      SlopeTargets<kSampleCount> slopes;
+      ParallelFor(NumSamples, [&](std::size_t sample) noexcept {
+        const auto column = static_cast<Eigen::Index>(sample);
+        const State state = states.col(column);
+        const State uncontrolled = forward_model_.state_drift()(stage, state);
+        const Eigen::Matrix<Scalar, N, M> columns = forward_model_.control_drift_mat()(stage, state);
+        const Control control = target_policy(stage, state);
+        const State policy_drift = uncontrolled + (columns * control);
+        // A path's drift is the one its sampled control produced; a probe has none of its own.
+        const State drift =
+            sample < path_count ? State(uncontrolled + (columns * controls_[stage].col(column))) : policy_drift;
+        const State mean_next = state + drift;
+        const State gradient = next.Gradient(mean_next);
+        const StateMat hessian = next.Hessian(mean_next);
+        const State difference = policy_drift - drift;
+        const Scalar first_order = gradient.dot(difference);
+        const Scalar second_order = Scalar{0.5} * difference.dot(hessian * difference);
+        const Scalar estimate =
+            estimator.EstimateFromParts(stage, state, drift, control, next(mean_next), gradient, hessian);
+        const Scalar truncated = estimate - (options_.taylor_correction_order < 2 ? second_order : Scalar{0}) -
+                                 (options_.taylor_correction_order < 1 ? first_order : Scalar{0});
+        targets[column] = std::max(truncated, options_.target_floor);
+        corrections[column] = std::abs(first_order);
+        signed_corrections[column] = first_order;
+        curvature_corrections[column] = std::abs(second_order);
+        const bool is_off_policy = !difference.isZero();
+        off_policy[column] = is_off_policy ? Scalar{1} : Scalar{0};
+        if (options_.measure_taylor_residual && is_off_policy) {
+          const State policy_next = state + policy_drift;
+          const StateMat diffusion = forward_model_.diffusion()(stage, state);
+          const Scalar exact = running_cost_(stage, state, control) + next(policy_next) +
+                               (Scalar{0.5} * next.Hessian(policy_next).cwiseProduct(diffusion * diffusion.transpose()).sum());
+          residuals[column] = std::abs(truncated - exact);
+        }
+        const StateMat diffusion = forward_model_.diffusion()(stage, state);
+        norms[column] = diffusion.fullPivLu().solve(difference).norm();
+        if (options_.girsanov_weight > Scalar{0}) {
+          girsanov_weights[column] = std::exp(-Scalar{0.5} * options_.girsanov_weight * norms[column] * norms[column]);
+        }
+        if (slopes_wanted) {
+          StateMat jacobian;
+          for (Eigen::Index axis = 0; axis < N; ++axis) {
+            const Scalar step = kJacobianStep * std::max(Scalar{1}, std::abs(state[axis]));
+            const State offset = step * State::Unit(axis);
+            jacobian.col(axis) = (forward_model_(stage, State(state + offset), control, State::Zero()) -
+                                  forward_model_(stage, State(state - offset), control, State::Zero())) /
+                                 (Scalar{2} * step);
+          }
+          const State slope_gradient = targets[column] <= options_.target_floor
+                                           ? State(State::Zero())
+                                           : State(jacobian.transpose() * (gradient + (hessian * difference)));
+          SetSlopeTargets<kSampleCount>(slopes, column, stage, state, slope_gradient);
+        }
+      });
+      drift_norm_sum += norms.mean();
+      correction_sum += corrections.mean();
+      target_sum += targets.cwiseAbs().mean();
+      const Scalar off_policy_count = off_policy.sum();
+      stats.signed_first_order += signed_corrections.mean();
+      stats.second_order += curvature_corrections.mean();
+      stats.off_policy_fraction += off_policy.mean();
+      if (off_policy_count > Scalar{0}) {
+        stats.off_policy_first_order += corrections.cwiseProduct(off_policy).sum() / off_policy_count;
+        stats.taylor_residual += residuals.sum() / off_policy_count;
+      }
+      fitted_[stage] = current_[stage];
+      if (const Result<> fitted = FitStage<kSampleCount>(fitted_[stage],
+                                                         states,
+                                                         targets,
+                                                         accrued_before_[stage],
+                                                         FitSeed(stage, 0),
+                                                         slopes_wanted ? &slopes : nullptr,
+                                                         Accumulator(stage, 0),
+                                                         options_.girsanov_weight > Scalar{0} ? &girsanov_weights
+                                                                                              : nullptr);
+          !fitted.has_value()) {
+        return fitted;
+      }
+    }
+    const auto stages = static_cast<Scalar>(kNumControlStages);
+    last_girsanov_drift_ = drift_norm_sum / stages;
+    last_first_order_correction_ = correction_sum / stages;
+    last_target_magnitude_ = target_sum / stages;
+    last_correction_stats_ = CorrectionStats{.signed_first_order = stats.signed_first_order / stages,
+                                             .second_order = stats.second_order / stages,
+                                             .off_policy_fraction = stats.off_policy_fraction / stages,
+                                             .off_policy_first_order = stats.off_policy_first_order / stages,
+                                             .taylor_residual = stats.taylor_residual / stages};
     return SuccessResult();
   }
 
@@ -763,9 +1276,6 @@ class DtFbsdeIterativeSolver {
   // half has its control chosen by its own table's Q-function and *scored* by the other's, whose
   // errors are independent of the choice. The table the policy uses is the average of the two.
   auto DoubleGreedyBackwardPass() noexcept -> Result<> {
-    constexpr int kHalf = kSampleCount / 2;
-    using HalfStates = ValueFunctionStateBatch<State, kHalf>;
-    using HalfValues = ValueFunctionValueBatch<State, kHalf>;
 
     const std::array<Policy, 2> choosers{MakePolicy(halves_[0]), MakePolicy(halves_[1])};
     const bool slopes_wanted = options_.slope_weight > Scalar{0};
@@ -773,33 +1283,65 @@ class DtFbsdeIterativeSolver {
       for (std::size_t half = 0; half < 2; ++half) {
         const Policy& chooser = choosers[half];
         const Policy& scorer = choosers[1 - half];
+        // The targets and slopes of a block of states, from the current tables: the control chosen
+        // by this half's table and scored -- value and slope -- by the other's.
+        const auto targets_of = [&](const HalfStates& states, HalfValues& targets, SlopeTargets<kHalf>& slopes) {
+          ParallelFor(static_cast<std::size_t>(kHalf), [&](std::size_t slot) noexcept {
+            const auto column = static_cast<Eigen::Index>(slot);
+            const State state = states.col(column);
+            const Control control = chooser(stage, state);
+            const Scalar q_value = scorer.QValue(stage, state, control);
+            targets[column] = std::max(q_value, options_.target_floor);
+            if (slopes_wanted) {
+              const State gradient = q_value < options_.target_floor
+                                         ? State(State::Zero())
+                                         : GradientTarget(stage, state, control, halves_[1 - half][stage + 1]);
+              SetSlopeTargets<kHalf>(slopes, column, stage, state, gradient);
+            }
+          });
+        };
         HalfStates states;
         HalfValues targets;
         HalfValues accrued;
         SlopeTargets<kHalf> slopes;
-        ParallelFor(static_cast<std::size_t>(kHalf), [&](std::size_t slot) noexcept {
+        for (std::size_t slot = 0; slot < static_cast<std::size_t>(kHalf); ++slot) {
           const auto column = static_cast<Eigen::Index>(slot);
-          const State state = states_[stage].col(static_cast<Eigen::Index>((2 * slot) + half));
-          states.col(column) = state;
+          states.col(column) = states_[stage].col(static_cast<Eigen::Index>((2 * slot) + half));
           accrued[column] = accrued_before_[stage][static_cast<Eigen::Index>((2 * slot) + half)];
-          const Control control = chooser(stage, state);
-          const Scalar q_value = scorer.QValue(stage, state, control);
-          targets[column] = std::max(q_value, options_.target_floor);
-          if (slopes_wanted) {
-            // Scored, like the value, by the other half's table.
-            const State gradient = q_value < options_.target_floor
-                                       ? State(State::Zero())
-                                       : GradientTarget(stage, state, control, halves_[1 - half][stage + 1]);
-            SetSlopeTargets<kHalf>(slopes, column, stage, state, gradient);
-          }
-        });
+        }
         halves_[half][stage] = current_[stage];
+        if (options_.replay_batches > 1) {
+          if constexpr (DtFbsdeNormalEquationsOf<ValueFunctionT>::kSupported) {
+            // Replay: fit this pass's block and the kept ones together, every target recomputed now.
+            std::deque<ReplayBlock>& kept = replay_[stage][half];
+            kept.push_front(ReplayBlock{.states = states, .accrued = accrued});
+            while (kept.size() > options_.replay_batches) {
+              kept.pop_back();
+            }
+            NormalEquations equations;
+            for (const ReplayBlock& block : kept) {
+              targets_of(block.states, targets, slopes);
+              const HalfValues weights = SampleWeights<kHalf>(targets, block.accrued);
+              if (slopes_wanted) {
+                RESULT_RETURN_IF_ERROR((halves_[half][stage].template AccumulateNormalEquations<kHalf, M>(
+                    block.states, targets, weights, slopes, options_.slope_weight, equations)));
+              } else {
+                RESULT_RETURN_IF_ERROR(halves_[half][stage].template AccumulateNormalEquations<kHalf>(
+                    block.states, targets, weights, equations));
+              }
+            }
+            RESULT_RETURN_IF_ERROR(halves_[half][stage].FitNormalEquations(equations, options_.ridge));
+            continue;
+          }
+        }
+        targets_of(states, targets, slopes);
         if (const Result<> fitted = FitStage<kHalf>(halves_[half][stage],
                                                     states,
                                                     targets,
                                                     accrued,
                                                     FitSeed(stage, half + 1),
-                                                    slopes_wanted ? &slopes : nullptr);
+                                                    slopes_wanted ? &slopes : nullptr,
+                                                    Accumulator(stage, half));
             !fitted.has_value()) {
           return fitted;
         }
@@ -827,6 +1369,21 @@ class DtFbsdeIterativeSolver {
     return SuccessResult();
   }
 
+  // The fit's sample weights: the local-entropy weights described at FitStage(), or all ones.
+  template <int Count>
+  [[nodiscard]] auto SampleWeights(const ValueFunctionValueBatch<State, Count>& targets,
+                                   const ValueFunctionValueBatch<State, Count>& accrued) const noexcept
+      -> ValueFunctionValueBatch<State, Count> {
+    if (options_.entropy_temperature <= Scalar{0}) {
+      return ValueFunctionValueBatch<State, Count>::Ones();
+    }
+    const ValueFunctionValueBatch<State, Count> heuristic = accrued + targets;
+    const Scalar mean = heuristic.mean();
+    const Scalar spread =
+        std::sqrt((heuristic.array() - mean).square().mean()) + std::numeric_limits<Scalar>::epsilon();
+    return (-(heuristic.array() - heuristic.minCoeff()) / (spread * options_.entropy_temperature)).exp();
+  }
+
   // Fits one stage's representation to its targets by the weighted least squares of (5.12).
   //
   // With a positive entropy temperature the weights are the thesis's local-entropy weights,
@@ -845,18 +1402,30 @@ class DtFbsdeIterativeSolver {
                 const ValueFunctionValueBatch<State, Count>& targets,
                 const ValueFunctionValueBatch<State, Count>& accrued,
                 std::uint64_t seed,
-                const SlopeTargets<Count>* slopes) const noexcept -> Result<> {
-    ValueFunctionValueBatch<State, Count> weights = ValueFunctionValueBatch<State, Count>::Ones();
-    if (options_.entropy_temperature > Scalar{0}) {
-      const ValueFunctionValueBatch<State, Count> heuristic = accrued + targets;
-      const Scalar mean = heuristic.mean();
-      const Scalar spread =
-          std::sqrt((heuristic.array() - mean).square().mean()) + std::numeric_limits<Scalar>::epsilon();
-      weights = (-(heuristic.array() - heuristic.minCoeff()) / (spread * options_.entropy_temperature)).exp();
+                const SlopeTargets<Count>* slopes,
+                NormalEquations* accumulator,
+                const ValueFunctionValueBatch<State, Count>* extra_weights = nullptr) const noexcept -> Result<> {
+    ValueFunctionValueBatch<State, Count> weights = SampleWeights<Count>(targets, accrued);
+    if (extra_weights != nullptr) {
+      weights = weights.cwiseProduct(*extra_weights);
     }
     if constexpr (requires {
                     value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, Scalar{});
                   }) {
+      if constexpr (DtFbsdeNormalEquationsOf<ValueFunctionT>::kSupported) {
+        if (accumulator != nullptr) {
+          // Recursive least squares: forget, add this batch's rows, solve what has been kept.
+          accumulator->Decay(options_.normal_equation_memory);
+          if (slopes == nullptr) {
+            RESULT_RETURN_IF_ERROR(
+                value_function.template AccumulateNormalEquations<Count>(states, targets, weights, *accumulator));
+          } else {
+            RESULT_RETURN_IF_ERROR((value_function.template AccumulateNormalEquations<Count, M>(
+                states, targets, weights, *slopes, options_.slope_weight, *accumulator)));
+          }
+          return value_function.FitNormalEquations(*accumulator, options_.ridge);
+        }
+      }
       if (slopes == nullptr) {
         return value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, options_.ridge);
       }
@@ -922,6 +1491,14 @@ class DtFbsdeIterativeSolver {
     }
   }
 
+  // The kept normal equations of one stage and half, or null when the solver does not carry them.
+  [[nodiscard]] auto Accumulator(std::size_t stage, std::size_t half) noexcept -> NormalEquations* {
+    if (options_.normal_equation_memory <= Scalar{0} || accumulated_.empty()) {
+      return nullptr;
+    }
+    return &accumulated_[stage][half];
+  }
+
   // The minibatch shuffling seed of one stage's SGD fit: distinct per iteration, stage, and half.
   [[nodiscard]] auto FitSeed(std::size_t stage, std::size_t half) const noexcept -> std::uint64_t {
     return SamplingSeed(iteration_) ^ ((static_cast<std::uint64_t>(stage) * 3U + half) * 0xBF58476D1CE4E5B9ULL);
@@ -979,6 +1556,38 @@ class DtFbsdeIterativeSolver {
   std::vector<ValueBlock> accrued_before_;
 
   std::size_t iteration_ = 0;
+  // The diagnostics of the most recent Taylor noiseless backward pass; see IterationReport.
+  Scalar last_girsanov_drift_ = Scalar{0};
+  Scalar last_first_order_correction_ = Scalar{0};
+  Scalar last_target_magnitude_ = Scalar{0};
+  // The rest of the Taylor noiseless pass's correction diagnostics, as IterationReport describes them.
+  struct CorrectionStats {
+    Scalar signed_first_order = Scalar{0};
+    Scalar second_order = Scalar{0};
+    Scalar off_policy_fraction = Scalar{0};
+    Scalar off_policy_first_order = Scalar{0};
+    Scalar taylor_residual = Scalar{0};
+  };
+  CorrectionStats last_correction_stats_{};
+  // Per path: how many more stages its held exploratory control lasts, and that control.
+  std::vector<std::size_t> hold_remaining_ = std::vector<std::size_t>(NumSamples, 0);
+  std::vector<Control> held_controls_ = std::vector<Control>(NumSamples, Control::Zero());
+
+  // The normal equations carried across iterations, per stage and half; empty unless the options ask
+  // for them. See DtFbsdeIterativeOptions::normal_equation_memory.
+  std::vector<std::array<NormalEquations, 2>> accumulated_ =
+      options_.normal_equation_memory > Scalar{0} ? std::vector<std::array<NormalEquations, 2>>(NumStages)
+                                                  : std::vector<std::array<NormalEquations, 2>>();
+
+  // The half-batches kept for replay, newest first, per stage and half; empty unless replaying.
+  std::vector<std::array<std::deque<ReplayBlock>, 2>> replay_ =
+      options_.replay_batches > 1 ? std::vector<std::array<std::deque<ReplayBlock>, 2>>(NumStages)
+                                  : std::vector<std::array<std::deque<ReplayBlock>, 2>>();
+
+  // The sigma-point rule's points and weights, and the rotation the second half's points are turned by.
+  SigmaPointSet<N, Scalar> sigma_points_ = MakeSigmaPoints<N, Scalar>(options_.sigma_point_rule);
+  StateMat sigma_rotation_ = SigmaRotation();
+  StateMat identity_ = StateMat::Identity();
 };
 
 }  // namespace fbsde_traj_opt

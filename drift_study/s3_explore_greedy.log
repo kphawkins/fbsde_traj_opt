@@ -1,0 +1,22 @@
+
+=== L1 double integrator: grid optimum 4.1367 ===
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.2 seed 0: final gap    +0.84% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.2 seed 1: final gap    +0.70% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.2 seed 2: final gap    +0.92% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.4 seed 0: final gap    +6.29% after 30.1 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.4 seed 1: final gap    +5.63% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.4 seed 2: final gap   +14.14% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.25,explore=0.4 seed 0: final gap    +1.68% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.25,explore=0.4 seed 1: final gap    +0.74% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.25,explore=0.4 seed 2: final gap    +1.75% after 30.0 s
+
+=== L1 inverted pendulum: grid optimum 2.2977 ===
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.2 seed 0: final gap    +6.53% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.2 seed 1: final gap   +10.37% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.2 seed 2: final gap    +6.58% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.4 seed 0: final gap   +23.97% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.4 seed 1: final gap   +33.81% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.5,explore=0.4 seed 2: final gap   +33.63% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.25,explore=0.4 seed 0: final gap   +12.29% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.25,explore=0.4 seed 1: final gap   +10.05% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,inflate=1,explorers=0.25,explore=0.4 seed 2: final gap   +20.81% after 30.0 s

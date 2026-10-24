@@ -1,0 +1,7 @@
+problem,method,seed,rollouts,cost,seconds_per_step
+L1 double inverted pendulum,iLQR-MPC,0,128,9.631469,0.004048803
+L1 double inverted pendulum,MPPI-MPC,0,128,2.623092,0.052096164
+L1 double inverted pendulum,iLQR-MPC,1,128,7.370065,0.004222823
+L1 double inverted pendulum,MPPI-MPC,1,128,2.635816,0.052598049
+L1 double inverted pendulum,iLQR-MPC,2,128,3.789763,0.004685030
+L1 double inverted pendulum,MPPI-MPC,2,128,2.599653,0.052274818

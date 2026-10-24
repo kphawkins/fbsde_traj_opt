@@ -387,3 +387,83 @@ cc_binary(
         "@eigen",
     ],
 )
+
+cc_binary(
+    name = "method_comparison",
+    srcs = ["method_comparison_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":fbrrt_comparison_experiment",
+        ":l1_benchmark_models",
+        ":l1_grid_dp_reference",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/solvers:box_ilqr_solver",
+        "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/solvers:mppi_solver",
+        "//fbsde_traj_opt/solvers:policy_rollout_evaluation",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "@eigen",
+    ],
+)
+
+cc_binary(
+    name = "value_model_study",
+    srcs = ["value_model_study_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":fbrrt_comparison_experiment",
+        ":l1_benchmark_models",
+        ":l1_grid_dp_reference",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/policies:taylor_q_function_l1_policy",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/solvers:policy_rollout_evaluation",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:linear_basis_value_function_approx",
+        "//fbsde_traj_opt/value_function:shallow_tanh_value_function_approx",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "//fbsde_traj_opt/value_function:value_function_sgd_fitter",
+        "//fbsde_traj_opt/value_function:value_function_slope_targets",
+        "@eigen",
+    ],
+)
+
+cc_binary(
+    name = "sigma_point_study",
+    srcs = ["sigma_point_study_main.cpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":fbrrt_comparison_experiment",
+        ":l1_benchmark_models",
+        ":l1_grid_dp_reference",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/sampling:sigma_point_rules",
+        "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/solvers:policy_rollout_evaluation",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:linear_basis_value_function_approx",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "l1_grid_dp_reference_test",
+    size = "small",
+    srcs = ["l1_grid_dp_reference.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":l1_benchmark_models",
+        ":l1_grid_dp_reference",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

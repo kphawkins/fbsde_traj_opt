@@ -1,0 +1,122 @@
+
+=== L1 double integrator (60 s per run) ===
+grid DP optimum, held out: 4.1367 (1024 rollouts), 4.1734 (first 128)
+L1 double integrator         iLQR (zero init)   seed  0:  726.5795 ->    4.4499 (best    4.4499) in    0.00 s, 33 iterations
+L1 double integrator         iLQR               seed  0:  752.0012 ->    4.4498 (best    4.4498) in    0.00 s, 49 iterations
+L1 double integrator         iLQR-MPC           seed  0:    4.3286 on 128 rollouts, 0.017 ms per step
+L1 double integrator         MPPI               seed  0:  724.1576 ->    9.8829 (best    9.5431) in   60.00 s, 121024 iterations
+L1 double integrator         MPPI+LQR           seed  0:  726.5795 ->    5.9761 (best    5.5656) in   60.00 s, 121024 iterations
+L1 double integrator         MPPI-MPC           seed  0:    4.5007 on 128 rollouts, 1.207 ms per step
+L1 double integrator         FBRRT              seed  0:  628.9949 ->    4.4432 (best    4.4423) in   60.35 s, 130 iterations
+L1 double integrator         DT-FBSDE           seed  0:   89.1632 ->    4.1446 (best    4.1446) in   60.01 s, 2927 iterations
+L1 double integrator         iLQR               seed  1:  762.8347 ->    4.4560 (best    4.4560) in    0.00 s, 33 iterations
+L1 double integrator         iLQR-MPC           seed  1:    4.3387 on 128 rollouts, 0.017 ms per step
+L1 double integrator         MPPI               seed  1:  724.1576 ->    9.9146 (best    9.6043) in   60.00 s, 117371 iterations
+L1 double integrator         MPPI+LQR           seed  1:  726.5795 ->    6.0395 (best    5.6967) in   60.00 s, 117371 iterations
+L1 double integrator         MPPI-MPC           seed  1:    4.5109 on 128 rollouts, 1.228 ms per step
+L1 double integrator         FBRRT              seed  1:  628.9949 ->    4.3883 (best    4.3883) in   60.28 s, 137 iterations
+L1 double integrator         DT-FBSDE           seed  1:   89.1632 ->    4.1467 (best    4.1467) in   60.00 s, 2954 iterations
+L1 double integrator         iLQR               seed  2:  829.0616 ->    4.4499 (best    4.4499) in    0.00 s, 45 iterations
+L1 double integrator         iLQR-MPC           seed  2:    4.3290 on 128 rollouts, 0.019 ms per step
+L1 double integrator         MPPI               seed  2:  724.1576 ->   10.0759 (best    9.5249) in   60.00 s, 118108 iterations
+L1 double integrator         MPPI+LQR           seed  2:  726.5795 ->    6.1690 (best    5.6483) in   60.00 s, 118108 iterations
+L1 double integrator         MPPI-MPC           seed  2:    4.4993 on 128 rollouts, 1.307 ms per step
+L1 double integrator         FBRRT              seed  2:  628.9949 ->    4.4191 (best    4.4191) in   60.36 s, 134 iterations
+L1 double integrator         DT-FBSDE           seed  2:   89.1632 ->    4.1424 (best    4.1424) in   60.02 s, 2630 iterations
+L1 double integrator         iLQR               seed  3:  880.8851 ->    4.4499 (best    4.4499) in    0.00 s, 48 iterations
+L1 double integrator         MPPI               seed  3:  724.1576 ->   10.0173 (best    9.5606) in   60.00 s, 119311 iterations
+L1 double integrator         MPPI+LQR           seed  3:  726.5795 ->    6.0702 (best    5.5737) in   60.00 s, 119311 iterations
+L1 double integrator         FBRRT              seed  3:  628.9949 ->    4.3756 (best    4.3739) in   60.39 s, 132 iterations
+L1 double integrator         DT-FBSDE           seed  3:   89.1632 ->    4.1556 (best    4.1552) in   60.03 s, 2459 iterations
+L1 double integrator         iLQR               seed  4:  949.2205 ->    4.4560 (best    4.4560) in    0.00 s, 33 iterations
+L1 double integrator         MPPI               seed  4:  724.1576 ->   10.3505 (best    9.5713) in   60.00 s, 117728 iterations
+L1 double integrator         MPPI+LQR           seed  4:  726.5795 ->    6.3722 (best    5.6455) in   60.00 s, 117728 iterations
+L1 double integrator         FBRRT              seed  4:  628.9949 ->    4.3841 (best    4.3841) in   60.46 s, 132 iterations
+L1 double integrator         DT-FBSDE           seed  4:   89.1632 ->    4.1454 (best    4.1454) in   60.01 s, 2828 iterations
+L1 double integrator         iLQR               seed  5:  625.5428 ->    4.4499 (best    4.4499) in    0.00 s, 49 iterations
+L1 double integrator         MPPI               seed  5:  724.1576 ->   10.0070 (best    9.7381) in   60.00 s, 123073 iterations
+L1 double integrator         MPPI+LQR           seed  5:  726.5795 ->    6.0979 (best    5.7606) in   60.00 s, 123073 iterations
+L1 double integrator         FBRRT              seed  5:  628.9949 ->    4.4558 (best    4.4556) in   60.29 s, 132 iterations
+L1 double integrator         DT-FBSDE           seed  5:   89.1632 ->    4.1508 (best    4.1508) in   60.01 s, 3201 iterations
+L1 double integrator         iLQR               seed  6:  896.1747 ->    4.4560 (best    4.4560) in    0.00 s, 33 iterations
+L1 double integrator         MPPI               seed  6:  724.1576 ->   10.1935 (best    9.6031) in   60.00 s, 119150 iterations
+L1 double integrator         MPPI+LQR           seed  6:  726.5795 ->    6.3252 (best    5.7043) in   60.00 s, 119150 iterations
+L1 double integrator         FBRRT              seed  6:  628.9949 ->    4.3773 (best    4.3746) in   60.41 s, 137 iterations
+L1 double integrator         DT-FBSDE           seed  6:   89.1632 ->    4.1521 (best    4.1510) in   60.01 s, 3206 iterations
+L1 double integrator         iLQR               seed  7: 1126.2473 ->    4.4499 (best    4.4499) in    0.00 s, 56 iterations
+L1 double integrator         MPPI               seed  7:  724.1576 ->    9.9041 (best    9.5780) in   60.00 s, 121672 iterations
+L1 double integrator         MPPI+LQR           seed  7:  726.5795 ->    5.9263 (best    5.6653) in   60.00 s, 121672 iterations
+L1 double integrator         FBRRT              seed  7:  628.9949 ->    4.5697 (best    4.5697) in   60.11 s, 131 iterations
+L1 double integrator         DT-FBSDE           seed  7:   89.1632 ->    4.1473 (best    4.1473) in   60.02 s, 3025 iterations
+L1 double integrator         iLQR               seed  8:  947.7601 ->    4.4499 (best    4.4499) in    0.00 s, 46 iterations
+L1 double integrator         MPPI               seed  8:  724.1576 ->    9.9628 (best    9.5010) in   60.00 s, 110035 iterations
+L1 double integrator         MPPI+LQR           seed  8:  726.5795 ->    5.9579 (best    5.5466) in   60.00 s, 110035 iterations
+L1 double integrator         FBRRT              seed  8:  628.9949 ->    4.4828 (best    4.4828) in   60.35 s, 142 iterations
+L1 double integrator         DT-FBSDE           seed  8:   89.1632 ->    4.1531 (best    4.1531) in   60.01 s, 2855 iterations
+L1 double integrator         iLQR               seed  9:  794.7192 ->    4.4499 (best    4.4499) in    0.00 s, 48 iterations
+L1 double integrator         MPPI               seed  9:  724.1576 ->    9.7275 (best    9.5266) in   60.00 s, 109802 iterations
+L1 double integrator         MPPI+LQR           seed  9:  726.5795 ->    5.8496 (best    5.5835) in   60.00 s, 109802 iterations
+L1 double integrator         FBRRT              seed  9:  628.9949 ->    4.4065 (best    4.4065) in   60.32 s, 134 iterations
+L1 double integrator         DT-FBSDE           seed  9:   89.1632 ->    4.1444 (best    4.1444) in   60.01 s, 2768 iterations
+
+=== L1 inverted pendulum (60 s per run) ===
+grid DP optimum, held out: 2.2977 (1024 rollouts), 2.3099 (first 128)
+L1 inverted pendulum         iLQR (zero init)   seed  0:   98.9377 ->    3.2231 (best    2.8085) in    0.13 s, 204 iterations
+L1 inverted pendulum         iLQR               seed  0:  110.2091 ->    3.1824 (best    2.9216) in    0.13 s, 209 iterations
+L1 inverted pendulum         iLQR-MPC           seed  0:    3.1266 on 128 rollouts, 0.616 ms per step
+L1 inverted pendulum         MPPI               seed  0:   98.9781 ->   47.5165 (best    8.7135) in   60.00 s, 19722 iterations
+L1 inverted pendulum         MPPI+LQR           seed  0:   98.9377 ->    3.2010 (best    2.8692) in   60.00 s, 19722 iterations
+L1 inverted pendulum         MPPI-MPC           seed  0:    3.3315 on 128 rollouts, 11.572 ms per step
+L1 inverted pendulum         FBRRT              seed  0:   98.8948 ->    4.6273 (best    4.6273) in   60.13 s, 101 iterations
+L1 inverted pendulum         DT-FBSDE           seed  0:   80.6872 ->    2.3683 (best    2.3682) in   60.03 s, 2194 iterations
+L1 inverted pendulum         iLQR               seed  1:  108.0635 ->    3.1253 (best    3.1253) in    0.03 s, 51 iterations
+L1 inverted pendulum         iLQR-MPC           seed  1:    2.8264 on 128 rollouts, 0.475 ms per step
+L1 inverted pendulum         MPPI               seed  1:   98.9781 ->   59.7379 (best    8.4312) in   60.00 s, 20548 iterations
+L1 inverted pendulum         MPPI+LQR           seed  1:   98.9377 ->    3.7416 (best    2.8960) in   60.00 s, 20548 iterations
+L1 inverted pendulum         MPPI-MPC           seed  1:    3.2690 on 128 rollouts, 11.724 ms per step
+L1 inverted pendulum         FBRRT              seed  1:   98.8948 ->    4.1096 (best    4.1096) in   60.27 s, 103 iterations
+L1 inverted pendulum         DT-FBSDE           seed  1:   80.6872 ->    2.3710 (best    2.3710) in   60.04 s, 2131 iterations
+L1 inverted pendulum         iLQR               seed  2:  114.0321 ->    2.8991 (best    2.8604) in    0.08 s, 180 iterations
+L1 inverted pendulum         iLQR-MPC           seed  2:    3.1412 on 128 rollouts, 0.481 ms per step
+L1 inverted pendulum         MPPI               seed  2:   98.9781 ->   67.9081 (best    8.6325) in   60.00 s, 21179 iterations
+L1 inverted pendulum         MPPI+LQR           seed  2:   98.9377 ->    4.4095 (best    2.8954) in   60.00 s, 21179 iterations
+L1 inverted pendulum         MPPI-MPC           seed  2:    3.3596 on 128 rollouts, 10.167 ms per step
+L1 inverted pendulum         FBRRT              seed  2:   98.8948 ->    4.0713 (best    4.0713) in   60.10 s, 103 iterations
+L1 inverted pendulum         DT-FBSDE           seed  2:   80.6872 ->    2.3806 (best    2.3777) in   60.02 s, 2123 iterations
+L1 inverted pendulum         iLQR               seed  3:   98.3535 ->    3.1817 (best    2.7688) in    0.08 s, 206 iterations
+L1 inverted pendulum         MPPI               seed  3:   98.9781 ->   67.6802 (best    8.7626) in   60.00 s, 26612 iterations
+L1 inverted pendulum         MPPI+LQR           seed  3:   98.9377 ->    4.4798 (best    3.0102) in   60.00 s, 26612 iterations
+L1 inverted pendulum         FBRRT              seed  3:   98.8948 ->    3.7835 (best    3.7835) in   60.52 s, 100 iterations
+L1 inverted pendulum         DT-FBSDE           seed  3:   80.6872 ->    2.3646 (best    2.3646) in   60.01 s, 2207 iterations
+L1 inverted pendulum         iLQR               seed  4:   84.8768 ->    2.8993 (best    2.7791) in    0.10 s, 207 iterations
+L1 inverted pendulum         MPPI               seed  4:   98.9781 ->   69.8766 (best    8.6832) in   60.00 s, 27845 iterations
+L1 inverted pendulum         MPPI+LQR           seed  4:   98.9377 ->    4.0633 (best    2.8591) in   60.00 s, 27845 iterations
+L1 inverted pendulum         FBRRT              seed  4:   98.8948 ->    3.6673 (best    3.6554) in   60.10 s, 101 iterations
+L1 inverted pendulum         DT-FBSDE           seed  4:   80.6872 ->    2.3757 (best    2.3757) in   60.01 s, 2197 iterations
+L1 inverted pendulum         iLQR               seed  5:  103.5184 ->    3.1442 (best    2.8447) in    0.10 s, 226 iterations
+L1 inverted pendulum         MPPI               seed  5:   98.9781 ->   59.4111 (best    8.3956) in   60.00 s, 27745 iterations
+L1 inverted pendulum         MPPI+LQR           seed  5:   98.9377 ->    3.8633 (best    2.8829) in   60.00 s, 27745 iterations
+L1 inverted pendulum         FBRRT              seed  5:   98.8948 ->    9.0837 (best    9.0837) in   60.20 s, 101 iterations
+L1 inverted pendulum         DT-FBSDE           seed  5:   80.6872 ->    2.3955 (best    2.3955) in   60.02 s, 2218 iterations
+L1 inverted pendulum         iLQR               seed  6:   78.3331 ->    3.0307 (best    2.8167) in    0.06 s, 130 iterations
+L1 inverted pendulum         MPPI               seed  6:   98.9781 ->   60.9085 (best    8.2983) in   60.00 s, 27852 iterations
+L1 inverted pendulum         MPPI+LQR           seed  6:   98.9377 ->    3.4669 (best    2.8990) in   60.00 s, 27852 iterations
+L1 inverted pendulum         FBRRT              seed  6:   98.8948 ->    4.3393 (best    4.3393) in   60.00 s, 100 iterations
+L1 inverted pendulum         DT-FBSDE           seed  6:   80.6872 ->    2.4114 (best    2.3679) in   60.00 s, 2143 iterations
+L1 inverted pendulum         iLQR               seed  7:   77.8648 ->    2.9655 (best    2.8035) in    0.07 s, 129 iterations
+L1 inverted pendulum         MPPI               seed  7:   98.9781 ->   70.5963 (best    8.7423) in   60.00 s, 27780 iterations
+L1 inverted pendulum         MPPI+LQR           seed  7:   98.9377 ->    4.4635 (best    3.0383) in   60.00 s, 27780 iterations
+L1 inverted pendulum         FBRRT              seed  7:   98.8948 ->   13.1235 (best   13.1235) in   60.55 s, 101 iterations
+L1 inverted pendulum         DT-FBSDE           seed  7:   80.6872 ->    2.3554 (best    2.3553) in   60.01 s, 2127 iterations
+L1 inverted pendulum         iLQR               seed  8:  102.2249 ->    2.8735 (best    2.8599) in    0.08 s, 199 iterations
+L1 inverted pendulum         MPPI               seed  8:   98.9781 ->   57.4739 (best    8.8444) in   60.00 s, 27367 iterations
+L1 inverted pendulum         MPPI+LQR           seed  8:   98.9377 ->    3.7354 (best    2.9177) in   60.00 s, 27367 iterations
+L1 inverted pendulum         FBRRT              seed  8:   98.8948 ->    6.7849 (best    6.7849) in   60.37 s, 97 iterations
+L1 inverted pendulum         DT-FBSDE           seed  8:   80.6872 ->    2.3691 (best    2.3667) in   60.00 s, 2179 iterations
+L1 inverted pendulum         iLQR               seed  9:  101.9071 ->    3.1644 (best    2.8002) in    0.09 s, 199 iterations
+L1 inverted pendulum         MPPI               seed  9:   98.9781 ->   69.2578 (best    8.2953) in   60.00 s, 27350 iterations
+L1 inverted pendulum         MPPI+LQR           seed  9:   98.9377 ->    4.0158 (best    2.9417) in   60.00 s, 27350 iterations
+L1 inverted pendulum         FBRRT              seed  9:   98.8948 ->    4.3346 (best    4.3346) in   60.10 s, 102 iterations
+L1 inverted pendulum         DT-FBSDE           seed  9:   80.6872 ->    2.3724 (best    2.3663) in   60.01 s, 2186 iterations
+
+Checkpoints in method_comparison.csv, MPC results in method_comparison_mpc.csv, grid optima in method_comparison_reference.csv

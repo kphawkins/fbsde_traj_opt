@@ -209,3 +209,45 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "linear_basis_value_function_approx",
+    hdrs = ["linear_basis_value_function_approx.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":value_function_approx_concepts",
+        ":value_function_slope_targets",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "linear_basis_value_function_approx_test",
+    size = "small",
+    srcs = ["linear_basis_value_function_approx.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":value_function_slope_targets",
+        ":linear_basis_value_function_approx",
+        ":polynomial_value_function_approx",
+        ":shallow_tanh_value_function_approx",
+        ":value_function_approx_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "shallow_tanh_value_function_approx",
+    hdrs = ["shallow_tanh_value_function_approx.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":linear_basis_value_function_approx",
+        ":value_function_approx_concepts",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)

@@ -121,6 +121,28 @@ class TaylorNoiselessBackwardStepEstimator {
                          Diffusion(stage, state));
   }
 
+  // Returns the estimate for one sample whose target-policy control `control` and next-stage value,
+  // gradient, and Hessian at the sampled mean `state + drift` the caller has already computed -- for a
+  // caller that shares them with other uses, such as slope targets, rather than have this class
+  // evaluate the policy and the next value function a second time. With `control = mu(stage, state)`
+  // and the next stage's derivatives at `state + drift`, it is exactly operator().
+  [[nodiscard]] auto EstimateFromParts(std::size_t stage,
+                                       const State& state,
+                                       const State& drift,
+                                       const Control& control,
+                                       Scalar next_value,
+                                       const State& next_gradient,
+                                       const StateMat& next_hessian) const noexcept -> Scalar {
+    const State policy_drift =
+        forward_model_.state_drift()(stage, state) + (forward_model_.control_drift_mat()(stage, state) * control);
+    return CombineTarget(running_cost_(stage, state, control),
+                         next_value,
+                         next_gradient,
+                         next_hessian,
+                         State(policy_drift - drift),
+                         Diffusion(stage, state));
+  }
+
   // Writes the estimate for every sample of a batch into `targets_out`: one column of `states`
   // and the matching column of `drifts` per sample.
   //

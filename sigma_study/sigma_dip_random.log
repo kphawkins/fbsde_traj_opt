@@ -1,0 +1,10 @@
+
+=== L1 double inverted pendulum ===
+ut:rotate=random                     batch 128 (asked 72)
+ut:rotate=random                     seed 0: cost   40.4898 (gap    +nan%), V0 estimate    0.6783, 390 iterations (21 accepted), fwd/bwd/ls 4/37/59%
+ut:rotate=random                     seed 1: cost   31.4261 (gap    +nan%), V0 estimate    1.1662, 354 iterations (20 accepted), fwd/bwd/ls 4/38/58%
+ut:rotate=random                     seed 2: cost   31.5501 (gap    +nan%), V0 estimate   10.2652, 333 iterations (14 accepted), fwd/bwd/ls 4/38/58%
+cut:rotate=random                    batch 256 (asked 200)
+cut:rotate=random                    seed 0: cost   18.5393 (gap    +nan%), V0 estimate    0.1667, 249 iterations (20 accepted), fwd/bwd/ls 6/52/41%
+cut:rotate=random                    seed 1: cost   45.5870 (gap    +nan%), V0 estimate    3.9139, 274 iterations (6 accepted), fwd/bwd/ls 7/50/43%
+cut:rotate=random                    seed 2: cost   30.8266 (gap    +nan%), V0 estimate    2.3099, 269 iterations (20 accepted), fwd/bwd/ls 7/50/43%

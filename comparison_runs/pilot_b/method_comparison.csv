@@ -1,0 +1,891 @@
+problem,method,seed,iteration,seconds,held_out_cost
+L1 double integrator,iLQR (zero init),0,0,0.000000,726.579475
+L1 double integrator,iLQR (zero init),0,33,0.000159,4.449865
+L1 double integrator,iLQR,0,0,0.000000,752.001196
+L1 double integrator,iLQR,0,49,0.000234,4.449809
+L1 double integrator,MPPI,0,0,0.000000,724.157644
+L1 double integrator,MPPI,0,2,0.001126,310.326955
+L1 double integrator,MPPI,0,3,0.001663,209.929199
+L1 double integrator,MPPI,0,4,0.002291,125.453878
+L1 double integrator,MPPI,0,5,0.002870,67.467675
+L1 double integrator,MPPI,0,6,0.003759,44.365250
+L1 double integrator,MPPI,0,7,0.004282,32.492746
+L1 double integrator,MPPI,0,8,0.004868,27.378989
+L1 double integrator,MPPI,0,9,0.005506,25.697630
+L1 double integrator,MPPI,0,11,0.006573,21.425058
+L1 double integrator,MPPI,0,13,0.007533,20.718239
+L1 double integrator,MPPI,0,15,0.008490,19.833736
+L1 double integrator,MPPI,0,17,0.009877,18.933872
+L1 double integrator,MPPI,0,19,0.010887,17.398092
+L1 double integrator,MPPI,0,22,0.012477,17.040424
+L1 double integrator,MPPI,0,25,0.014356,15.803702
+L1 double integrator,MPPI,0,27,0.017454,15.791449
+L1 double integrator,MPPI,0,30,0.018908,15.021543
+L1 double integrator,MPPI,0,36,0.021904,14.335198
+L1 double integrator,MPPI,0,42,0.025052,13.934652
+L1 double integrator,MPPI,0,48,0.028714,13.501670
+L1 double integrator,MPPI,0,55,0.033034,13.560862
+L1 double integrator,MPPI,0,64,0.038389,12.844622
+L1 double integrator,MPPI,0,72,0.043984,12.517882
+L1 double integrator,MPPI,0,84,0.050289,12.176209
+L1 double integrator,MPPI,0,99,0.057663,11.589009
+L1 double integrator,MPPI,0,117,0.066682,11.228889
+L1 double integrator,MPPI,0,134,0.076148,10.907278
+L1 double integrator,MPPI,0,156,0.087869,10.371539
+L1 double integrator,MPPI,0,178,0.100815,10.909550
+L1 double integrator,MPPI,0,207,0.115822,10.286524
+L1 double integrator,MPPI,0,242,0.133660,10.211938
+L1 double integrator,MPPI,0,281,0.153158,9.906621
+L1 double integrator,MPPI,0,323,0.176598,9.802539
+L1 double integrator,MPPI,0,373,0.202668,9.817511
+L1 double integrator,MPPI,0,433,0.233065,10.145931
+L1 double integrator,MPPI,0,497,0.268093,9.900199
+L1 double integrator,MPPI,0,575,0.308299,9.840100
+L1 double integrator,MPPI,0,661,0.354372,10.054083
+L1 double integrator,MPPI,0,745,0.407493,9.768606
+L1 double integrator,MPPI,0,850,0.468502,9.602996
+L1 double integrator,MPPI,0,991,0.539374,10.171909
+L1 double integrator,MPPI,0,1140,0.619708,9.879429
+L1 double integrator,MPPI,0,1315,0.713253,9.809520
+L1 double integrator,MPPI,0,1522,0.819888,10.063502
+L1 double integrator,MPPI,0,1763,0.942673,10.028807
+L1 double integrator,MPPI,0,2042,1.083782,9.702182
+L1 double integrator,MPPI,0,2340,1.246505,9.783082
+L1 double integrator,MPPI,0,2558,1.433325,9.650036
+L1 double integrator,MPPI,0,2972,1.648638,9.905840
+L1 double integrator,MPPI,0,3452,1.895680,9.681185
+L1 double integrator,MPPI,0,3963,2.179814,10.002661
+L1 double integrator,MPPI,0,4552,2.506916,9.964190
+L1 double integrator,MPPI,0,5244,2.882644,10.193735
+L1 double integrator,MPPI,0,5860,3.315335,9.668241
+L1 double integrator,MPPI,0,6862,3.812306,9.716939
+L1 double integrator,MPPI,0,8120,4.384143,9.796726
+L1 double integrator,MPPI,0,9465,5.045263,10.239906
+L1 double integrator,MPPI,0,11016,5.798051,9.741520
+L1 double integrator,MPPI,0,12849,6.667712,10.064007
+L1 double integrator,MPPI,0,14906,7.667755,10.010789
+L1 double integrator,MPPI,0,17260,8.818154,10.090243
+L1 double integrator,MPPI,0,19741,10.000451,9.716122
+L1 double integrator,MPPI+LQR,0,0,0.000000,726.579475
+L1 double integrator,MPPI+LQR,0,2,0.001126,315.117606
+L1 double integrator,MPPI+LQR,0,3,0.001663,217.230298
+L1 double integrator,MPPI+LQR,0,4,0.002291,129.632584
+L1 double integrator,MPPI+LQR,0,5,0.002870,70.724379
+L1 double integrator,MPPI+LQR,0,6,0.003759,46.125196
+L1 double integrator,MPPI+LQR,0,7,0.004282,33.072537
+L1 double integrator,MPPI+LQR,0,8,0.004868,27.512093
+L1 double integrator,MPPI+LQR,0,9,0.005506,24.107266
+L1 double integrator,MPPI+LQR,0,11,0.006573,19.701659
+L1 double integrator,MPPI+LQR,0,13,0.007533,19.841149
+L1 double integrator,MPPI+LQR,0,15,0.008490,18.971892
+L1 double integrator,MPPI+LQR,0,17,0.009877,17.513612
+L1 double integrator,MPPI+LQR,0,19,0.010887,15.597762
+L1 double integrator,MPPI+LQR,0,22,0.012477,15.758352
+L1 double integrator,MPPI+LQR,0,25,0.014356,14.339132
+L1 double integrator,MPPI+LQR,0,27,0.017454,14.664976
+L1 double integrator,MPPI+LQR,0,30,0.018908,13.038012
+L1 double integrator,MPPI+LQR,0,36,0.021904,12.687396
+L1 double integrator,MPPI+LQR,0,42,0.025052,12.108273
+L1 double integrator,MPPI+LQR,0,48,0.028714,11.549339
+L1 double integrator,MPPI+LQR,0,55,0.033034,11.546362
+L1 double integrator,MPPI+LQR,0,64,0.038389,10.663494
+L1 double integrator,MPPI+LQR,0,72,0.043984,10.176813
+L1 double integrator,MPPI+LQR,0,84,0.050289,9.426857
+L1 double integrator,MPPI+LQR,0,99,0.057663,8.764698
+L1 double integrator,MPPI+LQR,0,117,0.066682,8.329607
+L1 double integrator,MPPI+LQR,0,134,0.076148,7.756861
+L1 double integrator,MPPI+LQR,0,156,0.087869,7.128334
+L1 double integrator,MPPI+LQR,0,178,0.100815,7.088686
+L1 double integrator,MPPI+LQR,0,207,0.115822,6.522029
+L1 double integrator,MPPI+LQR,0,242,0.133660,6.324045
+L1 double integrator,MPPI+LQR,0,281,0.153158,5.929777
+L1 double integrator,MPPI+LQR,0,323,0.176598,5.862507
+L1 double integrator,MPPI+LQR,0,373,0.202668,5.870017
+L1 double integrator,MPPI+LQR,0,433,0.233065,6.168104
+L1 double integrator,MPPI+LQR,0,497,0.268093,5.875586
+L1 double integrator,MPPI+LQR,0,575,0.308299,5.824124
+L1 double integrator,MPPI+LQR,0,661,0.354372,5.986919
+L1 double integrator,MPPI+LQR,0,745,0.407493,5.766808
+L1 double integrator,MPPI+LQR,0,850,0.468502,5.598973
+L1 double integrator,MPPI+LQR,0,991,0.539374,6.080073
+L1 double integrator,MPPI+LQR,0,1140,0.619708,5.861373
+L1 double integrator,MPPI+LQR,0,1315,0.713253,5.828412
+L1 double integrator,MPPI+LQR,0,1522,0.819888,6.104984
+L1 double integrator,MPPI+LQR,0,1763,0.942673,6.002337
+L1 double integrator,MPPI+LQR,0,2042,1.083782,5.705443
+L1 double integrator,MPPI+LQR,0,2340,1.246505,5.878818
+L1 double integrator,MPPI+LQR,0,2558,1.433325,5.774554
+L1 double integrator,MPPI+LQR,0,2972,1.648638,5.948758
+L1 double integrator,MPPI+LQR,0,3452,1.895680,5.757147
+L1 double integrator,MPPI+LQR,0,3963,2.179814,6.009781
+L1 double integrator,MPPI+LQR,0,4552,2.506916,6.019983
+L1 double integrator,MPPI+LQR,0,5244,2.882644,6.280337
+L1 double integrator,MPPI+LQR,0,5860,3.315335,5.769026
+L1 double integrator,MPPI+LQR,0,6862,3.812306,5.749700
+L1 double integrator,MPPI+LQR,0,8120,4.384143,5.895215
+L1 double integrator,MPPI+LQR,0,9465,5.045263,6.286736
+L1 double integrator,MPPI+LQR,0,11016,5.798051,5.798025
+L1 double integrator,MPPI+LQR,0,12849,6.667712,6.205371
+L1 double integrator,MPPI+LQR,0,14906,7.667755,6.102416
+L1 double integrator,MPPI+LQR,0,17260,8.818154,6.090417
+L1 double integrator,MPPI+LQR,0,19741,10.000451,5.825941
+L1 double integrator,iLQR,1,0,0.000000,762.834740
+L1 double integrator,iLQR,1,33,0.000174,4.455975
+L1 double integrator,MPPI,1,0,0.000000,724.157644
+L1 double integrator,MPPI,1,2,0.001353,302.474076
+L1 double integrator,MPPI,1,3,0.001847,191.607180
+L1 double integrator,MPPI,1,4,0.002285,114.167367
+L1 double integrator,MPPI,1,5,0.002786,69.658061
+L1 double integrator,MPPI,1,6,0.003276,46.510649
+L1 double integrator,MPPI,1,7,0.003818,35.453616
+L1 double integrator,MPPI,1,8,0.004428,27.301901
+L1 double integrator,MPPI,1,9,0.004922,23.437899
+L1 double integrator,MPPI,1,10,0.005434,23.061155
+L1 double integrator,MPPI,1,12,0.006458,21.190797
+L1 double integrator,MPPI,1,13,0.007134,21.799429
+L1 double integrator,MPPI,1,15,0.008401,20.272450
+L1 double integrator,MPPI,1,17,0.009408,17.816807
+L1 double integrator,MPPI,1,20,0.010853,17.485525
+L1 double integrator,MPPI,1,23,0.012479,17.662839
+L1 double integrator,MPPI,1,27,0.014540,16.706382
+L1 double integrator,MPPI,1,31,0.016867,16.855257
+L1 double integrator,MPPI,1,35,0.018919,15.686907
+L1 double integrator,MPPI,1,41,0.021828,15.427631
+L1 double integrator,MPPI,1,48,0.025587,13.738222
+L1 double integrator,MPPI,1,53,0.028891,13.816532
+L1 double integrator,MPPI,1,62,0.033335,13.348953
+L1 double integrator,MPPI,1,71,0.037880,12.257522
+L1 double integrator,MPPI,1,83,0.043769,12.331354
+L1 double integrator,MPPI,1,96,0.050249,11.659941
+L1 double integrator,MPPI,1,111,0.057877,11.035621
+L1 double integrator,MPPI,1,129,0.066690,11.061739
+L1 double integrator,MPPI,1,150,0.076546,10.515383
+L1 double integrator,MPPI,1,173,0.087775,10.519095
+L1 double integrator,MPPI,1,202,0.101019,10.396167
+L1 double integrator,MPPI,1,235,0.116178,10.126489
+L1 double integrator,MPPI,1,271,0.133280,10.010556
+L1 double integrator,MPPI,1,315,0.153240,9.961832
+L1 double integrator,MPPI,1,363,0.176504,10.098452
+L1 double integrator,MPPI,1,419,0.202824,9.887421
+L1 double integrator,MPPI,1,482,0.232952,10.033005
+L1 double integrator,MPPI,1,558,0.268299,10.231599
+L1 double integrator,MPPI,1,642,0.308163,10.121777
+L1 double integrator,MPPI,1,739,0.354384,10.024501
+L1 double integrator,MPPI,1,847,0.407689,10.036584
+L1 double integrator,MPPI,1,974,0.468829,10.058317
+L1 double integrator,MPPI,1,1123,0.538802,9.875107
+L1 double integrator,MPPI,1,1295,0.619747,9.955215
+L1 double integrator,MPPI,1,1486,0.713076,9.868879
+L1 double integrator,MPPI,1,1693,0.819570,9.845433
+L1 double integrator,MPPI,1,1961,0.942571,9.889954
+L1 double integrator,MPPI,1,2254,1.083669,9.935694
+L1 double integrator,MPPI,1,2603,1.246580,10.042133
+L1 double integrator,MPPI,1,3005,1.433366,9.869951
+L1 double integrator,MPPI,1,3459,1.648303,9.863385
+L1 double integrator,MPPI,1,3964,1.895610,10.158904
+L1 double integrator,MPPI,1,4559,2.179866,10.095888
+L1 double integrator,MPPI,1,5221,2.506819,9.961063
+L1 double integrator,MPPI,1,6026,2.882614,9.918679
+L1 double integrator,MPPI,1,6924,3.315081,9.709759
+L1 double integrator,MPPI,1,8038,3.812389,9.814681
+L1 double integrator,MPPI,1,9266,4.384456,9.927974
+L1 double integrator,MPPI,1,10631,5.042083,10.103087
+L1 double integrator,MPPI,1,12218,5.797902,10.085984
+L1 double integrator,MPPI,1,14153,6.667932,9.926637
+L1 double integrator,MPPI,1,16422,7.667904,9.738433
+L1 double integrator,MPPI,1,19040,8.818107,9.842700
+L1 double integrator,MPPI,1,21690,10.000381,9.936117
+L1 double integrator,MPPI+LQR,1,0,0.000000,726.579475
+L1 double integrator,MPPI+LQR,1,2,0.001353,306.154023
+L1 double integrator,MPPI+LQR,1,3,0.001847,196.513247
+L1 double integrator,MPPI+LQR,1,4,0.002285,115.154649
+L1 double integrator,MPPI+LQR,1,5,0.002786,74.332354
+L1 double integrator,MPPI+LQR,1,6,0.003276,46.978897
+L1 double integrator,MPPI+LQR,1,7,0.003818,36.791923
+L1 double integrator,MPPI+LQR,1,8,0.004428,28.692344
+L1 double integrator,MPPI+LQR,1,9,0.004922,22.209298
+L1 double integrator,MPPI+LQR,1,10,0.005434,22.050276
+L1 double integrator,MPPI+LQR,1,12,0.006458,19.638398
+L1 double integrator,MPPI+LQR,1,13,0.007134,20.105277
+L1 double integrator,MPPI+LQR,1,15,0.008401,18.340205
+L1 double integrator,MPPI+LQR,1,17,0.009408,15.965502
+L1 double integrator,MPPI+LQR,1,20,0.010853,15.766536
+L1 double integrator,MPPI+LQR,1,23,0.012479,16.304089
+L1 double integrator,MPPI+LQR,1,27,0.014540,15.477332
+L1 double integrator,MPPI+LQR,1,31,0.016867,15.760591
+L1 double integrator,MPPI+LQR,1,35,0.018919,13.912936
+L1 double integrator,MPPI+LQR,1,41,0.021828,14.166789
+L1 double integrator,MPPI+LQR,1,48,0.025587,11.856079
+L1 double integrator,MPPI+LQR,1,53,0.028891,12.252961
+L1 double integrator,MPPI+LQR,1,62,0.033335,11.248816
+L1 double integrator,MPPI+LQR,1,71,0.037880,9.697248
+L1 double integrator,MPPI+LQR,1,83,0.043769,9.578746
+L1 double integrator,MPPI+LQR,1,96,0.050249,8.893475
+L1 double integrator,MPPI+LQR,1,111,0.057877,7.931584
+L1 double integrator,MPPI+LQR,1,129,0.066690,7.945755
+L1 double integrator,MPPI+LQR,1,150,0.076546,6.692230
+L1 double integrator,MPPI+LQR,1,173,0.087775,6.728095
+L1 double integrator,MPPI+LQR,1,202,0.101019,6.595277
+L1 double integrator,MPPI+LQR,1,235,0.116178,6.345021
+L1 double integrator,MPPI+LQR,1,271,0.133280,6.179666
+L1 double integrator,MPPI+LQR,1,315,0.153240,6.006555
+L1 double integrator,MPPI+LQR,1,363,0.176504,6.141456
+L1 double integrator,MPPI+LQR,1,419,0.202824,5.954286
+L1 double integrator,MPPI+LQR,1,482,0.232952,6.080297
+L1 double integrator,MPPI+LQR,1,558,0.268299,6.307181
+L1 double integrator,MPPI+LQR,1,642,0.308163,6.246363
+L1 double integrator,MPPI+LQR,1,739,0.354384,6.132963
+L1 double integrator,MPPI+LQR,1,847,0.407689,6.147077
+L1 double integrator,MPPI+LQR,1,974,0.468829,6.132974
+L1 double integrator,MPPI+LQR,1,1123,0.538802,5.947202
+L1 double integrator,MPPI+LQR,1,1295,0.619747,6.047147
+L1 double integrator,MPPI+LQR,1,1486,0.713076,5.972330
+L1 double integrator,MPPI+LQR,1,1693,0.819570,5.919717
+L1 double integrator,MPPI+LQR,1,1961,0.942571,6.066915
+L1 double integrator,MPPI+LQR,1,2254,1.083669,6.003189
+L1 double integrator,MPPI+LQR,1,2603,1.246580,6.120356
+L1 double integrator,MPPI+LQR,1,3005,1.433366,5.975395
+L1 double integrator,MPPI+LQR,1,3459,1.648303,6.010709
+L1 double integrator,MPPI+LQR,1,3964,1.895610,6.304745
+L1 double integrator,MPPI+LQR,1,4559,2.179866,6.156747
+L1 double integrator,MPPI+LQR,1,5221,2.506819,6.089904
+L1 double integrator,MPPI+LQR,1,6026,2.882614,6.030112
+L1 double integrator,MPPI+LQR,1,6924,3.315081,5.710084
+L1 double integrator,MPPI+LQR,1,8038,3.812389,5.794768
+L1 double integrator,MPPI+LQR,1,9266,4.384456,5.953465
+L1 double integrator,MPPI+LQR,1,10631,5.042083,6.255337
+L1 double integrator,MPPI+LQR,1,12218,5.797902,6.258573
+L1 double integrator,MPPI+LQR,1,14153,6.667932,5.947310
+L1 double integrator,MPPI+LQR,1,16422,7.667904,5.817537
+L1 double integrator,MPPI+LQR,1,19040,8.818107,5.886703
+L1 double integrator,MPPI+LQR,1,21690,10.000381,6.026356
+L1 inverted pendulum,iLQR (zero init),0,0,0.000000,98.937726
+L1 inverted pendulum,iLQR (zero init),0,3,0.001035,8.525345
+L1 inverted pendulum,iLQR (zero init),0,4,0.001454,8.246215
+L1 inverted pendulum,iLQR (zero init),0,5,0.001753,11.159715
+L1 inverted pendulum,iLQR (zero init),0,6,0.002176,9.950890
+L1 inverted pendulum,iLQR (zero init),0,7,0.002603,8.412335
+L1 inverted pendulum,iLQR (zero init),0,8,0.003045,7.536300
+L1 inverted pendulum,iLQR (zero init),0,9,0.003452,6.042162
+L1 inverted pendulum,iLQR (zero init),0,10,0.003828,3.908359
+L1 inverted pendulum,iLQR (zero init),0,11,0.004315,3.588802
+L1 inverted pendulum,iLQR (zero init),0,12,0.005096,3.975741
+L1 inverted pendulum,iLQR (zero init),0,13,0.005880,4.147872
+L1 inverted pendulum,iLQR (zero init),0,14,0.006662,5.116287
+L1 inverted pendulum,iLQR (zero init),0,15,0.007406,5.132104
+L1 inverted pendulum,iLQR (zero init),0,17,0.008610,5.139107
+L1 inverted pendulum,iLQR (zero init),0,19,0.009647,3.758610
+L1 inverted pendulum,iLQR (zero init),0,21,0.011332,4.121323
+L1 inverted pendulum,iLQR (zero init),0,23,0.012379,3.901405
+L1 inverted pendulum,iLQR (zero init),0,27,0.014641,3.762119
+L1 inverted pendulum,iLQR (zero init),0,31,0.016617,3.690775
+L1 inverted pendulum,iLQR (zero init),0,36,0.018944,3.672445
+L1 inverted pendulum,iLQR (zero init),0,42,0.021801,3.199939
+L1 inverted pendulum,iLQR (zero init),0,48,0.025298,3.008377
+L1 inverted pendulum,iLQR (zero init),0,53,0.028669,3.175070
+L1 inverted pendulum,iLQR (zero init),0,62,0.033138,2.973435
+L1 inverted pendulum,iLQR (zero init),0,71,0.038047,3.046237
+L1 inverted pendulum,iLQR (zero init),0,81,0.043738,2.921626
+L1 inverted pendulum,iLQR (zero init),0,93,0.050434,3.265476
+L1 inverted pendulum,iLQR (zero init),0,106,0.057728,2.857011
+L1 inverted pendulum,iLQR (zero init),0,115,0.067575,2.808286
+L1 inverted pendulum,iLQR (zero init),0,125,0.076450,2.939119
+L1 inverted pendulum,iLQR (zero init),0,149,0.087727,2.830395
+L1 inverted pendulum,iLQR (zero init),0,170,0.100971,3.294751
+L1 inverted pendulum,iLQR (zero init),0,204,0.115287,3.223145
+L1 inverted pendulum,iLQR,0,0,0.000000,110.209133
+L1 inverted pendulum,iLQR,0,3,0.001034,11.469960
+L1 inverted pendulum,iLQR,0,4,0.001366,9.951178
+L1 inverted pendulum,iLQR,0,5,0.001931,7.816949
+L1 inverted pendulum,iLQR,0,6,0.002305,7.439246
+L1 inverted pendulum,iLQR,0,7,0.002678,6.106800
+L1 inverted pendulum,iLQR,0,9,0.003309,5.531256
+L1 inverted pendulum,iLQR,0,10,0.003682,6.072423
+L1 inverted pendulum,iLQR,0,11,0.004098,3.227643
+L1 inverted pendulum,iLQR,0,12,0.004740,3.317380
+L1 inverted pendulum,iLQR,0,13,0.005351,3.486529
+L1 inverted pendulum,iLQR,0,15,0.006444,4.277805
+L1 inverted pendulum,iLQR,0,17,0.007608,4.305237
+L1 inverted pendulum,iLQR,0,18,0.008180,4.293110
+L1 inverted pendulum,iLQR,0,21,0.009670,3.653105
+L1 inverted pendulum,iLQR,0,24,0.011157,3.663864
+L1 inverted pendulum,iLQR,0,27,0.012459,3.277978
+L1 inverted pendulum,iLQR,0,31,0.014405,3.280013
+L1 inverted pendulum,iLQR,0,35,0.016620,3.261327
+L1 inverted pendulum,iLQR,0,39,0.019076,3.182637
+L1 inverted pendulum,iLQR,0,44,0.021773,3.286329
+L1 inverted pendulum,iLQR,0,50,0.025150,3.186867
+L1 inverted pendulum,iLQR,0,57,0.029023,3.139928
+L1 inverted pendulum,iLQR,0,65,0.033391,3.090279
+L1 inverted pendulum,iLQR,0,74,0.038018,2.957676
+L1 inverted pendulum,iLQR,0,85,0.043684,3.157517
+L1 inverted pendulum,iLQR,0,97,0.053532,2.983944
+L1 inverted pendulum,iLQR,0,102,0.059192,2.982442
+L1 inverted pendulum,iLQR,0,116,0.066249,2.918700
+L1 inverted pendulum,iLQR,0,139,0.076430,3.046457
+L1 inverted pendulum,iLQR,0,167,0.087790,3.001320
+L1 inverted pendulum,iLQR,0,188,0.100750,3.334208
+L1 inverted pendulum,iLQR,0,209,0.113678,3.182399
+L1 inverted pendulum,MPPI,0,0,0.000000,98.978083
+L1 inverted pendulum,MPPI,0,1,0.001961,77.468853
+L1 inverted pendulum,MPPI,0,2,0.003979,60.134007
+L1 inverted pendulum,MPPI,0,3,0.006135,42.681203
+L1 inverted pendulum,MPPI,0,4,0.008483,31.326603
+L1 inverted pendulum,MPPI,0,5,0.010591,23.970700
+L1 inverted pendulum,MPPI,0,6,0.012617,19.733724
+L1 inverted pendulum,MPPI,0,7,0.014834,17.155819
+L1 inverted pendulum,MPPI,0,8,0.016917,14.597024
+L1 inverted pendulum,MPPI,0,9,0.019737,13.059420
+L1 inverted pendulum,MPPI,0,10,0.022568,11.475642
+L1 inverted pendulum,MPPI,0,12,0.026915,9.826200
+L1 inverted pendulum,MPPI,0,13,0.028866,9.519473
+L1 inverted pendulum,MPPI,0,15,0.033247,8.713494
+L1 inverted pendulum,MPPI,0,18,0.039906,8.824187
+L1 inverted pendulum,MPPI,0,20,0.046050,8.797938
+L1 inverted pendulum,MPPI,0,22,0.051886,9.197651
+L1 inverted pendulum,MPPI,0,25,0.058393,9.425258
+L1 inverted pendulum,MPPI,0,29,0.067924,10.242921
+L1 inverted pendulum,MPPI,0,33,0.076486,11.166364
+L1 inverted pendulum,MPPI,0,39,0.088654,11.213504
+L1 inverted pendulum,MPPI,0,45,0.101478,12.400919
+L1 inverted pendulum,MPPI,0,52,0.117539,14.388226
+L1 inverted pendulum,MPPI,0,60,0.135210,15.490598
+L1 inverted pendulum,MPPI,0,68,0.153705,16.664437
+L1 inverted pendulum,MPPI,0,78,0.177728,18.122291
+L1 inverted pendulum,MPPI,0,89,0.204793,19.313115
+L1 inverted pendulum,MPPI,0,102,0.234912,20.375525
+L1 inverted pendulum,MPPI,0,116,0.267953,21.312207
+L1 inverted pendulum,MPPI,0,134,0.309621,23.588589
+L1 inverted pendulum,MPPI,0,154,0.356218,24.241011
+L1 inverted pendulum,MPPI,0,176,0.407913,25.646694
+L1 inverted pendulum,MPPI,0,202,0.469573,27.392810
+L1 inverted pendulum,MPPI,0,233,0.539110,28.744849
+L1 inverted pendulum,MPPI,0,268,0.620919,29.232282
+L1 inverted pendulum,MPPI,0,309,0.714040,29.306626
+L1 inverted pendulum,MPPI,0,357,0.821072,29.459392
+L1 inverted pendulum,MPPI,0,412,0.943479,29.990522
+L1 inverted pendulum,MPPI,0,473,1.084512,30.660701
+L1 inverted pendulum,MPPI,0,547,1.247901,30.430125
+L1 inverted pendulum,MPPI,0,632,1.434228,30.673869
+L1 inverted pendulum,MPPI,0,726,1.649451,31.461733
+L1 inverted pendulum,MPPI,0,831,1.895770,31.835590
+L1 inverted pendulum,MPPI,0,963,2.180018,32.241684
+L1 inverted pendulum,MPPI,0,1110,2.508027,32.978469
+L1 inverted pendulum,MPPI,0,1283,2.884474,33.455961
+L1 inverted pendulum,MPPI,0,1480,3.316682,34.424994
+L1 inverted pendulum,MPPI,0,1697,3.814004,34.581701
+L1 inverted pendulum,MPPI,0,1958,4.386535,35.306885
+L1 inverted pendulum,MPPI,0,2247,5.043843,34.749935
+L1 inverted pendulum,MPPI,0,2577,5.798386,35.422493
+L1 inverted pendulum,MPPI,0,2973,6.668041,35.576780
+L1 inverted pendulum,MPPI,0,3423,7.669308,35.522620
+L1 inverted pendulum,MPPI,0,3932,8.821087,36.709767
+L1 inverted pendulum,MPPI,0,4210,10.000358,37.738612
+L1 inverted pendulum,MPPI+LQR,0,0,0.000000,98.937726
+L1 inverted pendulum,MPPI+LQR,0,1,0.001961,77.459285
+L1 inverted pendulum,MPPI+LQR,0,2,0.003979,60.048907
+L1 inverted pendulum,MPPI+LQR,0,3,0.006135,42.208335
+L1 inverted pendulum,MPPI+LQR,0,4,0.008483,30.474841
+L1 inverted pendulum,MPPI+LQR,0,5,0.010591,22.793772
+L1 inverted pendulum,MPPI+LQR,0,6,0.012617,18.068450
+L1 inverted pendulum,MPPI+LQR,0,7,0.014834,15.537490
+L1 inverted pendulum,MPPI+LQR,0,8,0.016917,13.170835
+L1 inverted pendulum,MPPI+LQR,0,9,0.019737,11.542369
+L1 inverted pendulum,MPPI+LQR,0,10,0.022568,10.028641
+L1 inverted pendulum,MPPI+LQR,0,12,0.026915,8.100500
+L1 inverted pendulum,MPPI+LQR,0,13,0.028866,7.830497
+L1 inverted pendulum,MPPI+LQR,0,15,0.033247,6.289787
+L1 inverted pendulum,MPPI+LQR,0,18,0.039906,5.957966
+L1 inverted pendulum,MPPI+LQR,0,20,0.046050,5.611664
+L1 inverted pendulum,MPPI+LQR,0,22,0.051886,5.028695
+L1 inverted pendulum,MPPI+LQR,0,25,0.058393,4.440529
+L1 inverted pendulum,MPPI+LQR,0,29,0.067924,4.384072
+L1 inverted pendulum,MPPI+LQR,0,33,0.076486,4.092497
+L1 inverted pendulum,MPPI+LQR,0,39,0.088654,4.054028
+L1 inverted pendulum,MPPI+LQR,0,45,0.101478,3.743395
+L1 inverted pendulum,MPPI+LQR,0,52,0.117539,3.548361
+L1 inverted pendulum,MPPI+LQR,0,60,0.135210,3.305165
+L1 inverted pendulum,MPPI+LQR,0,68,0.153705,3.311294
+L1 inverted pendulum,MPPI+LQR,0,78,0.177728,3.143012
+L1 inverted pendulum,MPPI+LQR,0,89,0.204793,3.086889
+L1 inverted pendulum,MPPI+LQR,0,102,0.234912,3.174137
+L1 inverted pendulum,MPPI+LQR,0,116,0.267953,3.064913
+L1 inverted pendulum,MPPI+LQR,0,134,0.309621,2.999792
+L1 inverted pendulum,MPPI+LQR,0,154,0.356218,2.889931
+L1 inverted pendulum,MPPI+LQR,0,176,0.407913,2.928670
+L1 inverted pendulum,MPPI+LQR,0,202,0.469573,2.951200
+L1 inverted pendulum,MPPI+LQR,0,233,0.539110,3.069683
+L1 inverted pendulum,MPPI+LQR,0,268,0.620919,3.007036
+L1 inverted pendulum,MPPI+LQR,0,309,0.714040,3.015857
+L1 inverted pendulum,MPPI+LQR,0,357,0.821072,3.051582
+L1 inverted pendulum,MPPI+LQR,0,412,0.943479,3.079902
+L1 inverted pendulum,MPPI+LQR,0,473,1.084512,3.089423
+L1 inverted pendulum,MPPI+LQR,0,547,1.247901,3.111593
+L1 inverted pendulum,MPPI+LQR,0,632,1.434228,3.179288
+L1 inverted pendulum,MPPI+LQR,0,726,1.649451,3.058292
+L1 inverted pendulum,MPPI+LQR,0,831,1.895770,3.072052
+L1 inverted pendulum,MPPI+LQR,0,963,2.180018,3.178694
+L1 inverted pendulum,MPPI+LQR,0,1110,2.508027,3.198859
+L1 inverted pendulum,MPPI+LQR,0,1283,2.884474,3.206912
+L1 inverted pendulum,MPPI+LQR,0,1480,3.316682,3.222979
+L1 inverted pendulum,MPPI+LQR,0,1697,3.814004,3.262502
+L1 inverted pendulum,MPPI+LQR,0,1958,4.386535,3.349343
+L1 inverted pendulum,MPPI+LQR,0,2247,5.043843,3.149242
+L1 inverted pendulum,MPPI+LQR,0,2577,5.798386,3.193472
+L1 inverted pendulum,MPPI+LQR,0,2973,6.668041,3.037073
+L1 inverted pendulum,MPPI+LQR,0,3423,7.669308,3.183095
+L1 inverted pendulum,MPPI+LQR,0,3932,8.821087,3.064122
+L1 inverted pendulum,MPPI+LQR,0,4210,10.000358,2.979788
+L1 inverted pendulum,iLQR,1,0,0.000000,108.063512
+L1 inverted pendulum,iLQR,1,4,0.001068,11.151072
+L1 inverted pendulum,iLQR,1,5,0.001390,8.878137
+L1 inverted pendulum,iLQR,1,6,0.001663,8.009623
+L1 inverted pendulum,iLQR,1,7,0.001921,5.829494
+L1 inverted pendulum,iLQR,1,8,0.002266,5.172368
+L1 inverted pendulum,iLQR,1,9,0.002706,5.673924
+L1 inverted pendulum,iLQR,1,10,0.003530,5.679780
+L1 inverted pendulum,iLQR,1,11,0.004138,5.692462
+L1 inverted pendulum,iLQR,1,12,0.007821,5.694607
+L1 inverted pendulum,iLQR,1,13,0.008470,5.705302
+L1 inverted pendulum,iLQR,1,15,0.010656,5.710191
+L1 inverted pendulum,iLQR,1,16,0.012120,5.209060
+L1 inverted pendulum,iLQR,1,17,0.012424,4.756835
+L1 inverted pendulum,iLQR,1,21,0.014312,5.037324
+L1 inverted pendulum,iLQR,1,26,0.016523,3.978665
+L1 inverted pendulum,iLQR,1,32,0.021920,3.251656
+L1 inverted pendulum,iLQR,1,40,0.025233,3.243101
+L1 inverted pendulum,iLQR,1,48,0.028821,3.109766
+L1 inverted pendulum,iLQR,1,51,0.030178,3.125315
+L1 inverted pendulum,MPPI,1,0,0.000000,98.978083
+L1 inverted pendulum,MPPI,1,1,0.002148,77.152573
+L1 inverted pendulum,MPPI,1,2,0.004556,57.844732
+L1 inverted pendulum,MPPI,1,3,0.006739,45.279829
+L1 inverted pendulum,MPPI,1,4,0.009169,33.902801
+L1 inverted pendulum,MPPI,1,5,0.011441,26.880637
+L1 inverted pendulum,MPPI,1,6,0.014429,21.666012
+L1 inverted pendulum,MPPI,1,7,0.016767,17.653063
+L1 inverted pendulum,MPPI,1,8,0.020028,15.361526
+L1 inverted pendulum,MPPI,1,9,0.022575,13.515178
+L1 inverted pendulum,MPPI,1,10,0.025124,12.341471
+L1 inverted pendulum,MPPI,1,12,0.029511,10.279192
+L1 inverted pendulum,MPPI,1,14,0.033791,9.353950
+L1 inverted pendulum,MPPI,1,16,0.038298,8.804132
+L1 inverted pendulum,MPPI,1,19,0.044415,8.591196
+L1 inverted pendulum,MPPI,1,22,0.051011,8.414307
+L1 inverted pendulum,MPPI,1,26,0.059250,9.251773
+L1 inverted pendulum,MPPI,1,30,0.067805,10.241764
+L1 inverted pendulum,MPPI,1,33,0.076365,10.455399
+L1 inverted pendulum,MPPI,1,38,0.087581,11.060874
+L1 inverted pendulum,MPPI,1,44,0.100711,11.429069
+L1 inverted pendulum,MPPI,1,51,0.117917,12.574344
+L1 inverted pendulum,MPPI,1,58,0.134097,14.397997
+L1 inverted pendulum,MPPI,1,67,0.155493,16.328617
+L1 inverted pendulum,MPPI,1,76,0.178008,17.215585
+L1 inverted pendulum,MPPI,1,88,0.204177,18.834429
+L1 inverted pendulum,MPPI,1,102,0.235164,22.178604
+L1 inverted pendulum,MPPI,1,117,0.268490,23.840641
+L1 inverted pendulum,MPPI,1,136,0.309131,23.838796
+L1 inverted pendulum,MPPI,1,154,0.354772,26.027581
+L1 inverted pendulum,MPPI,1,178,0.407507,28.988749
+L1 inverted pendulum,MPPI,1,204,0.469915,30.790150
+L1 inverted pendulum,MPPI,1,236,0.540636,32.757814
+L1 inverted pendulum,MPPI,1,273,0.620951,33.017157
+L1 inverted pendulum,MPPI,1,315,0.714057,33.874443
+L1 inverted pendulum,MPPI,1,362,0.819904,34.153848
+L1 inverted pendulum,MPPI,1,420,0.944128,34.126101
+L1 inverted pendulum,MPPI,1,482,1.084943,34.555130
+L1 inverted pendulum,MPPI,1,553,1.248012,34.731342
+L1 inverted pendulum,MPPI,1,635,1.435188,34.603538
+L1 inverted pendulum,MPPI,1,725,1.649119,34.794751
+L1 inverted pendulum,MPPI,1,839,1.897425,34.986266
+L1 inverted pendulum,MPPI,1,964,2.181148,34.890210
+L1 inverted pendulum,MPPI,1,1112,2.507277,35.716376
+L1 inverted pendulum,MPPI,1,1278,2.883561,35.758873
+L1 inverted pendulum,MPPI,1,1474,3.316136,35.487280
+L1 inverted pendulum,MPPI,1,1688,3.812177,35.996781
+L1 inverted pendulum,MPPI,1,1942,4.384184,36.716488
+L1 inverted pendulum,MPPI,1,2221,5.042430,37.099075
+L1 inverted pendulum,MPPI,1,2552,5.798471,37.063715
+L1 inverted pendulum,MPPI,1,2942,6.668547,38.568449
+L1 inverted pendulum,MPPI,1,3390,7.667872,40.650456
+L1 inverted pendulum,MPPI,1,3900,8.819324,43.688644
+L1 inverted pendulum,MPPI,1,4413,10.002866,44.357028
+L1 inverted pendulum,MPPI+LQR,1,0,0.000000,98.937726
+L1 inverted pendulum,MPPI+LQR,1,1,0.002148,77.154118
+L1 inverted pendulum,MPPI+LQR,1,2,0.004556,57.737244
+L1 inverted pendulum,MPPI+LQR,1,3,0.006739,44.888571
+L1 inverted pendulum,MPPI+LQR,1,4,0.009169,33.079897
+L1 inverted pendulum,MPPI+LQR,1,5,0.011441,26.280981
+L1 inverted pendulum,MPPI+LQR,1,6,0.014429,20.675499
+L1 inverted pendulum,MPPI+LQR,1,7,0.016767,16.298174
+L1 inverted pendulum,MPPI+LQR,1,8,0.020028,14.120767
+L1 inverted pendulum,MPPI+LQR,1,9,0.022575,12.272802
+L1 inverted pendulum,MPPI+LQR,1,10,0.025124,11.008794
+L1 inverted pendulum,MPPI+LQR,1,12,0.029511,8.556859
+L1 inverted pendulum,MPPI+LQR,1,14,0.033791,7.720508
+L1 inverted pendulum,MPPI+LQR,1,16,0.038298,7.043108
+L1 inverted pendulum,MPPI+LQR,1,19,0.044415,6.174644
+L1 inverted pendulum,MPPI+LQR,1,22,0.051011,5.500055
+L1 inverted pendulum,MPPI+LQR,1,26,0.059250,4.968497
+L1 inverted pendulum,MPPI+LQR,1,30,0.067805,4.509083
+L1 inverted pendulum,MPPI+LQR,1,33,0.076365,4.295972
+L1 inverted pendulum,MPPI+LQR,1,38,0.087581,4.106114
+L1 inverted pendulum,MPPI+LQR,1,44,0.100711,4.273016
+L1 inverted pendulum,MPPI+LQR,1,51,0.117917,3.483785
+L1 inverted pendulum,MPPI+LQR,1,58,0.134097,3.520318
+L1 inverted pendulum,MPPI+LQR,1,67,0.155493,3.464262
+L1 inverted pendulum,MPPI+LQR,1,76,0.178008,3.221927
+L1 inverted pendulum,MPPI+LQR,1,88,0.204177,3.023020
+L1 inverted pendulum,MPPI+LQR,1,102,0.235164,3.035483
+L1 inverted pendulum,MPPI+LQR,1,117,0.268490,3.128311
+L1 inverted pendulum,MPPI+LQR,1,136,0.309131,3.234613
+L1 inverted pendulum,MPPI+LQR,1,154,0.354772,3.036573
+L1 inverted pendulum,MPPI+LQR,1,178,0.407507,2.902817
+L1 inverted pendulum,MPPI+LQR,1,204,0.469915,2.983223
+L1 inverted pendulum,MPPI+LQR,1,236,0.540636,2.925258
+L1 inverted pendulum,MPPI+LQR,1,273,0.620951,2.984289
+L1 inverted pendulum,MPPI+LQR,1,315,0.714057,3.108947
+L1 inverted pendulum,MPPI+LQR,1,362,0.819904,3.018984
+L1 inverted pendulum,MPPI+LQR,1,420,0.944128,3.186047
+L1 inverted pendulum,MPPI+LQR,1,482,1.084943,3.200991
+L1 inverted pendulum,MPPI+LQR,1,553,1.248012,3.136598
+L1 inverted pendulum,MPPI+LQR,1,635,1.435188,3.129148
+L1 inverted pendulum,MPPI+LQR,1,725,1.649119,3.075872
+L1 inverted pendulum,MPPI+LQR,1,839,1.897425,3.301012
+L1 inverted pendulum,MPPI+LQR,1,964,2.181148,3.347659
+L1 inverted pendulum,MPPI+LQR,1,1112,2.507277,3.574400
+L1 inverted pendulum,MPPI+LQR,1,1278,2.883561,3.366558
+L1 inverted pendulum,MPPI+LQR,1,1474,3.316136,3.284549
+L1 inverted pendulum,MPPI+LQR,1,1688,3.812177,3.252804
+L1 inverted pendulum,MPPI+LQR,1,1942,4.384184,3.178454
+L1 inverted pendulum,MPPI+LQR,1,2221,5.042430,3.238860
+L1 inverted pendulum,MPPI+LQR,1,2552,5.798471,3.206953
+L1 inverted pendulum,MPPI+LQR,1,2942,6.668547,3.134473
+L1 inverted pendulum,MPPI+LQR,1,3390,7.667872,3.234577
+L1 inverted pendulum,MPPI+LQR,1,3900,8.819324,3.379799
+L1 inverted pendulum,MPPI+LQR,1,4413,10.002866,3.551703
+L1 double inverted pendulum,iLQR (zero init),0,0,0.000000,98.872791
+L1 double inverted pendulum,iLQR (zero init),0,1,0.001478,33.390346
+L1 double inverted pendulum,iLQR (zero init),0,2,0.003087,23.776486
+L1 double inverted pendulum,iLQR (zero init),0,3,0.004999,13.769587
+L1 double inverted pendulum,iLQR (zero init),0,4,0.007362,13.897227
+L1 double inverted pendulum,iLQR (zero init),0,5,0.009580,13.669631
+L1 double inverted pendulum,iLQR (zero init),0,6,0.011437,10.758017
+L1 double inverted pendulum,iLQR (zero init),0,7,0.014095,10.537516
+L1 double inverted pendulum,iLQR (zero init),0,8,0.016222,9.656969
+L1 double inverted pendulum,iLQR (zero init),0,9,0.018175,8.629037
+L1 double inverted pendulum,iLQR (zero init),0,10,0.020832,7.810986
+L1 double inverted pendulum,iLQR (zero init),0,11,0.023644,9.519047
+L1 double inverted pendulum,iLQR (zero init),0,12,0.026910,7.388608
+L1 double inverted pendulum,iLQR (zero init),0,13,0.030429,7.267307
+L1 double inverted pendulum,iLQR (zero init),0,14,0.048623,6.412621
+L1 double inverted pendulum,iLQR (zero init),0,15,0.051260,6.216774
+L1 double inverted pendulum,iLQR (zero init),0,18,0.059730,6.173646
+L1 double inverted pendulum,iLQR (zero init),0,20,0.066452,6.042303
+L1 double inverted pendulum,iLQR (zero init),0,24,0.077773,5.098092
+L1 double inverted pendulum,iLQR (zero init),0,28,0.088952,4.552339
+L1 double inverted pendulum,iLQR (zero init),0,32,0.116576,5.070278
+L1 double inverted pendulum,iLQR (zero init),0,38,0.133703,4.737070
+L1 double inverted pendulum,iLQR (zero init),0,46,0.155999,3.894134
+L1 double inverted pendulum,iLQR (zero init),0,53,0.177339,3.674059
+L1 double inverted pendulum,iLQR (zero init),0,62,0.218656,5.545983
+L1 double inverted pendulum,iLQR (zero init),0,67,0.235967,3.038518
+L1 double inverted pendulum,iLQR (zero init),0,73,0.268963,3.102317
+L1 double inverted pendulum,iLQR (zero init),0,81,0.309963,2.904654
+L1 double inverted pendulum,iLQR (zero init),0,89,0.359052,3.229148
+L1 double inverted pendulum,iLQR (zero init),0,101,0.410742,2.677947
+L1 double inverted pendulum,iLQR (zero init),0,120,0.469655,3.283958
+L1 double inverted pendulum,iLQR (zero init),0,138,0.551029,2.781164
+L1 double inverted pendulum,iLQR (zero init),0,159,0.626682,2.638915
+L1 double inverted pendulum,iLQR (zero init),0,178,0.718543,2.700402
+L1 double inverted pendulum,iLQR (zero init),0,206,0.819474,2.703495
+L1 double inverted pendulum,iLQR (zero init),0,241,0.943305,10.379002
+L1 double inverted pendulum,iLQR (zero init),0,286,1.087093,12.847044
+L1 double inverted pendulum,iLQR (zero init),0,331,1.246363,16.666359
+L1 double inverted pendulum,iLQR (zero init),0,385,1.434923,19.194348
+L1 double inverted pendulum,iLQR (zero init),0,452,1.649175,9.647071
+L1 double inverted pendulum,iLQR (zero init),0,543,1.896075,8.289864
+L1 double inverted pendulum,iLQR (zero init),0,575,1.959693,7.185937
+L1 double inverted pendulum,iLQR,0,0,0.000000,117.669699
+L1 double inverted pendulum,iLQR,0,1,0.001561,38.714747
+L1 double inverted pendulum,iLQR,0,2,0.003713,32.557796
+L1 double inverted pendulum,iLQR,0,3,0.005306,13.210086
+L1 double inverted pendulum,iLQR,0,4,0.007115,14.981118
+L1 double inverted pendulum,iLQR,0,5,0.008827,9.314448
+L1 double inverted pendulum,iLQR,0,6,0.010941,8.589951
+L1 double inverted pendulum,iLQR,0,7,0.012706,6.432233
+L1 double inverted pendulum,iLQR,0,8,0.014842,6.744043
+L1 double inverted pendulum,iLQR,0,9,0.016624,5.295533
+L1 double inverted pendulum,iLQR,0,10,0.018983,4.701429
+L1 double inverted pendulum,iLQR,0,12,0.023809,6.699805
+L1 double inverted pendulum,iLQR,0,13,0.026303,6.230469
+L1 double inverted pendulum,iLQR,0,14,0.028636,4.639002
+L1 double inverted pendulum,iLQR,0,16,0.033336,6.417407
+L1 double inverted pendulum,iLQR,0,18,0.038252,4.252167
+L1 double inverted pendulum,iLQR,0,21,0.045303,6.148873
+L1 double inverted pendulum,iLQR,0,22,0.061808,3.787340
+L1 double inverted pendulum,iLQR,0,24,0.067740,4.025033
+L1 double inverted pendulum,iLQR,0,27,0.076529,4.229583
+L1 double inverted pendulum,iLQR,0,31,0.088274,3.864462
+L1 double inverted pendulum,iLQR,0,34,0.112428,4.752515
+L1 double inverted pendulum,iLQR,0,36,0.119763,4.127312
+L1 double inverted pendulum,iLQR,0,41,0.133307,4.173143
+L1 double inverted pendulum,iLQR,0,49,0.155228,3.250726
+L1 double inverted pendulum,iLQR,0,52,0.178549,3.109751
+L1 double inverted pendulum,iLQR,0,61,0.204224,3.203665
+L1 double inverted pendulum,iLQR,0,66,0.235164,2.972775
+L1 double inverted pendulum,iLQR,0,72,0.270151,3.221107
+L1 double inverted pendulum,iLQR,0,81,0.311915,3.221772
+L1 double inverted pendulum,iLQR,0,92,0.355354,3.443602
+L1 double inverted pendulum,iLQR,0,102,0.408622,10.186430
+L1 double inverted pendulum,iLQR,0,114,0.476913,8.502819
+L1 double inverted pendulum,iLQR,0,127,0.543881,2.778081
+L1 double inverted pendulum,iLQR,0,145,0.620929,4.854474
+L1 double inverted pendulum,iLQR,0,163,0.714035,15.079025
+L1 double inverted pendulum,iLQR,0,185,0.819914,16.734607
+L1 double inverted pendulum,iLQR,0,216,0.944113,18.676337
+L1 double inverted pendulum,iLQR,0,250,1.084298,17.676422
+L1 double inverted pendulum,iLQR,0,290,1.246460,19.628421
+L1 double inverted pendulum,iLQR,0,344,1.434597,11.642320
+L1 double inverted pendulum,iLQR,0,399,1.648737,7.894429
+L1 double inverted pendulum,iLQR,0,473,1.828711,7.185920
+L1 double inverted pendulum,MPPI,0,0,0.000000,98.871666
+L1 double inverted pendulum,MPPI,0,1,0.009094,82.227774
+L1 double inverted pendulum,MPPI,0,2,0.018702,70.583524
+L1 double inverted pendulum,MPPI,0,3,0.028437,58.522530
+L1 double inverted pendulum,MPPI,0,4,0.038596,51.424168
+L1 double inverted pendulum,MPPI,0,5,0.050558,43.181804
+L1 double inverted pendulum,MPPI,0,6,0.060258,36.008986
+L1 double inverted pendulum,MPPI,0,7,0.069940,31.006973
+L1 double inverted pendulum,MPPI,0,8,0.080551,27.300738
+L1 double inverted pendulum,MPPI,0,9,0.091693,23.863314
+L1 double inverted pendulum,MPPI,0,10,0.102811,21.086950
+L1 double inverted pendulum,MPPI,0,12,0.124212,17.882414
+L1 double inverted pendulum,MPPI,0,13,0.134133,17.084469
+L1 double inverted pendulum,MPPI,0,15,0.156821,14.969031
+L1 double inverted pendulum,MPPI,0,17,0.178218,14.071990
+L1 double inverted pendulum,MPPI,0,20,0.212609,13.528916
+L1 double inverted pendulum,MPPI,0,22,0.233736,13.077576
+L1 double inverted pendulum,MPPI,0,26,0.278363,12.307033
+L1 double inverted pendulum,MPPI,0,29,0.314733,10.869658
+L1 double inverted pendulum,MPPI,0,33,0.362417,10.423977
+L1 double inverted pendulum,MPPI,0,37,0.407704,9.846515
+L1 double inverted pendulum,MPPI,0,43,0.474575,9.436734
+L1 double inverted pendulum,MPPI,0,49,0.543283,9.015003
+L1 double inverted pendulum,MPPI,0,56,0.625161,9.249923
+L1 double inverted pendulum,MPPI,0,64,0.717041,9.042742
+L1 double inverted pendulum,MPPI,0,74,0.827839,8.733287
+L1 double inverted pendulum,MPPI,0,84,0.943816,8.814243
+L1 double inverted pendulum,MPPI,0,97,1.087503,8.223588
+L1 double inverted pendulum,MPPI,0,109,1.247403,8.806374
+L1 double inverted pendulum,MPPI,0,125,1.435117,9.232571
+L1 double inverted pendulum,MPPI,0,144,1.648577,9.604118
+L1 double inverted pendulum,MPPI,0,167,1.904929,12.417516
+L1 double inverted pendulum,MPPI,0,191,2.187633,13.896903
+L1 double inverted pendulum,MPPI,0,220,2.514788,15.687954
+L1 double inverted pendulum,MPPI,0,251,2.889507,16.913160
+L1 double inverted pendulum,MPPI,0,289,3.321546,18.862064
+L1 double inverted pendulum,MPPI,0,333,3.813263,19.958876
+L1 double inverted pendulum,MPPI,0,384,4.394192,21.521614
+L1 double inverted pendulum,MPPI,0,441,5.048531,23.311839
+L1 double inverted pendulum,MPPI,0,506,5.801413,24.755504
+L1 double inverted pendulum,MPPI,0,578,6.673385,25.814869
+L1 double inverted pendulum,MPPI,0,666,7.675929,26.206088
+L1 double inverted pendulum,MPPI,0,764,8.819103,27.280260
+L1 double inverted pendulum,MPPI,0,878,10.142764,29.086281
+L1 double inverted pendulum,MPPI,0,1010,11.666076,30.520610
+L1 double inverted pendulum,MPPI,0,1162,13.417887,33.270002
+L1 double inverted pendulum,MPPI,0,1336,15.429446,35.249565
+L1 double inverted pendulum,MPPI,0,1534,17.739057,38.263421
+L1 double inverted pendulum,MPPI,0,1727,20.007406,40.040245
+L1 double inverted pendulum,MPPI+LQR,0,0,0.000000,98.872791
+L1 double inverted pendulum,MPPI+LQR,0,1,0.009094,82.217783
+L1 double inverted pendulum,MPPI+LQR,0,2,0.018702,70.571187
+L1 double inverted pendulum,MPPI+LQR,0,3,0.028437,58.459100
+L1 double inverted pendulum,MPPI+LQR,0,4,0.038596,51.385823
+L1 double inverted pendulum,MPPI+LQR,0,5,0.050558,43.156372
+L1 double inverted pendulum,MPPI+LQR,0,6,0.060258,36.005148
+L1 double inverted pendulum,MPPI+LQR,0,7,0.069940,30.998420
+L1 double inverted pendulum,MPPI+LQR,0,8,0.080551,27.223608
+L1 double inverted pendulum,MPPI+LQR,0,9,0.091693,23.786804
+L1 double inverted pendulum,MPPI+LQR,0,10,0.102811,21.207083
+L1 double inverted pendulum,MPPI+LQR,0,12,0.124212,17.781316
+L1 double inverted pendulum,MPPI+LQR,0,13,0.134133,16.961222
+L1 double inverted pendulum,MPPI+LQR,0,15,0.156821,14.803301
+L1 double inverted pendulum,MPPI+LQR,0,17,0.178218,13.851390
+L1 double inverted pendulum,MPPI+LQR,0,20,0.212609,13.197979
+L1 double inverted pendulum,MPPI+LQR,0,22,0.233736,12.831501
+L1 double inverted pendulum,MPPI+LQR,0,26,0.278363,12.054250
+L1 double inverted pendulum,MPPI+LQR,0,29,0.314733,10.554291
+L1 double inverted pendulum,MPPI+LQR,0,33,0.362417,10.066085
+L1 double inverted pendulum,MPPI+LQR,0,37,0.407704,9.393842
+L1 double inverted pendulum,MPPI+LQR,0,43,0.474575,8.482758
+L1 double inverted pendulum,MPPI+LQR,0,49,0.543283,7.827603
+L1 double inverted pendulum,MPPI+LQR,0,56,0.625161,7.107180
+L1 double inverted pendulum,MPPI+LQR,0,64,0.717041,6.498210
+L1 double inverted pendulum,MPPI+LQR,0,74,0.827839,5.790569
+L1 double inverted pendulum,MPPI+LQR,0,84,0.943816,5.306458
+L1 double inverted pendulum,MPPI+LQR,0,97,1.087503,4.583250
+L1 double inverted pendulum,MPPI+LQR,0,109,1.247403,4.243079
+L1 double inverted pendulum,MPPI+LQR,0,125,1.435117,4.212715
+L1 double inverted pendulum,MPPI+LQR,0,144,1.648577,4.110522
+L1 double inverted pendulum,MPPI+LQR,0,167,1.904929,3.699360
+L1 double inverted pendulum,MPPI+LQR,0,191,2.187633,3.380913
+L1 double inverted pendulum,MPPI+LQR,0,220,2.514788,3.116915
+L1 double inverted pendulum,MPPI+LQR,0,251,2.889507,3.133050
+L1 double inverted pendulum,MPPI+LQR,0,289,3.321546,3.192326
+L1 double inverted pendulum,MPPI+LQR,0,333,3.813263,3.013469
+L1 double inverted pendulum,MPPI+LQR,0,384,4.394192,3.095237
+L1 double inverted pendulum,MPPI+LQR,0,441,5.048531,3.102484
+L1 double inverted pendulum,MPPI+LQR,0,506,5.801413,3.189816
+L1 double inverted pendulum,MPPI+LQR,0,578,6.673385,3.092028
+L1 double inverted pendulum,MPPI+LQR,0,666,7.675929,3.135659
+L1 double inverted pendulum,MPPI+LQR,0,764,8.819103,3.392468
+L1 double inverted pendulum,MPPI+LQR,0,878,10.142764,3.601542
+L1 double inverted pendulum,MPPI+LQR,0,1010,11.666076,3.539797
+L1 double inverted pendulum,MPPI+LQR,0,1162,13.417887,3.740277
+L1 double inverted pendulum,MPPI+LQR,0,1336,15.429446,3.683097
+L1 double inverted pendulum,MPPI+LQR,0,1534,17.739057,3.947662
+L1 double inverted pendulum,MPPI+LQR,0,1727,20.007406,3.916445
+L1 double inverted pendulum,iLQR,1,0,0.000000,104.162787
+L1 double inverted pendulum,iLQR,1,1,0.001388,88.731934
+L1 double inverted pendulum,iLQR,1,2,0.002904,68.652710
+L1 double inverted pendulum,iLQR,1,3,0.004814,54.404606
+L1 double inverted pendulum,iLQR,1,4,0.006630,41.026567
+L1 double inverted pendulum,iLQR,1,5,0.008580,10.561207
+L1 double inverted pendulum,iLQR,1,6,0.010698,9.539662
+L1 double inverted pendulum,iLQR,1,7,0.013195,8.029682
+L1 double inverted pendulum,iLQR,1,8,0.016031,8.251361
+L1 double inverted pendulum,iLQR,1,9,0.019177,8.571378
+L1 double inverted pendulum,iLQR,1,10,0.022764,9.355985
+L1 double inverted pendulum,iLQR,1,11,0.026242,8.352332
+L1 double inverted pendulum,iLQR,1,12,0.028676,7.596612
+L1 double inverted pendulum,iLQR,1,14,0.035723,7.055779
+L1 double inverted pendulum,iLQR,1,15,0.038574,7.038236
+L1 double inverted pendulum,iLQR,1,17,0.060535,7.030459
+L1 double inverted pendulum,iLQR,1,19,0.070515,6.633127
+L1 double inverted pendulum,iLQR,1,21,0.077043,7.982944
+L1 double inverted pendulum,iLQR,1,25,0.089797,7.319349
+L1 double inverted pendulum,iLQR,1,29,0.102236,7.397706
+L1 double inverted pendulum,iLQR,1,34,0.117480,5.492664
+L1 double inverted pendulum,iLQR,1,39,0.135223,5.198397
+L1 double inverted pendulum,iLQR,1,41,0.156290,6.245110
+L1 double inverted pendulum,iLQR,1,48,0.176549,4.340841
+L1 double inverted pendulum,iLQR,1,56,0.203428,4.441485
+L1 double inverted pendulum,iLQR,1,66,0.233822,4.398855
+L1 double inverted pendulum,iLQR,1,72,0.269599,4.711662
+L1 double inverted pendulum,iLQR,1,86,0.310246,3.903371
+L1 double inverted pendulum,iLQR,1,100,0.354846,3.342078
+L1 double inverted pendulum,iLQR,1,108,0.409083,8.808682
+L1 double inverted pendulum,iLQR,1,123,0.470475,3.004710
+L1 double inverted pendulum,iLQR,1,143,0.548828,2.883495
+L1 double inverted pendulum,iLQR,1,157,0.620121,3.021847
+L1 double inverted pendulum,iLQR,1,176,0.713889,2.834201
+L1 double inverted pendulum,iLQR,1,199,0.822010,2.851582
+L1 double inverted pendulum,iLQR,1,228,0.943093,3.916211
+L1 double inverted pendulum,iLQR,1,261,1.088634,4.307808
+L1 double inverted pendulum,iLQR,1,297,1.248804,12.107623
+L1 double inverted pendulum,iLQR,1,349,1.433727,6.461848
+L1 double inverted pendulum,iLQR,1,405,1.648109,18.796654
+L1 double inverted pendulum,iLQR,1,478,1.900923,9.171997
+L1 double inverted pendulum,iLQR,1,491,1.940832,10.110423
+L1 double inverted pendulum,MPPI,1,0,0.000000,98.871666
+L1 double inverted pendulum,MPPI,1,1,0.008583,85.083652
+L1 double inverted pendulum,MPPI,1,2,0.017216,73.137250
+L1 double inverted pendulum,MPPI,1,3,0.025033,63.248276
+L1 double inverted pendulum,MPPI,1,4,0.034916,55.288376
+L1 double inverted pendulum,MPPI,1,5,0.043802,49.241667
+L1 double inverted pendulum,MPPI,1,6,0.052904,41.607592
+L1 double inverted pendulum,MPPI,1,7,0.062078,33.739118
+L1 double inverted pendulum,MPPI,1,8,0.072015,28.969029
+L1 double inverted pendulum,MPPI,1,9,0.080607,26.557567
+L1 double inverted pendulum,MPPI,1,10,0.090561,24.518185
+L1 double inverted pendulum,MPPI,1,12,0.109770,18.763071
+L1 double inverted pendulum,MPPI,1,13,0.118986,17.816246
+L1 double inverted pendulum,MPPI,1,15,0.139123,15.975826
+L1 double inverted pendulum,MPPI,1,17,0.160464,14.801004
+L1 double inverted pendulum,MPPI,1,19,0.182681,14.431014
+L1 double inverted pendulum,MPPI,1,21,0.207470,13.735410
+L1 double inverted pendulum,MPPI,1,24,0.243026,12.716653
+L1 double inverted pendulum,MPPI,1,27,0.275861,12.782956
+L1 double inverted pendulum,MPPI,1,30,0.314982,11.202969
+L1 double inverted pendulum,MPPI,1,34,0.362394,10.744437
+L1 double inverted pendulum,MPPI,1,37,0.413720,9.475718
+L1 double inverted pendulum,MPPI,1,42,0.474060,9.125964
+L1 double inverted pendulum,MPPI,1,48,0.549948,9.104841
+L1 double inverted pendulum,MPPI,1,54,0.621550,8.658983
+L1 double inverted pendulum,MPPI,1,62,0.720853,8.447074
+L1 double inverted pendulum,MPPI,1,71,0.829690,8.682394
+L1 double inverted pendulum,MPPI,1,81,0.946437,8.539623
+L1 double inverted pendulum,MPPI,1,92,1.088350,8.518934
+L1 double inverted pendulum,MPPI,1,104,1.247587,8.212496
+L1 double inverted pendulum,MPPI,1,120,1.443138,11.356207
+L1 double inverted pendulum,MPPI,1,135,1.655554,11.880368
+L1 double inverted pendulum,MPPI,1,155,1.896452,12.385095
+L1 double inverted pendulum,MPPI,1,178,2.186651,13.913131
+L1 double inverted pendulum,MPPI,1,204,2.508031,16.340743
+L1 double inverted pendulum,MPPI,1,232,2.891117,17.280421
+L1 double inverted pendulum,MPPI,1,247,3.339955,17.705887
+L1 double inverted pendulum,MPPI,1,279,3.817748,17.928873
+L1 double inverted pendulum,MPPI,1,325,4.393178,19.127832
+L1 double inverted pendulum,MPPI,1,380,5.043504,21.903656
+L1 double inverted pendulum,MPPI,1,443,5.800161,22.522131
+L1 double inverted pendulum,MPPI,1,516,6.673216,25.068264
+L1 double inverted pendulum,MPPI,1,598,7.668355,27.035465
+L1 double inverted pendulum,MPPI,1,695,8.818418,28.443444
+L1 double inverted pendulum,MPPI,1,803,10.142629,28.674312
+L1 double inverted pendulum,MPPI,1,931,11.671202,32.216913
+L1 double inverted pendulum,MPPI,1,1075,13.421070,33.493542
+L1 double inverted pendulum,MPPI,1,1244,15.428866,35.271243
+L1 double inverted pendulum,MPPI,1,1431,17.737535,36.243015
+L1 double inverted pendulum,MPPI,1,1622,20.005466,38.201114
+L1 double inverted pendulum,MPPI+LQR,1,0,0.000000,98.872791
+L1 double inverted pendulum,MPPI+LQR,1,1,0.008583,85.072913
+L1 double inverted pendulum,MPPI+LQR,1,2,0.017216,73.139932
+L1 double inverted pendulum,MPPI+LQR,1,3,0.025033,63.246602
+L1 double inverted pendulum,MPPI+LQR,1,4,0.034916,55.223490
+L1 double inverted pendulum,MPPI+LQR,1,5,0.043802,49.199836
+L1 double inverted pendulum,MPPI+LQR,1,6,0.052904,41.581675
+L1 double inverted pendulum,MPPI+LQR,1,7,0.062078,33.682249
+L1 double inverted pendulum,MPPI+LQR,1,8,0.072015,28.866261
+L1 double inverted pendulum,MPPI+LQR,1,9,0.080607,26.500626
+L1 double inverted pendulum,MPPI+LQR,1,10,0.090561,24.433452
+L1 double inverted pendulum,MPPI+LQR,1,12,0.109770,18.628162
+L1 double inverted pendulum,MPPI+LQR,1,13,0.118986,17.688223
+L1 double inverted pendulum,MPPI+LQR,1,15,0.139123,15.811428
+L1 double inverted pendulum,MPPI+LQR,1,17,0.160464,14.560127
+L1 double inverted pendulum,MPPI+LQR,1,19,0.182681,14.224682
+L1 double inverted pendulum,MPPI+LQR,1,21,0.207470,13.616990
+L1 double inverted pendulum,MPPI+LQR,1,24,0.243026,12.473528
+L1 double inverted pendulum,MPPI+LQR,1,27,0.275861,12.585925
+L1 double inverted pendulum,MPPI+LQR,1,30,0.314982,10.833187
+L1 double inverted pendulum,MPPI+LQR,1,34,0.362394,10.286568
+L1 double inverted pendulum,MPPI+LQR,1,37,0.413720,9.021999
+L1 double inverted pendulum,MPPI+LQR,1,42,0.474060,8.652302
+L1 double inverted pendulum,MPPI+LQR,1,48,0.549948,8.020069
+L1 double inverted pendulum,MPPI+LQR,1,54,0.621550,7.656962
+L1 double inverted pendulum,MPPI+LQR,1,62,0.720853,6.907830
+L1 double inverted pendulum,MPPI+LQR,1,71,0.829690,6.119984
+L1 double inverted pendulum,MPPI+LQR,1,81,0.946437,5.234506
+L1 double inverted pendulum,MPPI+LQR,1,92,1.088350,5.090591
+L1 double inverted pendulum,MPPI+LQR,1,104,1.247587,4.521346
+L1 double inverted pendulum,MPPI+LQR,1,120,1.443138,3.978861
+L1 double inverted pendulum,MPPI+LQR,1,135,1.655554,3.891567
+L1 double inverted pendulum,MPPI+LQR,1,155,1.896452,3.905225
+L1 double inverted pendulum,MPPI+LQR,1,178,2.186651,4.571912
+L1 double inverted pendulum,MPPI+LQR,1,204,2.508031,3.685731
+L1 double inverted pendulum,MPPI+LQR,1,232,2.891117,4.355997
+L1 double inverted pendulum,MPPI+LQR,1,247,3.339955,4.375433
+L1 double inverted pendulum,MPPI+LQR,1,279,3.817748,4.742259
+L1 double inverted pendulum,MPPI+LQR,1,325,4.393178,4.356161
+L1 double inverted pendulum,MPPI+LQR,1,380,5.043504,3.082492
+L1 double inverted pendulum,MPPI+LQR,1,443,5.800161,4.281922
+L1 double inverted pendulum,MPPI+LQR,1,516,6.673216,3.091660
+L1 double inverted pendulum,MPPI+LQR,1,598,7.668355,3.078023
+L1 double inverted pendulum,MPPI+LQR,1,695,8.818418,4.756029
+L1 double inverted pendulum,MPPI+LQR,1,803,10.142629,4.309130
+L1 double inverted pendulum,MPPI+LQR,1,931,11.671202,2.914959
+L1 double inverted pendulum,MPPI+LQR,1,1075,13.421070,3.676884
+L1 double inverted pendulum,MPPI+LQR,1,1244,15.428866,2.840372
+L1 double inverted pendulum,MPPI+LQR,1,1431,17.737535,3.932505
+L1 double inverted pendulum,MPPI+LQR,1,1622,20.005466,3.535619
