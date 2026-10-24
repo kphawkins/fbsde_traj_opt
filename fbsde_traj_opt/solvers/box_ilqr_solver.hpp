@@ -42,6 +42,10 @@ namespace fbsde_traj_opt {
 //
 // Replan() restarts the problem from a later stage and state, keeping the planned controls as the
 // warm start, for receding-horizon use: the remaining stages form the same problem, shorter.
+//
+// ValueExpansions() hands out the quadratic model of the cost-to-go the backward pass builds about
+// the nominal trajectory at every stage, which is how another method is warm-started from iLQR's
+// solution: DT-FBSDE, for one, takes it as its first value function table.
 
 template <typename Scalar = double>
 struct BoxIlqrOptions {
@@ -85,6 +89,23 @@ struct BoxIlqrIterationReport {
   bool converged = false;
 };
 
+// The backward pass's quadratic model of the cost-to-go at one stage, about the nominal state there:
+//
+//   V(x) ~ value + gradient' (x - state) + 1/2 (x - state)' hessian (x - state).
+//
+// `value` is the true L1 cost-to-go of the nominal trajectory from that stage; the gradient and the
+// Hessian are those of the smoothed problem the backward pass was run at. The Hessian is positive
+// semidefinite: there is no state running cost, the dynamics' second derivatives are dropped as
+// iLQR drops them, and each stage's update is a (regularized) Schur complement of a positive
+// semidefinite block.
+template <int N, typename Scalar = double>
+struct BoxIlqrValueExpansion {
+  Eigen::Matrix<Scalar, N, 1> state = Eigen::Matrix<Scalar, N, 1>::Zero();
+  Scalar value = Scalar{0};
+  Eigen::Matrix<Scalar, N, 1> gradient = Eigen::Matrix<Scalar, N, 1>::Zero();
+  Eigen::Matrix<Scalar, N, N> hessian = Eigen::Matrix<Scalar, N, N>::Zero();
+};
+
 // The closed-loop policy: track the nominal trajectory with the time-varying gains, inside the box.
 template <int N, typename Scalar = double>
 class BoxIlqrPolicy {
@@ -126,6 +147,7 @@ class BoxIlqrSolver {
   using Gain = Eigen::Matrix<Scalar, 1, N>;
   using Policy = BoxIlqrPolicy<N, Scalar>;
   using IterationReport = BoxIlqrIterationReport<Scalar>;
+  using ValueExpansion = BoxIlqrValueExpansion<N, Scalar>;
 
   static constexpr std::size_t kNumControlStages = NumStages - 1;
   static_assert(NumStages >= 2, "a problem needs an initial and a terminal stage.");
@@ -220,19 +242,29 @@ class BoxIlqrSolver {
   // `smoothing` (the current one if not given). A larger smoothing than the solve's gives feedback at
   // coasting stages, where the nearly-L1 cost's curvature at zero all but switches it off.
   [[nodiscard]] auto CurrentPolicy(Scalar smoothing = Scalar{0}) noexcept -> Policy {
-    const Scalar saved = smoothing_;
-    if (smoothing > Scalar{0}) {
-      smoothing_ = smoothing;
-    }
-    Linearize();
-    Scalar regularization = options_.initial_regularization;
-    std::swap(regularization, regularization_);
-    while (!BackwardPass() && regularization_ <= options_.max_regularization) {
-      regularization_ *= options_.regularization_factor;
-    }
-    std::swap(regularization, regularization_);
-    smoothing_ = saved;
+    BackwardPassAt(smoothing);
     return Policy(std::vector<State>(states_.begin(), states_.end() - 1), controls_, gains_, lower_, upper_);
+  }
+
+  // The quadratic model of the cost-to-go about the nominal trajectory at every stage from the first
+  // one planned to the terminal one, from a backward pass at `smoothing` (the current one if not
+  // given); entries before a Replan()'s first stage are left zero. As with CurrentPolicy(), a larger
+  // smoothing than the solve's keeps curvature in the control at coasting stages, without which the
+  // model is all but flat across the directions the control moves the state in.
+  [[nodiscard]] auto ValueExpansions(Scalar smoothing = Scalar{0}) noexcept -> std::vector<ValueExpansion> {
+    BackwardPassAt(smoothing);
+    std::vector<ValueExpansion> expansions(NumStages);
+    Scalar cost_to_go = TerminalCost(states_.back());
+    for (std::size_t stage = NumStages; stage-- > first_stage_;) {
+      if (stage < kNumControlStages) {
+        cost_to_go += l1_weight_ * std::abs(controls_[stage]);
+      }
+      expansions[stage] = ValueExpansion{.state = states_[stage],
+                                         .value = cost_to_go,
+                                         .gradient = value_gradients_[stage],
+                                         .hessian = value_hessians_[stage]};
+    }
+    return expansions;
   }
 
   // The true L1 cost of the nominal trajectory.
@@ -274,7 +306,9 @@ class BoxIlqrSolver {
         state_jacobians_(kNumControlStages, StateMat::Zero()),
         control_jacobians_(kNumControlStages, State::Zero()),
         feedforward_(kNumControlStages, Scalar{0}),
-        gains_(kNumControlStages, Gain::Zero()) {}
+        gains_(kNumControlStages, Gain::Zero()),
+        value_gradients_(NumStages, State::Zero()),
+        value_hessians_(NumStages, StateMat::Zero()) {}
 
   [[nodiscard]] auto Step(std::size_t stage, const State& state, Scalar control) const noexcept -> State {
     return forward_model_(stage, state, Control(control), State::Zero());
@@ -320,11 +354,32 @@ class BoxIlqrSolver {
     }
   }
 
-  // The backward Riccati recursion of the box-constrained LQ subproblem. Fails if a regularized
-  // Q_uu is not positive.
+  // A backward pass about the nominal trajectory at `smoothing` (the current one if zero), from the
+  // initial regularization up until one succeeds, leaving the solver's own smoothing and
+  // regularization as they were: the gains and value expansions it leaves behind are what
+  // CurrentPolicy() and ValueExpansions() hand out.
+  auto BackwardPassAt(Scalar smoothing) noexcept -> void {
+    const Scalar saved = smoothing_;
+    if (smoothing > Scalar{0}) {
+      smoothing_ = smoothing;
+    }
+    Linearize();
+    Scalar regularization = options_.initial_regularization;
+    std::swap(regularization, regularization_);
+    while (!BackwardPass() && regularization_ <= options_.max_regularization) {
+      regularization_ *= options_.regularization_factor;
+    }
+    std::swap(regularization, regularization_);
+    smoothing_ = saved;
+  }
+
+  // The backward Riccati recursion of the box-constrained LQ subproblem, recording the value
+  // function's gradient and Hessian at every stage. Fails if a regularized Q_uu is not positive.
   [[nodiscard]] auto BackwardPass() noexcept -> bool {
     StateVector value_gradient = 2 * (terminal_cost_mat_ * states_.back());
     StateMat value_hessian = 2 * terminal_cost_mat_;
+    value_gradients_.back() = value_gradient;
+    value_hessians_.back() = value_hessian;
     for (std::size_t stage = kNumControlStages; stage-- > first_stage_;) {
       const StateMat& a = state_jacobians_[stage];
       const State& b = control_jacobians_[stage];
@@ -357,6 +412,8 @@ class BoxIlqrSolver {
                        (q_ux.transpose() * feedforward);
       value_hessian = q_xx + (gain.transpose() * q_uu * gain) + (gain.transpose() * q_ux) + (q_ux.transpose() * gain);
       value_hessian = Scalar{0.5} * (value_hessian + value_hessian.transpose());
+      value_gradients_[stage] = value_gradient;
+      value_hessians_[stage] = value_hessian;
     }
     return true;
   }
@@ -394,6 +451,9 @@ class BoxIlqrSolver {
   std::vector<State> control_jacobians_;
   std::vector<Scalar> feedforward_;
   std::vector<Gain> gains_;
+  // The value function's gradient and Hessian at every stage, from the latest backward pass.
+  std::vector<State> value_gradients_;
+  std::vector<StateMat> value_hessians_;
 };
 
 }  // namespace fbsde_traj_opt

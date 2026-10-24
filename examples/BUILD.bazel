@@ -259,6 +259,36 @@ cc_test(
 )
 
 cc_library(
+    name = "ilqr_seeded_table",
+    hdrs = ["ilqr_seeded_table.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/solvers:box_ilqr_solver",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "ilqr_seeded_table_test",
+    size = "small",
+    srcs = ["ilqr_seeded_table.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":ilqr_seeded_table",
+        "//fbsde_traj_opt/solvers:box_ilqr_solver",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "fbrrt_comparison_experiment",
     srcs = ["fbrrt_comparison_experiment.cpp"],
     hdrs = [
@@ -395,6 +425,7 @@ cc_binary(
     copts = FBSDE_COPTS,
     deps = [
         ":fbrrt_comparison_experiment",
+        ":ilqr_seeded_table",
         ":l1_benchmark_models",
         ":l1_grid_dp_reference",
         "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",

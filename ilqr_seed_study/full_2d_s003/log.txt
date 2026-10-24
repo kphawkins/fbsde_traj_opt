@@ -1,0 +1,48 @@
+
+=== L1 double integrator (60 s per run) ===
+grid DP optimum, held out: 4.1367 (1024 rollouts), 4.1734 (first 128)
+L1 double integrator         DT-FBSDE+iLQR      seed  0: seeded from iLQR iteration 49 of 49 (16 candidates, 0.541 s): solver cost 4.4430, unseeded 89.8901
+L1 double integrator         DT-FBSDE+iLQR      seed  0:   89.1632 ->    4.1461 (best    4.1461) in   60.00 s, 1978 iterations
+L1 double integrator         DT-FBSDE+iLQR      seed  1: seeded from iLQR iteration 20 of 33 (14 candidates, 0.570 s): solver cost 4.3653, unseeded 89.7211
+L1 double integrator         DT-FBSDE+iLQR      seed  1:   89.1632 ->    4.1459 (best    4.1459) in   60.01 s, 1828 iterations
+L1 double integrator         DT-FBSDE+iLQR      seed  2: seeded from iLQR iteration 16 of 45 (15 candidates, 0.498 s): solver cost 4.3569, unseeded 89.5705
+L1 double integrator         DT-FBSDE+iLQR      seed  2:   89.1632 ->    4.1434 (best    4.1434) in   60.02 s, 1858 iterations
+L1 double integrator         DT-FBSDE+iLQR      seed  3: seeded from iLQR iteration 20 of 48 (16 candidates, 0.509 s): solver cost 4.3800, unseeded 89.9957
+L1 double integrator         DT-FBSDE+iLQR      seed  3:   89.1632 ->    4.1606 (best    4.1596) in   60.00 s, 1651 iterations
+L1 double integrator         DT-FBSDE+iLQR      seed  4: seeded from iLQR iteration 20 of 33 (14 candidates, 0.530 s): solver cost 4.2237, unseeded 89.1440
+L1 double integrator         DT-FBSDE+iLQR      seed  4:   89.1632 ->    4.1516 (best    4.1499) in   60.01 s, 1887 iterations
+L1 double integrator         DT-FBSDE+iLQR      seed  5: seeded from iLQR iteration 49 of 49 (16 candidates, 0.581 s): solver cost 4.2661, unseeded 88.6114
+L1 double integrator         DT-FBSDE+iLQR      seed  5:   89.1632 ->    4.1462 (best    4.1462) in   60.00 s, 1932 iterations
+L1 double integrator         DT-FBSDE+iLQR      seed  6: seeded from iLQR iteration 20 of 33 (14 candidates, 0.402 s): solver cost 4.4106, unseeded 89.8883
+L1 double integrator         DT-FBSDE+iLQR      seed  6:   89.1632 ->    4.1503 (best    4.1492) in   60.02 s, 2233 iterations
+L1 double integrator         DT-FBSDE+iLQR      seed  7: seeded from iLQR iteration 16 of 56 (16 candidates, 0.395 s): solver cost 4.3979, unseeded 89.4437
+L1 double integrator         DT-FBSDE+iLQR      seed  7:   89.1632 ->    4.1472 (best    4.1472) in   60.02 s, 2138 iterations
+L1 double integrator         DT-FBSDE+iLQR      seed  8: seeded from iLQR iteration 20 of 46 (15 candidates, 0.379 s): solver cost 4.4017, unseeded 90.2046
+L1 double integrator         DT-FBSDE+iLQR      seed  8:   89.1632 ->    4.1528 (best    4.1526) in   60.00 s, 2166 iterations
+L1 double integrator         DT-FBSDE+iLQR      seed  9: seeded from iLQR iteration 20 of 48 (16 candidates, 0.421 s): solver cost 4.3597, unseeded 89.0971
+L1 double integrator         DT-FBSDE+iLQR      seed  9:   89.1632 ->    4.1454 (best    4.1449) in   60.02 s, 2139 iterations
+
+=== L1 inverted pendulum (60 s per run) ===
+grid DP optimum, held out: 2.2977 (1024 rollouts), 2.3099 (first 128)
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  0: seeded from iLQR iteration 143 of 209 (22 candidates, 1.061 s): solver cost 2.4639, unseeded 80.8095
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  0:   80.6872 ->    2.3791 (best    2.3791) in   60.03 s, 1564 iterations
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  1: seeded from iLQR iteration 51 of 51 (16 candidates, 0.707 s): solver cost 2.9042, unseeded 81.1541
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  1:   80.6872 ->    2.3720 (best    2.3678) in   60.04 s, 1479 iterations
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  2: seeded from iLQR iteration 114 of 180 (22 candidates, 0.876 s): solver cost 2.5426, unseeded 81.1408
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  2:   80.6872 ->    2.3744 (best    2.3744) in   60.05 s, 1465 iterations
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  3: seeded from iLQR iteration 143 of 206 (22 candidates, 0.992 s): solver cost 2.5503, unseeded 80.1236
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  3:   80.6872 ->    2.3588 (best    2.3555) in   60.01 s, 1703 iterations
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  4: seeded from iLQR iteration 91 of 207 (22 candidates, 0.963 s): solver cost 2.9070, unseeded 81.2982
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  4:   80.6872 ->    2.3680 (best    2.3680) in   60.01 s, 1613 iterations
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  5: seeded from iLQR iteration 47 of 226 (23 candidates, 1.048 s): solver cost 2.6723, unseeded 80.6538
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  5:   80.6872 ->    2.3727 (best    2.3640) in   60.02 s, 1642 iterations
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  6: seeded from iLQR iteration 73 of 130 (20 candidates, 1.005 s): solver cost 2.8716, unseeded 81.4103
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  6:   80.6872 ->    2.3995 (best    2.3748) in   60.12 s, 1686 iterations
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  7: seeded from iLQR iteration 73 of 129 (20 candidates, 0.875 s): solver cost 2.8160, unseeded 80.4352
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  7:   80.6872 ->    2.3841 (best    2.3841) in   60.01 s, 1610 iterations
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  8: seeded from iLQR iteration 143 of 199 (22 candidates, 0.945 s): solver cost 2.5747, unseeded 81.3415
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  8:   80.6872 ->    2.3580 (best    2.3543) in   60.02 s, 1754 iterations
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  9: seeded from iLQR iteration 59 of 199 (22 candidates, 0.927 s): solver cost 2.8587, unseeded 80.6448
+L1 inverted pendulum         DT-FBSDE+iLQR      seed  9:   80.6872 ->    2.3971 (best    2.3890) in   60.03 s, 1762 iterations
+
+Checkpoints in method_comparison.csv, MPC results in /dev/null, grid optima in method_comparison_reference.csv
