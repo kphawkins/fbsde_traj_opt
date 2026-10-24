@@ -1,0 +1,9 @@
+problem,model,seed,iterations,accepted,failures,seconds,final_cost,mean_girsanov_drift,mean_first_order_correction,mean_target_magnitude,mean_signed_first_order_correction,mean_second_order_correction,off_policy_fraction,mean_off_policy_correction,mean_taylor_residual
+L1 inverted pendulum,"poly6:time=linear,knots=16,pass=gs,stale=0.1",0,76,9,1,9.352603,nan,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly6:time=linear,knots=16,pass=gs,stale=0.1",1,160,3,1,18.566947,nan,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly6:time=linear,knots=16,pass=gs,stale=0.1",2,159,8,1,17.998099,nan,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly6:time=linear,knots=16,pass=gs,stale=0.1",3,147,12,1,15.548623,nan,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1",0,336,11,0,30.059623,12.864270,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1",1,345,10,0,30.013148,10.371091,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1",2,344,15,0,30.000734,4.542110,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1",3,304,12,0,30.058098,6.050756,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000

@@ -251,3 +251,28 @@ cc_library(
         "@eigen",
     ],
 )
+
+cc_library(
+    name = "time_shared_linear_fit",
+    hdrs = ["time_shared_linear_fit.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "time_shared_linear_fit_test",
+    size = "small",
+    srcs = ["time_shared_linear_fit.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":linear_basis_value_function_approx",
+        ":time_shared_linear_fit",
+        ":value_function_approx_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

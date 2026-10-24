@@ -23,6 +23,7 @@
 #include "fbsde_traj_opt/value_function/linear_basis_value_function_approx.hpp"
 #include "fbsde_traj_opt/value_function/polynomial_value_function_approx.hpp"
 #include "fbsde_traj_opt/value_function/soft_min_quadratic_value_function_approx.hpp"
+#include "fbsde_traj_opt/value_function/time_shared_linear_fit.hpp"
 
 namespace fbsde_traj_opt {
 namespace {
@@ -821,6 +822,78 @@ TEST(DtFbsdeIterativeSolverNormalEquationTest, ReplayedBatchesStillConverge) {
   EXPECT_FALSE(MakeLinearSolver(fixture, options, 7).has_value());
   options.normal_equation_memory = 0.0;
   options.backward_target = DtFbsdeBackwardTarget::kCurrentPolicy;
+  EXPECT_FALSE(MakeLinearSolver(fixture, options, 7).has_value());
+}
+
+// Parameters shared across stages -- knots in time, a shared basis, or both -- still only ever lower
+// the cost and converge, on every backward target; and a rank equal to the feature count, every stage
+// mixing a full basis, takes the same steps as the per-stage fit once the basis exists.
+TEST(DtFbsdeIterativeSolverTimeSharingTest, SharedParametersStillConverge) {
+  const Fixture fixture = MakeFixture();
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  const std::array<TimeSharedFitOptions, 3> shapes{
+      TimeSharedFitOptions{.kind = TimeBasisKind::kPiecewiseLinear, .num_knots = 4},
+      TimeSharedFitOptions{.kind = TimeBasisKind::kPerStage, .rank = 3, .sweeps = 2},
+      TimeSharedFitOptions{.kind = TimeBasisKind::kPiecewiseLinear, .num_knots = 4, .rank = 3, .sweeps = 2}};
+  for (const DtFbsdeBackwardTarget target : {DtFbsdeBackwardTarget::kDoubleGreedy,
+                                             DtFbsdeBackwardTarget::kCurrentPolicy,
+                                             DtFbsdeBackwardTarget::kTaylorNoiseless}) {
+    for (const TimeSharedFitOptions& shape : shapes) {
+      // A negative stale weight stands for the after-pass mode.
+      for (const double stale_weight : {-1.0, 0.0, 0.1, 1.0}) {
+        DtFbsdeIterativeOptions<double> options;
+        options.backward_target = target;
+        options.time_sharing_pass =
+            stale_weight < 0.0 ? DtFbsdeTimeSharingPass::kAfterPass : DtFbsdeTimeSharingPass::kGaussSeidel;
+        options.time_sharing_stale_weight = std::max(stale_weight, 0.0);
+        options.target_floor = 0.0;
+        options.exploration_decay = 0.5;
+        options.time_sharing = shape;
+        Result<LinearSolver> solver = MakeLinearSolver(fixture, options, 7);
+        ASSERT_TRUE(solver.has_value()) << solver.error();
+        double previous = solver->CurrentCost();
+        for (std::size_t iteration = 0; iteration < 12; ++iteration) {
+          const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+          ASSERT_TRUE(report.has_value()) << report.error();
+          EXPECT_LE(report->mean_cost, previous + 1e-12);
+          previous = report->mean_cost;
+        }
+        EXPECT_LT(solver->CurrentCost(), 0.05 * coasting_cost)
+            << "knots " << shape.num_knots << ", rank " << shape.rank << ", target " << static_cast<int>(target)
+            << ", stale weight " << stale_weight;
+      }
+    }
+  }
+}
+
+TEST(DtFbsdeIterativeSolverTimeSharingTest, AFullRankBasisIsThePerStageFit) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+  options.target_floor = 0.0;
+  options.ridge = 1e-6;
+  Result<LinearSolver> plain = MakeLinearSolver(fixture, options, 3);
+  options.time_sharing = {.kind = TimeBasisKind::kPerStage, .rank = LinearPoly::kNumParameters, .sweeps = 0};
+  options.time_sharing_pass = DtFbsdeTimeSharingPass::kGaussSeidel;
+  Result<LinearSolver> shared = MakeLinearSolver(fixture, options, 3);
+  ASSERT_TRUE(plain.has_value() && shared.has_value());
+  for (std::size_t iteration = 0; iteration < 5; ++iteration) {
+    ASSERT_TRUE(plain->Iterate().has_value());
+    ASSERT_TRUE(shared->Iterate().has_value());
+    EXPECT_NEAR(plain->CurrentCost(), shared->CurrentCost(), 1e-6 * plain->CurrentCost());
+  }
+}
+
+// Time sharing cannot be combined with replay, and its stale weight lies in [0, 1].
+TEST(DtFbsdeIterativeSolverTimeSharingTest, MakeRejectsReplay) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+  options.time_sharing = {.kind = TimeBasisKind::kPiecewiseLinear, .num_knots = 4};
+  options.replay_batches = 3;
+  EXPECT_FALSE(MakeLinearSolver(fixture, options, 7).has_value());
+  options.replay_batches = 0;
+  options.time_sharing_stale_weight = 1.5;
   EXPECT_FALSE(MakeLinearSolver(fixture, options, 7).has_value());
 }
 

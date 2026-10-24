@@ -1,0 +1,7 @@
+problem,model,seed,iterations,accepted,failures,seconds,final_cost,mean_girsanov_drift,mean_first_order_correction,mean_target_magnitude,mean_signed_first_order_correction,mean_second_order_correction,off_policy_fraction,mean_off_policy_correction,mean_taylor_residual
+L1 double inverted pendulum,"poly4:batch=128,inflation=6,uphill=1",0,85,8,0,180.466824,11.230138,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double inverted pendulum,"poly4:batch=128,inflation=6,uphill=1",1,83,11,0,181.729218,16.788671,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double inverted pendulum,"poly4:batch=128,inflation=6,uphill=1,time=linear,knots=16",0,83,5,0,181.636981,22.732247,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double inverted pendulum,"poly4:batch=128,inflation=6,uphill=1,time=linear,knots=16",1,79,8,0,181.232084,23.706575,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double inverted pendulum,"poly4:batch=128,inflation=6,uphill=1,rank=8,time=linear,knots=16,balance=1,sweeps=2",0,76,13,0,181.375577,5.708359,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double inverted pendulum,"poly4:batch=128,inflation=6,uphill=1,rank=8,time=linear,knots=16,balance=1,sweeps=2",1,77,6,0,181.012830,18.019201,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
