@@ -14,6 +14,8 @@ Research workflow
 * For each change, branch off `research`, commit, push, open a PR into `research`, and merge it
   right away with a merge commit. No review and no CI: the CI workflow only runs for `main`.
 * Commits can be coarse, but keep the conventional prefixes (`feat:`, `fix:`, `refactor:`, ...).
+* Commit with `git commit --no-verify` on research branches. The pre-commit hooks run clang-tidy,
+  which takes minutes and enforces the lint `main` needs; clean that up when work moves to `main`.
 * Prefer extending an existing experiment binary with a flag over copying it into a new variant.
 * Commit study results (CSV, logs, JSON, HTML reports and the scripts that analyze them) next to
   the experiment that produced them. Never commit binaries.
