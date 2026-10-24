@@ -7,6 +7,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 
 #include <Eigen/Core>
 #include <gtest/gtest.h>
@@ -19,6 +20,7 @@
 #include "fbsde_traj_opt/sampling/diagonal_covariance_normal_distribution.hpp"
 #include "fbsde_traj_opt/sde/composed_forward_sde_model.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
+#include "fbsde_traj_opt/value_function/linear_basis_value_function_approx.hpp"
 #include "fbsde_traj_opt/value_function/polynomial_value_function_approx.hpp"
 #include "fbsde_traj_opt/value_function/soft_min_quadratic_value_function_approx.hpp"
 
@@ -399,6 +401,452 @@ TEST(DtFbsdeIterativeSolverSlopeTest, MatchingSlopesBySgdStillConverges) {
     previous = report->mean_cost;
   }
   EXPECT_LT(solver->CurrentCost(), 0.05 * coasting_cost);
+}
+
+}  // namespace
+}  // namespace fbsde_traj_opt
+
+namespace fbsde_traj_opt {
+namespace {
+
+// With sigma points the forward pass draws nothing: two solvers seeded differently sample the same
+// states. The line search's rollouts still depend on the seed, so only the forward pass is compared.
+TEST(DtFbsdeIterativeSolverSigmaPointTest, TheForwardPassIsDeterministic) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+  options.sigma_point_rule = SigmaPointRule::kUnscented;
+  Result<Solver> first = MakeSolver(fixture, options);
+  Result<Solver> second = Solver::Make(fixture.model,
+                                       fixture.running_cost,
+                                       fixture.terminal_cost,
+                                       fixture.initial,
+                                       Eigen::Matrix<double, 1, 1>(-1.0),
+                                       Eigen::Matrix<double, 1, 1>(1.0),
+                                       fixture.terminal_value_function,
+                                       fixture.terminal_value_function,
+                                       options,
+                                       12345);
+  ASSERT_TRUE(first.has_value() && second.has_value());
+  ASSERT_TRUE(first->Iterate().has_value());
+  ASSERT_TRUE(second->Iterate().has_value());
+  for (std::size_t stage = 0; stage < kStages; ++stage) {
+    EXPECT_EQ(first->SampledStates()[stage], second->SampledStates()[stage]);
+  }
+}
+
+// Every rule, with mixed exploration and probes, drives the cost far below coasting, as the random
+// forward pass does, and keeps every sampled state finite.
+TEST(DtFbsdeIterativeSolverSigmaPointTest, EveryRuleConvergesOnALinearProblem) {
+  const Fixture fixture = MakeFixture();
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  for (const SigmaPointRule rule : {SigmaPointRule::kUnscented,
+                                    SigmaPointRule::kCubature5,
+                                    SigmaPointRule::kConjugate,
+                                    SigmaPointRule::kGaussHermite3}) {
+    DtFbsdeIterativeOptions<double> options;
+    options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+    options.target_floor = 0.0;
+    options.sigma_point_rule = rule;
+    options.base_diffusion_inflation = 6.0;
+    options.max_diffusion_inflation = 6.0;
+    options.uninflated_path_fraction = 0.5;
+    Result<Solver> solver = MakeSolver(fixture, options);
+    ASSERT_TRUE(solver.has_value()) << solver.error();
+    double previous = solver->CurrentCost();
+    for (std::size_t iteration = 0; iteration < 12; ++iteration) {
+      const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+      ASSERT_TRUE(report.has_value()) << report.error();
+      EXPECT_LE(report->mean_cost, previous + 1e-12);
+      previous = report->mean_cost;
+      EXPECT_TRUE(solver->SampledStates()[kStages - 1].allFinite());
+    }
+    EXPECT_LT(solver->CurrentCost(), 0.02 * coasting_cost) << static_cast<int>(rule);
+  }
+}
+
+// Randomly rotated points still match the covariance: the first stage's points, all drawn from the
+// initial distribution, have its mean, whatever the rotation.
+TEST(DtFbsdeIterativeSolverSigmaPointTest, RandomlyRotatedPointsKeepTheInitialMean) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+  options.sigma_point_rule = SigmaPointRule::kUnscented;
+  options.sigma_point_probes = false;
+  options.randomize_sigma_point_rotation = true;
+  Result<Solver> solver = MakeSolver(fixture, options);
+  ASSERT_TRUE(solver.has_value());
+  ASSERT_TRUE(solver->Iterate().has_value());
+  // Five points per half and 256 columns: the first ten columns are each half's set once.
+  const SigmaPointSet<2> set = MakeSigmaPoints<2>(SigmaPointRule::kUnscented);
+  Eigen::Vector2d mean = Eigen::Vector2d::Zero();
+  for (std::size_t point = 0; point < set.points.size(); ++point) {
+    mean += set.weights[point] * solver->SampledStates()[0].col(static_cast<Eigen::Index>(2 * point)).eval();
+  }
+  EXPECT_NEAR(mean[0], 2.0, 1e-9);
+  EXPECT_NEAR(mean[1], 0.5, 1e-9);
+}
+
+}  // namespace
+}  // namespace fbsde_traj_opt
+
+namespace fbsde_traj_opt {
+namespace {
+
+using LinearPoly = LinearBasisValueFunctionApprox<2, MonomialBasis<2, 2>>;
+using LinearSolver = DtFbsdeIterativeSolver<2, 1, 256, kStages, 64, Model, TerminalCost, LinearPoly>;
+
+auto MakeLinearSolver(const Fixture& fixture, const DtFbsdeIterativeOptions<double>& options, std::uint64_t seed)
+    -> Result<LinearSolver> {
+  auto blank = LinearPoly::Make(LinearPoly::ParameterVector::Zero(),
+                                Eigen::Vector2d(1.0, 0.0),
+                                Eigen::Vector2d(2.0, 2.0),
+                                MonomialBasis<2, 2>{});
+  EXPECT_TRUE(blank.has_value());
+  // The terminal cost 5 x0^2 + 2 x1^2 in the normalized monomials (1, z0, z1, z0^2, z0 z1, z1^2) is
+  // fitted on a grid rather than written out, so the test does not depend on the basis order.
+  constexpr int kGrid = 121;
+  Eigen::Matrix<double, 2, kGrid> grid;
+  Eigen::Matrix<double, 1, kGrid> values;
+  for (int index = 0; index < kGrid; ++index) {
+    grid.col(index) = Eigen::Vector2d(-1.0 + (0.4 * (index % 11)), -2.0 + (0.4 * (index / 11)));
+    values[index] = (5.0 * grid(0, index) * grid(0, index)) + (2.0 * grid(1, index) * grid(1, index));
+  }
+  EXPECT_TRUE(blank->FitWeightedLeastSquares<kGrid>(grid, values, Eigen::Matrix<double, 1, kGrid>::Ones(), 0.0)
+                  .has_value());
+  return LinearSolver::Make(fixture.model,
+                            fixture.running_cost,
+                            fixture.terminal_cost,
+                            fixture.initial,
+                            Eigen::Matrix<double, 1, 1>(-1.0),
+                            Eigen::Matrix<double, 1, 1>(1.0),
+                            *blank,
+                            *blank,
+                            options,
+                            seed);
+}
+
+// The backward pass's targets, checked against exact Bellman backups on a linear-quadratic problem,
+// for both backward targets, with and without slope rows. Two cases, each one where the backup has a
+// closed form:
+//
+//   * Fuel so expensive the control is zero everywhere: every stage's fit must be the quadratic of
+//     P_k = A' P_{k+1} A, P_K = F, down the whole horizon. This checks that the control is chosen
+//     and scored by the right tables at the right stage, that the noise term only shifts the level,
+//     and that the halves are averaged.
+//   * Free fuel and bounds too wide to bind: the last control stage's fit must be the one-step
+//     Riccati backup P_{K-1} = A' F A - A' F b (b' F b)^-1 b' F A, which checks the interior
+//     minimizer's target. (Further back the problem is deadbeat -- one control zeroes both states in
+//     two steps -- so every control ties and the backup is degenerate.)
+TEST(DtFbsdeIterativeSolverTargetTest, FitsAreExactBellmanBackupsOnALinearQuadraticProblem) {
+  Eigen::Matrix2d transition = Eigen::Matrix2d::Identity();
+  transition(0, 1) = kTimeStep;
+  const Eigen::Vector2d column(0.5 * kTimeStep * kTimeStep, kTimeStep);
+  const Eigen::Matrix2d terminal = Eigen::Vector2d(5.0, 2.0).asDiagonal();
+  std::vector<Eigen::Matrix2d> coasting(kStages);
+  coasting[kStages - 1] = terminal;
+  for (std::size_t stage = kStages - 1; stage-- > 0;) {
+    coasting[stage] = transition.transpose() * coasting[stage + 1] * transition;
+  }
+  const Eigen::RowVector2d gain = (column.transpose() * terminal * transition) / column.dot(terminal * column);
+  const Eigen::Matrix2d one_step =
+      transition.transpose() * terminal * transition - (transition.transpose() * terminal * column) * gain;
+
+  for (const bool coast : {true, false}) {
+    Fixture fixture = MakeFixture();
+    const Result<L1ControlSdeRunningCostTerm<2, 1>> fuel = L1ControlSdeRunningCostTerm<2, 1>::Make(coast ? 1e6 : 0.0);
+    ASSERT_TRUE(fuel.has_value());
+    fixture.running_cost = *fuel;
+    // A wide initial spread, so that without exploration the samples still span the state space and
+    // the six-coefficient fits are well conditioned; the fixture's tight start leaves them on a thin
+    // tube around one trajectory, where a quadratic is fitted only to a few digits.
+    const Result<DiagonalCovarianceNormalDistribution<2>> wide =
+        DiagonalCovarianceNormalDistribution<2>::Make(Eigen::Vector2d(1.0, 0.0), Eigen::Vector2d(1.0, 1.0));
+    ASSERT_TRUE(wide.has_value());
+    fixture.initial = *wide;
+    const double bound = coast ? 1.0 : 1e4;
+    for (const DtFbsdeBackwardTarget target : {DtFbsdeBackwardTarget::kDoubleGreedy,
+                                               DtFbsdeBackwardTarget::kCurrentPolicy,
+                                               DtFbsdeBackwardTarget::kTaylorNoiseless}) {
+      for (const double slope_weight : {0.0, 1.0}) {
+        DtFbsdeIterativeOptions<double> options;
+        options.backward_target = target;
+        options.initial_exploration_probability = 0.0;
+        options.exploration_probability = 0.0;
+        options.probe_fraction = 0.0;
+        options.ridge = 1e-12;
+        options.slope_weight = slope_weight;
+        Result<LinearSolver> tables = MakeLinearSolver(fixture, DtFbsdeIterativeOptions<double>{}, 5);
+        ASSERT_TRUE(tables.has_value()) << tables.error();
+        Result<LinearSolver> solver = LinearSolver::Make(fixture.model,
+                                                         fixture.running_cost,
+                                                         fixture.terminal_cost,
+                                                         fixture.initial,
+                                                         Eigen::Matrix<double, 1, 1>(-bound),
+                                                         Eigen::Matrix<double, 1, 1>(bound),
+                                                         tables->ValueFunctions()[0],
+                                                         tables->ValueFunctions()[kStages - 1],
+                                                         options,
+                                                         5);
+        ASSERT_TRUE(solver.has_value()) << solver.error();
+        ASSERT_TRUE(solver->Iterate().has_value());
+        const auto check = [&](std::size_t stage, const Eigen::Matrix2d& expected) {
+          const Eigen::Matrix2d hessian = solver->FittedValueFunctions()[stage].Hessian(Eigen::Vector2d(0.3, -0.2));
+          EXPECT_LT((hessian - (2.0 * expected)).norm(), 1e-6 * (1.0 + expected.norm()))
+              << (coast ? "coasting" : "free fuel") << ", stage " << stage << ", target " << static_cast<int>(target)
+              << ", slope weight " << slope_weight << "\nfitted\n" << hessian << "\nexpected\n" << 2.0 * expected;
+        };
+        if (coast) {
+          for (std::size_t stage = 0; stage + 1 < kStages; ++stage) {
+            check(stage, coasting[stage]);
+          }
+        } else {
+          check(kStages - 2, one_step);
+        }
+      }
+    }
+  }
+}
+
+// The Taylor noiseless estimator is exact for a quadratic next-stage value function whatever drift
+// the sample was taken with, so even with every path exploring -- every sampled control a random
+// one of {-1, 0, 1}, far from the coasting policy's zero -- its targets are the coasting policy's
+// exact values, and each stage's fit follows P_k = A' P_{k+1} A. The Girsanov drift it reports is
+// then well above zero, because the sampling is off-policy.
+TEST(DtFbsdeIterativeSolverTargetTest, TaylorNoiselessTargetsAreExactOffPolicy) {
+  Fixture fixture = MakeFixture();
+  const Result<L1ControlSdeRunningCostTerm<2, 1>> fuel = L1ControlSdeRunningCostTerm<2, 1>::Make(1e6);
+  ASSERT_TRUE(fuel.has_value());
+  fixture.running_cost = *fuel;
+  const Result<DiagonalCovarianceNormalDistribution<2>> wide =
+      DiagonalCovarianceNormalDistribution<2>::Make(Eigen::Vector2d(1.0, 0.0), Eigen::Vector2d(1.0, 1.0));
+  ASSERT_TRUE(wide.has_value());
+  fixture.initial = *wide;
+  Eigen::Matrix2d transition = Eigen::Matrix2d::Identity();
+  transition(0, 1) = kTimeStep;
+  std::vector<Eigen::Matrix2d> coasting(kStages);
+  coasting[kStages - 1] = Eigen::Vector2d(5.0, 2.0).asDiagonal();
+  for (std::size_t stage = kStages - 1; stage-- > 0;) {
+    coasting[stage] = transition.transpose() * coasting[stage + 1] * transition;
+  }
+  for (const double slope_weight : {0.0, 1.0}) {
+    DtFbsdeIterativeOptions<double> options;
+    options.backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
+    options.initial_exploration_probability = 1.0;
+    options.ridge = 1e-12;
+    options.slope_weight = slope_weight;
+    Result<LinearSolver> solver = MakeLinearSolver(fixture, options, 5);
+    ASSERT_TRUE(solver.has_value()) << solver.error();
+    const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+    ASSERT_TRUE(report.has_value()) << report.error();
+    EXPECT_GT(report->mean_girsanov_drift, 1.0);
+    for (std::size_t stage = 0; stage + 1 < kStages; ++stage) {
+      const Eigen::Matrix2d hessian = solver->FittedValueFunctions()[stage].Hessian(Eigen::Vector2d(0.3, -0.2));
+      EXPECT_LT((hessian - (2.0 * coasting[stage])).norm(), 1e-6 * (1.0 + coasting[stage].norm()))
+          << "stage " << stage << ", slope weight " << slope_weight;
+    }
+  }
+}
+
+// With exploration kept on, the Taylor noiseless target's first-order correction g' (F^mu - K) is
+// nonzero, and every variant -- greedy target policy, held exploratory arcs, Girsanov weighting --
+// still only ever lowers the cost and converges far below coasting.
+TEST(DtFbsdeIterativeSolverTargetTest, TaylorNoiselessVariantsConvergeWithExploration) {
+  const Fixture fixture = MakeFixture();
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  struct Variant {
+    DtFbsdeTaylorTargetPolicy target_policy;
+    std::size_t hold;
+    double girsanov_weight;
+  };
+  for (const Variant variant : {Variant{DtFbsdeTaylorTargetPolicy::kCurrent, 1, 0.0},
+                                Variant{DtFbsdeTaylorTargetPolicy::kGreedy, 1, 0.0},
+                                Variant{DtFbsdeTaylorTargetPolicy::kCurrent, 4, 0.0},
+                                Variant{DtFbsdeTaylorTargetPolicy::kCurrent, 1, 1.0}}) {
+    DtFbsdeIterativeOptions<double> options;
+    options.backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
+    options.target_floor = 0.0;
+    options.exploration_probability = 0.3;
+    options.initial_exploration_probability = 0.3;
+    options.taylor_target_policy = variant.target_policy;
+    options.exploration_hold_stages = variant.hold;
+    options.girsanov_weight = variant.girsanov_weight;
+    Result<LinearSolver> solver = MakeLinearSolver(fixture, options, 7);
+    ASSERT_TRUE(solver.has_value()) << solver.error();
+    double previous = solver->CurrentCost();
+    double correction = 0.0;
+    for (std::size_t iteration = 0; iteration < 12; ++iteration) {
+      const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+      ASSERT_TRUE(report.has_value()) << report.error();
+      EXPECT_LE(report->mean_cost, previous + 1e-12);
+      previous = report->mean_cost;
+      correction += report->mean_first_order_correction;
+    }
+    EXPECT_GT(correction, 0.0);
+    EXPECT_LT(solver->CurrentCost(), 0.05 * coasting_cost) << "hold " << variant.hold;
+  }
+}
+
+// With a quadratic value function the second-order expansion is exact, so the full estimator's
+// Taylor residual is zero to rounding however far off-policy the samples are, while dropping the
+// first-order term leaves the targets wrong by about the size of that term.
+TEST(DtFbsdeIterativeSolverTargetTest, TaylorResidualVanishesForAQuadraticAndTheAblationsDoNot) {
+  const Fixture fixture = MakeFixture();
+  for (const std::size_t order : {std::size_t{2}, std::size_t{0}}) {
+    DtFbsdeIterativeOptions<double> options;
+    options.backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
+    options.target_floor = -1e9;
+    options.exploration_probability = 0.3;
+    options.initial_exploration_probability = 0.3;
+    options.taylor_correction_order = order;
+    options.measure_taylor_residual = true;
+    Result<LinearSolver> solver = MakeLinearSolver(fixture, options, 11);
+    ASSERT_TRUE(solver.has_value()) << solver.error();
+    for (std::size_t iteration = 0; iteration < 3; ++iteration) {
+      const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+      ASSERT_TRUE(report.has_value()) << report.error();
+      EXPECT_GT(report->off_policy_fraction, 0.1);
+      EXPECT_GT(report->mean_off_policy_correction, report->mean_first_order_correction);
+      if (iteration == 0) {
+        continue;  // The first pass fits the blank tables' targets, which have no gradient.
+      }
+      if (order == 2) {
+        EXPECT_LT(report->mean_taylor_residual, 1e-8 * (1.0 + report->mean_target_magnitude));
+      } else {
+        EXPECT_GT(report->mean_taylor_residual, 0.1 * report->mean_off_policy_correction);
+      }
+    }
+  }
+}
+
+// Only the exploring fraction of paths ever leaves the policy: with none, every path follows it even
+// at an exploration probability of one, and with half, about half of what full exploration gives.
+TEST(DtFbsdeIterativeSolverTargetTest, OnlyExploringPathsLeaveThePolicy) {
+  const Fixture fixture = MakeFixture();
+  double previous_fraction = -1.0;
+  for (const double explorers : {0.0, 0.5, 1.0}) {
+    DtFbsdeIterativeOptions<double> options;
+    options.backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
+    options.target_floor = 0.0;
+    options.exploration_probability = 1.0;
+    options.initial_exploration_probability = 1.0;
+    options.exploring_path_fraction = explorers;
+    Result<LinearSolver> solver = MakeLinearSolver(fixture, options, 5);
+    ASSERT_TRUE(solver.has_value()) << solver.error();
+    ASSERT_TRUE(solver->Iterate().has_value());
+    const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+    ASSERT_TRUE(report.has_value()) << report.error();
+    if (explorers == 0.0) {
+      EXPECT_EQ(report->off_policy_fraction, 0.0);
+    } else {
+      EXPECT_GT(report->off_policy_fraction, previous_fraction + 0.1);
+    }
+    previous_fraction = report->off_policy_fraction;
+  }
+}
+
+// A memory of zero is the plain fit: the solver takes the same steps either way.
+TEST(DtFbsdeIterativeSolverNormalEquationTest, ZeroMemoryIsThePlainFit) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+  options.target_floor = 0.0;
+  Result<LinearSolver> plain = MakeLinearSolver(fixture, options, 3);
+  options.reset_normal_equations_on_acceptance = true;
+  Result<LinearSolver> zero = MakeLinearSolver(fixture, options, 3);
+  ASSERT_TRUE(plain.has_value() && zero.has_value());
+  for (std::size_t iteration = 0; iteration < 5; ++iteration) {
+    ASSERT_TRUE(plain->Iterate().has_value());
+    ASSERT_TRUE(zero->Iterate().has_value());
+    EXPECT_DOUBLE_EQ(plain->CurrentCost(), zero->CurrentCost());
+  }
+}
+
+// Carried normal equations, with and without the reset on acceptance, still only ever lower the
+// cost and drive it far below coasting. On this easy problem, with a large batch, every update is
+// accepted, so remembering old batches only adds stale targets and slows the descent; and the reset
+// then clears the equations every iteration, which makes the method exactly the plain fit.
+TEST(DtFbsdeIterativeSolverNormalEquationTest, CarriedNormalEquationsStillConverge) {
+  const Fixture fixture = MakeFixture();
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  double plain_cost = 0.0;
+  for (const auto& [memory, reset] : {std::pair{0.0, false}, std::pair{0.9, false}, std::pair{1.0, true}}) {
+    DtFbsdeIterativeOptions<double> options;
+    options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+    options.target_floor = 0.0;
+    options.exploration_decay = 0.5;
+    options.normal_equation_memory = memory;
+    options.reset_normal_equations_on_acceptance = reset;
+    Result<LinearSolver> solver = MakeLinearSolver(fixture, options, 7);
+    ASSERT_TRUE(solver.has_value()) << solver.error();
+    double previous = solver->CurrentCost();
+    for (std::size_t iteration = 0; iteration < 12; ++iteration) {
+      const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+      ASSERT_TRUE(report.has_value()) << report.error();
+      EXPECT_LE(report->mean_cost, previous + 1e-12);
+      previous = report->mean_cost;
+    }
+    EXPECT_LT(solver->CurrentCost(), 0.05 * coasting_cost) << "memory " << memory << ", reset " << reset;
+    if (memory == 0.0) {
+      plain_cost = solver->CurrentCost();
+    }
+    if (reset) {
+      EXPECT_DOUBLE_EQ(solver->CurrentCost(), plain_cost);
+    }
+  }
+}
+
+// Replaying earlier batches, their targets recomputed, still only ever lowers the cost and converges;
+// and replay cannot be combined with a memory or the single-table backward target.
+TEST(DtFbsdeIterativeSolverNormalEquationTest, ReplayedBatchesStillConverge) {
+  const Fixture fixture = MakeFixture();
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  DtFbsdeIterativeOptions<double> options;
+  options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+  options.target_floor = 0.0;
+  options.exploration_decay = 0.5;
+  options.replay_batches = 3;
+  Result<LinearSolver> solver = MakeLinearSolver(fixture, options, 7);
+  ASSERT_TRUE(solver.has_value()) << solver.error();
+  double previous = solver->CurrentCost();
+  for (std::size_t iteration = 0; iteration < 12; ++iteration) {
+    const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+    ASSERT_TRUE(report.has_value()) << report.error();
+    EXPECT_LE(report->mean_cost, previous + 1e-12);
+    previous = report->mean_cost;
+  }
+  EXPECT_LT(solver->CurrentCost(), 0.05 * coasting_cost);
+
+  options.normal_equation_memory = 0.5;
+  EXPECT_FALSE(MakeLinearSolver(fixture, options, 7).has_value());
+  options.normal_equation_memory = 0.0;
+  options.backward_target = DtFbsdeBackwardTarget::kCurrentPolicy;
+  EXPECT_FALSE(MakeLinearSolver(fixture, options, 7).has_value());
+}
+
+// A representation without normal equations cannot carry them.
+TEST(DtFbsdeIterativeSolverNormalEquationTest, MakeRejectsMemoryForASoftMinModel) {
+  using SoftMin = SoftMinQuadraticValueFunctionApprox<2, 3>;
+  using SoftMinSolver = DtFbsdeIterativeSolver<2, 1, 256, kStages, 64, Model, TerminalCost, SoftMin>;
+  const Fixture fixture = MakeFixture();
+  const Eigen::Matrix2d terminal_matrix = Eigen::Vector2d(5.0, 2.0).asDiagonal();
+  auto parameters = SoftMin::QuadraticParameters(terminal_matrix, Eigen::Vector2d::Zero(), 0.0, 1.0, 1e-3);
+  ASSERT_TRUE(parameters.has_value());
+  auto model = SoftMin::Make(*parameters, 1.0, 1e-3);
+  ASSERT_TRUE(model.has_value());
+  DtFbsdeIterativeOptions<double> options;
+  options.normal_equation_memory = 0.9;
+  EXPECT_FALSE(SoftMinSolver::Make(fixture.model,
+                                   fixture.running_cost,
+                                   fixture.terminal_cost,
+                                   fixture.initial,
+                                   Eigen::Matrix<double, 1, 1>(-1.0),
+                                   Eigen::Matrix<double, 1, 1>(1.0),
+                                   *model,
+                                   *model,
+                                   options,
+                                   1)
+                   .has_value());
 }
 
 }  // namespace

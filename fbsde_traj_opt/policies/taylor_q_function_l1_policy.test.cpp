@@ -3,6 +3,7 @@
 
 #include "fbsde_traj_opt/policies/taylor_q_function_l1_policy.hpp"
 
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <limits>
@@ -150,6 +151,40 @@ TEST(TaylorQFunctionL1PolicyTest, TwoControlsNeverDoWorseThanAnyVertexOrZero) {
   for (const double first : {-1.0, 0.0, 1.0}) {
     for (const double second : {-1.0, 0.0, 1.0}) {
       EXPECT_LE(chosen, policy->QValue(0, state, Eigen::Vector2d(first, second)) + 1e-12);
+    }
+  }
+}
+
+// The Q-value against an independent evaluation of what it estimates: c |u| plus the expectation
+// of the next value function over the step's noise, E[V(x + f + B u + Sigma w)], taken by tensor
+// Gauss-Hermite quadrature from values of V alone. For a cubic V the second-order Taylor form is
+// exact -- the third-order term has zero mean -- so the two must agree to rounding. This is what
+// checks the noise-curvature term, its covariance, and its factor of one half.
+TEST(TaylorQFunctionL1PolicyTest, QValueIsTheExpectedNextValueForACubic) {
+  const Model<1> model = MakeModel<1>(Eigen::Vector2d(0.3, 0.6));
+  const std::vector<Cubic> table = MakeCubicTable();
+  constexpr double kL1Weight = 0.2;
+  const Result<Policy<1>> policy = Policy<1>::Make(model,
+                                                   kL1Weight,
+                                                   Eigen::Matrix<double, 1, 1>(-1.0),
+                                                   Eigen::Matrix<double, 1, 1>(1.0),
+                                                   std::span<const Cubic>(table));
+  ASSERT_TRUE(policy.has_value()) << policy.error();
+  // The 3-point rule for E[g(w)], w ~ N(0, 1): exact for polynomials of degree five.
+  const std::array<std::pair<double, double>, 3> rule{
+      {{-std::sqrt(3.0), 1.0 / 6.0}, {0.0, 2.0 / 3.0}, {std::sqrt(3.0), 1.0 / 6.0}}};
+  for (const Eigen::Vector2d& state : {Eigen::Vector2d(1.0, 0.5), Eigen::Vector2d(-0.8, 0.2)}) {
+    for (const double u : {-1.0, -0.3, 0.0, 0.7, 1.0}) {
+      const Eigen::Matrix<double, 1, 1> control(u);
+      double expected = 0.0;
+      for (const auto& [first, first_weight] : rule) {
+        for (const auto& [second, second_weight] : rule) {
+          const Eigen::Vector2d next = model(0, state, control, Eigen::Vector2d(first, second));
+          expected += first_weight * second_weight * table[1](next);
+        }
+      }
+      expected += kL1Weight * std::abs(u);
+      EXPECT_NEAR(policy->QValue(0, state, control), expected, 1e-10) << "state " << state.transpose() << " u " << u;
     }
   }
 }

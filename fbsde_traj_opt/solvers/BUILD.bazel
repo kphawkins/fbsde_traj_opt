@@ -114,6 +114,7 @@ cc_library(
     hdrs = ["dt_fbsde_iterative_solver.hpp"],
     copts = FBSDE_COPTS,
     deps = [
+        ":taylor_noiseless_backward_step_estimator",
         ":policy_rollout_evaluation",
         ":taylor_gradient_target",
         "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
@@ -121,6 +122,7 @@ cc_library(
         "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
         "//fbsde_traj_opt/sampling:l1_exploratory_control",
         "//fbsde_traj_opt/sampling:normal_distribution_concepts",
+        "//fbsde_traj_opt/sampling:sigma_point_rules",
         "//fbsde_traj_opt/sde:diffusion_scaled_forward_sde_model",
         "//fbsde_traj_opt/sde:sde_term_concepts",
         "//fbsde_traj_opt/utils:parallel_for",
@@ -139,6 +141,7 @@ cc_test(
     srcs = ["dt_fbsde_iterative_solver.test.cpp"],
     copts = FBSDE_TEST_COPTS,
     deps = [
+        "//fbsde_traj_opt/value_function:linear_basis_value_function_approx",
         ":dt_fbsde_iterative_solver",
         "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
         "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
@@ -221,6 +224,66 @@ cc_test(
         "//fbsde_traj_opt/policies:taylor_q_function_l1_policy",
         "//fbsde_traj_opt/sde:composed_forward_sde_model",
         "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "box_ilqr_solver",
+    hdrs = ["box_ilqr_solver.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "box_ilqr_solver_test",
+    size = "small",
+    srcs = ["box_ilqr_solver.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":box_ilqr_solver",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "mppi_solver",
+    hdrs = ["mppi_solver.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "mppi_solver_test",
+    size = "small",
+    srcs = ["mppi_solver.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":mppi_solver",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/utils:result",
         "@eigen",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
