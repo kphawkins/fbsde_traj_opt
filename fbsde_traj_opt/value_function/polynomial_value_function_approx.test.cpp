@@ -197,5 +197,58 @@ TEST(PolynomialValueFunctionApproxTest, FitRejectsNegativeWeights) {
                    .has_value());
 }
 
+TEST(PolynomialValueFunctionApproxSlopeTest, SlopeRowsDetermineAFitThatValuesAloneCannot) {
+  // Three samples cannot determine a quadratic's six coefficients from values alone; with the
+  // slopes along both axes at each, they do.
+  Quadratic2::ParameterVector truth_parameters;
+  truth_parameters << 0.4, -1.2, 0.7, 2.0, -0.6, 1.5;
+  const Result<Quadratic2> truth =
+      Quadratic2::Make(truth_parameters, Eigen::Vector2d(0.5, -1.0), Eigen::Vector2d(1.5, 0.7));
+  ASSERT_TRUE(truth.has_value());
+  Quadratic2::StateBatch<3> states;
+  states << 0.1, 1.3, -0.8,  //
+      -0.4, 0.9, 0.2;
+  Quadratic2::ValueBatch<3> targets;
+  truth->Values<3>(states, targets);
+  ValueFunctionSlopeTargets<Eigen::Vector2d, 3, 2> slopes;
+  for (Eigen::Index column = 0; column < 3; ++column) {
+    const Eigen::Vector2d gradient = truth->Gradient(states.col(column));
+    for (std::size_t axis = 0; axis < 2; ++axis) {
+      // Directions of unequal length and not along the axes, so a slope is not a bare partial.
+      const Eigen::Vector2d direction = axis == 0 ? Eigen::Vector2d(0.3, 0.1) : Eigen::Vector2d(-0.2, 1.1);
+      slopes.directions[axis].col(column) = direction;
+      slopes.slopes[axis][column] = direction.dot(gradient);
+    }
+  }
+
+  Result<Quadratic2> model =
+      Quadratic2::Make(Quadratic2::ParameterVector::Zero(), Eigen::Vector2d(0.5, -1.0), Eigen::Vector2d(1.5, 0.7));
+  ASSERT_TRUE(model.has_value());
+  ASSERT_TRUE(
+      (model->FitWeightedLeastSquares<3, 2>(states, targets, Quadratic2::ValueBatch<3>::Ones(), slopes, 1.0, 0.0))
+          .has_value());
+  EXPECT_TRUE(model->Parameters().isApprox(truth_parameters, 1e-9));
+}
+
+TEST(PolynomialValueFunctionApproxSlopeTest, AZeroSlopeWeightIsThePlainFit) {
+  const Cubic3 cubic = MakeCubic();
+  Cubic3::StateBatch<8> states;
+  for (Eigen::Index column = 0; column < 8; ++column) {
+    states.col(column) = Eigen::Vector3d(std::sin(column), std::cos(2.0 * column), 0.3 * column);
+  }
+  Cubic3::ValueBatch<8> targets;
+  cubic.Values<8>(states, targets);
+  ValueFunctionSlopeTargets<Eigen::Vector3d, 8, 1> slopes;
+  slopes.directions[0].setOnes();
+  slopes.slopes[0].setConstant(5.0);
+
+  Cubic3 plain = cubic;
+  Cubic3 sloped = cubic;
+  ASSERT_TRUE(plain.FitWeightedLeastSquares<8>(states, targets, Cubic3::ValueBatch<8>::Ones(), 1e-3).has_value());
+  ASSERT_TRUE((sloped.FitWeightedLeastSquares<8, 1>(states, targets, Cubic3::ValueBatch<8>::Ones(), slopes, 0.0, 1e-3))
+                  .has_value());
+  EXPECT_TRUE(sloped.Parameters().isApprox(plain.Parameters(), 1e-12));
+}
+
 }  // namespace
 }  // namespace fbsde_traj_opt

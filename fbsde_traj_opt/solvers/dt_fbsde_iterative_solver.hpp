@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -22,13 +23,16 @@
 #include "fbsde_traj_opt/sampling/counter_based_normal_sampler.hpp"
 #include "fbsde_traj_opt/sampling/l1_exploratory_control.hpp"
 #include "fbsde_traj_opt/sampling/normal_distribution_concepts.hpp"
+#include "fbsde_traj_opt/sde/diffusion_scaled_forward_sde_model.hpp"
 #include "fbsde_traj_opt/sde/sde_term_concepts.hpp"
 #include "fbsde_traj_opt/solvers/policy_rollout_evaluation.hpp"
+#include "fbsde_traj_opt/solvers/taylor_gradient_target.hpp"
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/value_function_approx_concepts.hpp"
 #include "fbsde_traj_opt/value_function/value_function_gauss_newton_fitter.hpp"
 #include "fbsde_traj_opt/value_function/value_function_sgd_fitter.hpp"
+#include "fbsde_traj_opt/value_function/value_function_slope_targets.hpp"
 
 namespace fbsde_traj_opt {
 
@@ -77,6 +81,57 @@ namespace fbsde_traj_opt {
 //     an improvement over mu is thereby checked rather than assumed. The rollouts that make the
 //     comparison use the same noise for every candidate -- the evaluation seed is fixed -- so a
 //     difference in cost is a difference between policies and not between noise draws.
+//
+// Two options make a rejected update cheaper, which matters at small batches, where most updates
+// are rejected. `stop_uphill_line_search` gives up on an update once two candidates show the cost
+// rising along it from the current table: if halving the step only shrinks the excess in
+// proportion, every smaller step is worse too, and the remaining halvings are wasted rollouts.
+// `screening_rollouts` scores each candidate on the first few evaluation rollouts before the rest;
+// every candidate and the current policy see the same noise, so a small paired comparison already
+// rules most of them out, and only a candidate that passes is scored on all of them.
+//
+// Adaptive diffusion inflation is a second form of exploration, for when the iterations stall. Each
+// iteration that fails to lower the cost multiplies the forward pass's noise by a growth factor, up
+// to a cap, and an iteration that lowers it resets the factor to one. The batch then spreads out
+// around the policy's trajectories just when the fit has nothing new to learn from them, and draws
+// back in once an update lands. Inflation changes where the samples are, not what is fitted to them:
+// every target is computed from its sample's state under the problem's own dynamics and noise, so
+// an inflated batch still estimates the problem's value function, only accurately over a wider
+// region. Nor can an inflated batch degrade the policy. The table the policy runs on is replaced
+// only by a candidate that lowers the cost on the evaluation rollouts, and those are always
+// simulated under the problem's own noise; the table therefore always holds the best fit found so far
+// under that noise, whatever the batch that produced it.
+//
+// The inflation's base -- where it starts and what an improvement resets it to -- can be changed
+// between iterations by SetExplorationInflation(), which is how a caller anneals it: start the
+// batch far wider than the problem's noise and narrow it to that noise over a schedule. And
+// `uninflated_path_fraction` keeps a share of the paths at the problem's own noise whatever the
+// inflation, so the fit stays accurate where the policy's trajectories actually go.
+//
+// Diffusion continuation is a different thing from inflation: it changes the problem rather than
+// the sampling. SetDiffusionScale(s) makes the solver work on the problem with `s` times the
+// diffusion -- the forward pass, the targets' noise-curvature correction, the policy, and the line
+// search's rollouts all see it (DiffusionScaledForwardSdeModel) -- so its value functions are those
+// of a smoother problem, whose minima are wider and fewer. Walking `s` down to one then follows the
+// smoothed solution to the original one, a homotopy. A cost measured under one scale says nothing
+// about another, so a change of scale re-scores the current policy before the next line search.
+// CurrentPolicy() always acts on the problem as posed, with the diffusion at scale one.
+//
+// Slope matching (`slope_weight`, off by default) fits each stage's value function to slopes as well
+// as values. The policy compares the next stage's value function across the states its candidate
+// controls land on, which differ along the control columns, so what decides a control is that
+// function's slope along those columns -- which a fit to values alone leaves unconstrained. The
+// slope target is the derivative of the noiseless target itself: with the control fixed at the one
+// the target used (the envelope argument: the control's own derivative contributes nothing almost
+// everywhere) and the noise-curvature term's third-derivative part dropped,
+//
+//   G^_i(x) = J(x, u)' grad V~_{i+1}(x + F_i(x, u)),     J = d (x + F_i(x, u)) / dx,
+//
+// the discrete costate recursion. Its projection on each control column `b` of the stage before is
+// matched, weighted by `slope_weight`; `b' grad V` is the value difference across one full control
+// step, in the units of the value function. The Jacobian `J` is taken by central differences of
+// the forward model's own noise-free step, so no model has to supply derivatives; it costs 2N
+// extra steps per sample. docs/derivations/gradient_target.html has the derivation.
 //
 // The value function representation is fitted by its own closed-form weighted least squares when
 // it offers one (PolynomialValueFunctionApprox does), and otherwise -- for a model that is not
@@ -155,6 +210,37 @@ struct DtFbsdeIterativeOptions {
   // How many times the blending step may be halved before the iteration gives up and keeps the
   // current value functions: 7 tries steps down to 1/128.
   std::size_t max_step_halvings = 7;
+
+  // Give up on an update once it looks uphill. With `e(s)` the excess of the candidate at step `s`
+  // over the current cost, a quadratic through `e(0) = 0`, `e(s)`, and `e(2s)` has slope
+  // `(4 e(s) - e(2s)) / (2s)` at zero; when that is positive, smaller steps are predicted to be worse
+  // as well, and the line search stops.
+  bool stop_uphill_line_search = false;
+
+  // Score each candidate on the first this many evaluation rollouts first, and on all of them only
+  // if it beats the current policy there. Zero scores every candidate on all of them.
+  std::size_t screening_rollouts = 0;
+
+  // Adaptive diffusion inflation; see the class comment. After `stall_patience` consecutive
+  // iterations whose cost fell by no more than `stall_relative_improvement` of itself, the forward
+  // pass's noise is multiplied by `diffusion_inflation_growth`, and again after every further such
+  // iteration, up to `max_diffusion_inflation`; any iteration that lowers the cost by more resets it
+  // to `base_diffusion_inflation`, where it also starts; SetExplorationInflation() changes that base.
+  // A growth of one holds the inflation at the base, and a base of one as well disables it.
+  Scalar base_diffusion_inflation = Scalar{1};
+  Scalar diffusion_inflation_growth = Scalar{1};
+  Scalar max_diffusion_inflation = Scalar{8};
+  Scalar stall_relative_improvement = Scalar{0};
+  std::size_t stall_patience = 1;
+
+  // The weight of the slope residual against the value residual in every stage's fit; see the class
+  // comment. Zero, the default, fits values alone. A closed-form representation must offer the
+  // slope-matching overload of FitWeightedLeastSquares; the Gauss-Newton fitter does not support it.
+  Scalar slope_weight = Scalar{0};
+
+  // The fraction of the paths sampled at the problem's own noise whatever the inflation, in [0, 1].
+  // They are the first paths, so both halves of a double-estimation pass get their share.
+  Scalar uninflated_path_fraction = Scalar{0};
 };
 
 // What one iteration did.
@@ -178,8 +264,20 @@ struct DtFbsdeIterationReport {
   // The exploration probability the forward pass used.
   Scalar exploration_probability = Scalar{0};
 
+  // The factor the forward pass multiplied its noise by, on the paths it inflated.
+  Scalar diffusion_inflation = Scalar{1};
+
+  // The scale of the problem's diffusion the iteration worked on; see SetDiffusionScale().
+  Scalar diffusion_scale = Scalar{1};
+
   // How many candidate steps were rolled out before one was accepted or the halvings ran out.
   std::size_t candidates_tried = 0;
+
+  // Wall-clock time spent in each phase, in seconds: the forward pass, the backward pass, and the
+  // line search's blends and rollouts.
+  double forward_seconds = 0.0;
+  double backward_seconds = 0.0;
+  double line_search_seconds = 0.0;
 };
 
 template <int N,
@@ -204,7 +302,8 @@ class DtFbsdeIterativeSolver {
   using Control = Eigen::Matrix<Scalar, M, 1>;
   using StateMat = Eigen::Matrix<Scalar, N, N>;
   using RunningCost = L1ControlSdeRunningCostTerm<N, M, Scalar>;
-  using Policy = TaylorQFunctionL1Policy<N, M, ForwardModelT, ValueFunctionT, Scalar>;
+  using Model = DiffusionScaledForwardSdeModel<ForwardModelT>;
+  using Policy = TaylorQFunctionL1Policy<N, M, Model, ValueFunctionT, Scalar>;
   using Options = DtFbsdeIterativeOptions<Scalar>;
   using IterationReport = DtFbsdeIterationReport<Scalar>;
 
@@ -251,6 +350,26 @@ class DtFbsdeIterativeSolver {
     RESULT_ASSERT(std::isfinite(options.entropy_temperature) && options.entropy_temperature >= Scalar{0},
                   "DtFbsdeIterativeSolver::Make: the entropy temperature must be finite and non-negative.");
     RESULT_ASSERT(!std::isnan(options.target_floor), "DtFbsdeIterativeSolver::Make: the target floor may not be NaN.");
+    RESULT_ASSERT(options.screening_rollouts <= NumEvaluationSamples,
+                  "DtFbsdeIterativeSolver::Make: a candidate cannot be screened on more rollouts than are evaluated.");
+    RESULT_ASSERT(std::isfinite(options.diffusion_inflation_growth) &&
+                      options.diffusion_inflation_growth >= Scalar{1} &&
+                      std::isfinite(options.base_diffusion_inflation) &&
+                      options.base_diffusion_inflation >= Scalar{1} && std::isfinite(options.max_diffusion_inflation) &&
+                      options.max_diffusion_inflation >= options.base_diffusion_inflation,
+                  "DtFbsdeIterativeSolver::Make: the diffusion inflation's growth and base must be finite and at least "
+                  "one, and its cap at least its base.");
+    RESULT_ASSERT(std::isfinite(options.stall_relative_improvement) && options.stall_relative_improvement >= Scalar{0},
+                  "DtFbsdeIterativeSolver::Make: the stall threshold must be finite and non-negative.");
+    RESULT_ASSERT(options.stall_patience >= 1,
+                  "DtFbsdeIterativeSolver::Make: the stall patience must be at least one.");
+    RESULT_ASSERT(std::isfinite(options.slope_weight) && options.slope_weight >= Scalar{0},
+                  "DtFbsdeIterativeSolver::Make: the slope weight must be finite and non-negative.");
+    RESULT_ASSERT(
+        options.slope_weight == Scalar{0} || options.nonlinear_fit_method != ValueFunctionFitMethod::kGaussNewton,
+        "DtFbsdeIterativeSolver::Make: the Gauss-Newton fitter does not support slope matching.");
+    RESULT_ASSERT(options.uninflated_path_fraction >= Scalar{0} && options.uninflated_path_fraction <= Scalar{1},
+                  "DtFbsdeIterativeSolver::Make: the uninflated path fraction must lie in [0, 1].");
     RESULT_ASSERT((lower_bounds.array() <= Scalar{0}).all() && (upper_bounds.array() >= Scalar{0}).all() &&
                       lower_bounds.allFinite() && upper_bounds.allFinite(),
                   "DtFbsdeIterativeSolver::Make: every control's bounds must be finite and contain zero.");
@@ -271,7 +390,10 @@ class DtFbsdeIterativeSolver {
                                   terminal_value_function,
                                   options,
                                   seed);
-    solver.current_cost_ = solver.Evaluate(solver.current_).total;
+    solver.current_costs_ = solver.Evaluate(solver.current_);
+    if (options.screening_rollouts > 0) {
+      solver.current_screened_cost_ = solver.Evaluate(solver.current_, options.screening_rollouts).total;
+    }
     return SuccessResult(std::move(solver));
   }
 
@@ -279,44 +401,121 @@ class DtFbsdeIterativeSolver {
   //
   // Fails if a stage's regression fails, which leaves the current value functions as they were.
   auto Iterate() noexcept -> Result<IterationReport> {
+    using Clock = std::chrono::steady_clock;
     IterationReport report;
     report.iteration = iteration_;
 
+    auto start = Clock::now();
+    const auto lap = [&start]() noexcept {
+      const auto now = Clock::now();
+      const double seconds = std::chrono::duration<double>(now - start).count();
+      start = now;
+      return seconds;
+    };
+
     report.exploration_probability = ExplorationProbability(iteration_);
-    report.sampled_mean_cost = SampleForwardPass(report.exploration_probability, SamplingSeed(iteration_));
+    report.diffusion_inflation = ExplorationInflation();
+    report.diffusion_scale = forward_model_.scale();
+    report.sampled_mean_cost =
+        SampleForwardPass(report.exploration_probability, report.diffusion_inflation, SamplingSeed(iteration_));
+    report.forward_seconds = lap();
 
     if (const Result<> fitted = BackwardPass(); !fitted.has_value()) {
       return ErrorResult(fitted.error().message, fitted.error().location);
     }
+    report.backward_seconds = lap();
 
+    const Scalar previous_cost = current_costs_.total;
+    const bool screening = options_.screening_rollouts > 0;
+    // The excess of the previous candidate, at twice this one's step, over the current cost -- on
+    // the screening rollouts when screening, so that every excess compared is on the same rollouts.
+    auto previous_excess = Scalar{0};
     auto step = Scalar{1};
     for (std::size_t halving = 0; halving <= options_.max_step_halvings; ++halving, step *= Scalar{0.5}) {
       if (const Result<> blended = BlendIntoTrial(step); !blended.has_value()) {
         return ErrorResult(blended.error().message, blended.error().location);
       }
       ++report.candidates_tried;
-      const Costs trial_cost = Evaluate(trial_);
-      if (trial_cost.total < current_cost_) {
-        // Copied element by element rather than swapped, so that `current_` keeps its storage and
-        // a policy handed out by CurrentPolicy() keeps reading the live table.
-        std::ranges::copy(trial_, current_.begin());
-        current_cost_ = trial_cost.total;
-        report.accepted_step = step;
+      auto excess = Scalar{0};
+      Scalar screened_cost = Scalar{0};
+      bool confirm = true;
+      if (screening) {
+        screened_cost = Evaluate(trial_, options_.screening_rollouts).total;
+        excess = screened_cost - current_screened_cost_;
+        confirm = excess < Scalar{0};
+      }
+      if (confirm) {
+        const Costs trial_costs = Evaluate(trial_);
+        if (!screening) {
+          excess = trial_costs.total - current_costs_.total;
+        }
+        if (trial_costs.total < current_costs_.total) {
+          // Copied element by element rather than swapped, so that `current_` keeps its storage and
+          // a policy handed out by CurrentPolicy() keeps reading the live table.
+          std::ranges::copy(trial_, current_.begin());
+          current_costs_ = trial_costs;
+          current_screened_cost_ = screened_cost;
+          report.accepted_step = step;
+          break;
+        }
+      }
+      if (options_.stop_uphill_line_search && halving > 0 && (Scalar{4} * excess) - previous_excess > Scalar{0}) {
         break;
       }
+      previous_excess = excess;
+    }
+    report.line_search_seconds = lap();
+
+    if (previous_cost - current_costs_.total > options_.stall_relative_improvement * std::abs(previous_cost)) {
+      stall_factor_ = Scalar{1};
+      stalled_iterations_ = 0;
+    } else if (++stalled_iterations_ >= options_.stall_patience) {
+      stall_factor_ = std::min(stall_factor_ * options_.diffusion_inflation_growth, options_.max_diffusion_inflation);
     }
 
-    const Costs costs = Evaluate(current_);
-    report.mean_cost = costs.total;
-    report.mean_running_cost = costs.running;
-    report.mean_terminal_cost = costs.terminal;
+    // The evaluation noise is fixed, so the accepted candidate's costs are the current policy's.
+    report.mean_cost = current_costs_.total;
+    report.mean_running_cost = current_costs_.running;
+    report.mean_terminal_cost = current_costs_.terminal;
     ++iteration_;
     return SuccessResult(report);
   }
 
   // The current policy: the Taylor Q-function minimizer over the current value functions. It
   // reads them by reference, so it tracks every later iteration and must not outlive the solver.
-  [[nodiscard]] auto CurrentPolicy() const noexcept -> Policy { return MakePolicy(current_); }
+  [[nodiscard]] auto CurrentPolicy() const noexcept -> Policy {
+    return MakePolicy(current_, Model(forward_model_.unscaled()));
+  }
+
+  // Sets the exploration inflation's base from the next iteration on; see the class comment.
+  //
+  // Fails if `base` is not finite or is below one.
+  auto SetExplorationInflation(Scalar base) noexcept -> Result<> {
+    RESULT_ASSERT(std::isfinite(base) && base >= Scalar{1},
+                  "DtFbsdeIterativeSolver::SetExplorationInflation: the base must be finite and at least one.");
+    base_inflation_ = base;
+    return SuccessResult();
+  }
+
+  // Sets the scale of the diffusion of the problem the solver works on from the next iteration on,
+  // and re-scores the current policy under it; see the class comment.
+  //
+  // Fails if `scale` is not finite and positive.
+  auto SetDiffusionScale(Scalar scale) noexcept -> Result<> {
+    RESULT_ASSERT(std::isfinite(scale) && scale > Scalar{0},
+                  "DtFbsdeIterativeSolver::SetDiffusionScale: the scale must be finite and positive.");
+    if (scale == forward_model_.scale()) {
+      return SuccessResult();
+    }
+    forward_model_.set_scale(scale);
+    current_costs_ = Evaluate(current_);
+    if (options_.screening_rollouts > 0) {
+      current_screened_cost_ = Evaluate(current_, options_.screening_rollouts).total;
+    }
+    return SuccessResult();
+  }
+
+  [[nodiscard]] auto DiffusionScale() const noexcept -> Scalar { return forward_model_.scale(); }
 
   // The current value functions, one per stage 0..K.
   [[nodiscard]] auto ValueFunctions() const noexcept -> std::span<const ValueFunctionT> { return current_; }
@@ -325,8 +524,9 @@ class DtFbsdeIterativeSolver {
   // estimate of the value of the policy that is greedy with respect to them.
   [[nodiscard]] auto FittedValueFunctions() const noexcept -> std::span<const ValueFunctionT> { return fitted_; }
 
-  // The mean cost of the current policy on the evaluation rollouts.
-  [[nodiscard]] auto CurrentCost() const noexcept -> Scalar { return current_cost_; }
+  // The mean cost of the current policy on the evaluation rollouts, under the current diffusion
+  // scale.
+  [[nodiscard]] auto CurrentCost() const noexcept -> Scalar { return current_costs_.total; }
 
   [[nodiscard]] auto IterationCount() const noexcept -> std::size_t { return iteration_; }
 
@@ -348,6 +548,12 @@ class DtFbsdeIterativeSolver {
   // The minibatch of an SGD fit, and the accumulation block of a Gauss-Newton one, for a
   // representation without a closed-form fit.
   static constexpr int kSgdMinibatch = 64;
+
+  // The relative half-width of the central differences the slope targets' Jacobian is taken by.
+  static constexpr Scalar kJacobianStep = Scalar{1e-5};
+
+  template <int Count>
+  using SlopeTargets = ValueFunctionSlopeTargets<State, Count, M>;
 
   DtFbsdeIterativeSolver(ForwardModelT forward_model,
                          RunningCost running_cost,
@@ -377,6 +583,7 @@ class DtFbsdeIterativeSolver {
         states_(NumStages),
         controls_(kNumControlStages),
         accrued_before_(NumStages, ValueBlock::Zero()) {
+    base_inflation_ = options_.base_diffusion_inflation;
     current_.back() = terminal_value_function;
     fitted_.back() = terminal_value_function;
     trial_.back() = terminal_value_function;
@@ -398,11 +605,21 @@ class DtFbsdeIterativeSolver {
   }
 
   [[nodiscard]] auto MakePolicy(const std::vector<ValueFunctionT>& table) const noexcept -> Policy {
-    // Cannot fail: Make() checked the bounds and the table has NumStages >= 2 entries.
-    return *Policy::Make(forward_model_, running_cost_.L1Weight(), lower_bounds_, upper_bounds_, table);
+    return MakePolicy(table, forward_model_);
   }
 
-  // The forward pass. Returns the mean cost the path columns incurred.
+  [[nodiscard]] auto MakePolicy(const std::vector<ValueFunctionT>& table, Model model) const noexcept -> Policy {
+    // Cannot fail: Make() checked the bounds and the table has NumStages >= 2 entries.
+    return *Policy::Make(std::move(model), running_cost_.L1Weight(), lower_bounds_, upper_bounds_, table);
+  }
+
+  // The inflation the next forward pass applies: the base times the stall factor, capped.
+  [[nodiscard]] auto ExplorationInflation() const noexcept -> Scalar {
+    return std::min(base_inflation_ * stall_factor_, std::max(options_.max_diffusion_inflation, base_inflation_));
+  }
+
+  // The forward pass, with its noise multiplied by `inflation` beyond the problem's own, except on the
+  // first `uninflated_path_fraction` of the paths. Returns the mean cost the path columns incurred.
   //
   // The batch's columns are of two kinds. The first `PathCount()` are *paths*: trajectories from
   // the initial distribution under the current policy, each stage's control replaced by an
@@ -419,10 +636,12 @@ class DtFbsdeIterativeSolver {
   // Sampler coordinates: stage coordinate k+1 drives the k -> k+1 transition, as in
   // TrajectoryBatch. Components 0..N-1 are the state noise, the next decides whether a path
   // explores, the next picks a probe's parent, and the last M pick an exploratory control.
-  auto SampleForwardPass(Scalar exploration, std::uint64_t seed) noexcept -> Scalar {
+  auto SampleForwardPass(Scalar exploration, Scalar inflation, std::uint64_t seed) noexcept -> Scalar {
     const CounterBasedNormalSampler sampler(seed);
     const Policy policy = MakePolicy(current_);
     const std::size_t path_count = PathCount();
+    const auto uninflated_count =
+        static_cast<std::size_t>(std::lround(options_.uninflated_path_fraction * static_cast<Scalar>(path_count)));
 
     State noise;
     for (std::size_t sample = 0; sample < NumSamples; ++sample) {
@@ -457,7 +676,8 @@ class DtFbsdeIterativeSolver {
 
         State noise;
         sampler.FillNoise(sample, stage + 1, noise);
-        states_[stage + 1].col(column) = forward_model_(stage, state, control, noise);
+        const Scalar column_inflation = sample < uninflated_count ? Scalar{1} : inflation;
+        states_[stage + 1].col(column) = forward_model_(stage, state, control, State(column_inflation * noise));
         controls_[stage].col(column) = control;
         next_accrued[column] = accrued[static_cast<Eigen::Index>(parent)] + running_cost_(stage, state, control);
       });
@@ -501,18 +721,31 @@ class DtFbsdeIterativeSolver {
     const Policy target_policy = MakePolicy(current_);
     const Policy continuation = MakePolicy(fitted_);
 
+    const bool slopes_wanted = options_.slope_weight > Scalar{0};
     for (std::size_t stage = kNumControlStages; stage-- > 0;) {
       const StateBlock& states = states_[stage];
       ValueBlock targets;
+      SlopeTargets<kSampleCount> slopes;
       ParallelFor(NumSamples, [&](std::size_t sample) noexcept {
         const auto column = static_cast<Eigen::Index>(sample);
         const State state = states.col(column);
-        targets[column] =
-            std::max(continuation.QValue(stage, state, target_policy(stage, state)), options_.target_floor);
+        const Control control = target_policy(stage, state);
+        const Scalar q_value = continuation.QValue(stage, state, control);
+        targets[column] = std::max(q_value, options_.target_floor);
+        if (slopes_wanted) {
+          const State gradient = q_value < options_.target_floor
+                                     ? State(State::Zero())
+                                     : GradientTarget(stage, state, control, fitted_[stage + 1]);
+          SetSlopeTargets<kSampleCount>(slopes, column, stage, state, gradient);
+        }
       });
       fitted_[stage] = current_[stage];
-      if (const Result<> fitted =
-              FitStage<kSampleCount>(fitted_[stage], states, targets, accrued_before_[stage], FitSeed(stage, 0));
+      if (const Result<> fitted = FitStage<kSampleCount>(fitted_[stage],
+                                                         states,
+                                                         targets,
+                                                         accrued_before_[stage],
+                                                         FitSeed(stage, 0),
+                                                         slopes_wanted ? &slopes : nullptr);
           !fitted.has_value()) {
         return fitted;
       }
@@ -535,6 +768,7 @@ class DtFbsdeIterativeSolver {
     using HalfValues = ValueFunctionValueBatch<State, kHalf>;
 
     const std::array<Policy, 2> choosers{MakePolicy(halves_[0]), MakePolicy(halves_[1])};
+    const bool slopes_wanted = options_.slope_weight > Scalar{0};
     for (std::size_t stage = kNumControlStages; stage-- > 0;) {
       for (std::size_t half = 0; half < 2; ++half) {
         const Policy& chooser = choosers[half];
@@ -542,16 +776,30 @@ class DtFbsdeIterativeSolver {
         HalfStates states;
         HalfValues targets;
         HalfValues accrued;
+        SlopeTargets<kHalf> slopes;
         ParallelFor(static_cast<std::size_t>(kHalf), [&](std::size_t slot) noexcept {
           const auto column = static_cast<Eigen::Index>(slot);
           const State state = states_[stage].col(static_cast<Eigen::Index>((2 * slot) + half));
           states.col(column) = state;
           accrued[column] = accrued_before_[stage][static_cast<Eigen::Index>((2 * slot) + half)];
-          targets[column] = std::max(scorer.QValue(stage, state, chooser(stage, state)), options_.target_floor);
+          const Control control = chooser(stage, state);
+          const Scalar q_value = scorer.QValue(stage, state, control);
+          targets[column] = std::max(q_value, options_.target_floor);
+          if (slopes_wanted) {
+            // Scored, like the value, by the other half's table.
+            const State gradient = q_value < options_.target_floor
+                                       ? State(State::Zero())
+                                       : GradientTarget(stage, state, control, halves_[1 - half][stage + 1]);
+            SetSlopeTargets<kHalf>(slopes, column, stage, state, gradient);
+          }
         });
         halves_[half][stage] = current_[stage];
-        if (const Result<> fitted =
-                FitStage<kHalf>(halves_[half][stage], states, targets, accrued, FitSeed(stage, half + 1));
+        if (const Result<> fitted = FitStage<kHalf>(halves_[half][stage],
+                                                    states,
+                                                    targets,
+                                                    accrued,
+                                                    FitSeed(stage, half + 1),
+                                                    slopes_wanted ? &slopes : nullptr);
             !fitted.has_value()) {
           return fitted;
         }
@@ -596,7 +844,8 @@ class DtFbsdeIterativeSolver {
                 const ValueFunctionStateBatch<State, Count>& states,
                 const ValueFunctionValueBatch<State, Count>& targets,
                 const ValueFunctionValueBatch<State, Count>& accrued,
-                std::uint64_t seed) const noexcept -> Result<> {
+                std::uint64_t seed,
+                const SlopeTargets<Count>* slopes) const noexcept -> Result<> {
     ValueFunctionValueBatch<State, Count> weights = ValueFunctionValueBatch<State, Count>::Ones();
     if (options_.entropy_temperature > Scalar{0}) {
       const ValueFunctionValueBatch<State, Count> heuristic = accrued + targets;
@@ -608,18 +857,68 @@ class DtFbsdeIterativeSolver {
     if constexpr (requires {
                     value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, Scalar{});
                   }) {
-      return value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, options_.ridge);
+      if (slopes == nullptr) {
+        return value_function.template FitWeightedLeastSquares<Count>(states, targets, weights, options_.ridge);
+      }
+      if constexpr (requires {
+                      value_function.template FitWeightedLeastSquares<Count, M>(
+                          states, targets, weights, *slopes, Scalar{}, Scalar{});
+                    }) {
+        return value_function.template FitWeightedLeastSquares<Count, M>(
+            states, targets, weights, *slopes, options_.slope_weight, options_.ridge);
+      } else {
+        return ErrorResult("DtFbsdeIterativeSolver: this representation's closed-form fit cannot match slopes.");
+      }
     } else if (options_.nonlinear_fit_method == ValueFunctionFitMethod::kGaussNewton) {
-      using Fitter = ValueFunctionGaussNewtonFitter<ValueFunctionT, kSgdMinibatch>;
+      using Fitter = ValueFunctionGaussNewtonFitter<ValueFunctionT, std::min(kSgdMinibatch, Count)>;
       RESULT_ASSIGN_OR_RETURN(const Fitter fitter, Fitter::Make(options_.gauss_newton));
       ValueFunctionGaussNewtonReport<Scalar> report;
       return fitter.template Fit<Count>(value_function, states, targets, weights, report);
     } else {
-      using Fitter = ValueFunctionSgdFitter<ValueFunctionT, kSgdMinibatch>;
+      // A minibatch no wider than the data: a wider one would only repeat each sample, which
+      // leaves the mean gradient unchanged and multiplies its cost.
+      using Fitter = ValueFunctionSgdFitter<ValueFunctionT, std::min(kSgdMinibatch, Count)>;
       RESULT_ASSIGN_OR_RETURN(Fitter fitter, Fitter::Make(options_.sgd, value_function.Parameters()));
       std::vector<typename Fitter::StepReport> history;
+      if (slopes != nullptr) {
+        return fitter.template FitEpochs<Count, M>(value_function,
+                                                   states,
+                                                   targets,
+                                                   weights,
+                                                   *slopes,
+                                                   options_.slope_weight,
+                                                   options_.sgd_epochs,
+                                                   seed,
+                                                   history);
+      }
       return fitter.template FitEpochs<Count>(
           value_function, states, targets, weights, options_.sgd_epochs, seed, history);
+    }
+  }
+
+  // The slope target at `state` for the value target taken with `control` against `next`, the
+  // next stage's table; see TaylorGradientTarget().
+  [[nodiscard]] auto GradientTarget(std::size_t stage,
+                                    const State& state,
+                                    const Control& control,
+                                    const ValueFunctionT& next) const noexcept -> State {
+    return TaylorGradientTarget(forward_model_, stage, state, control, next, kJacobianStep);
+  }
+
+  // Writes sample `column`'s slope targets from its gradient target: the gradient projected on each
+  // control column of the stage before, along which that stage's policy compares this stage's
+  // value function. Stage 0's table serves no policy; its columns are its own stage's.
+  template <int Count>
+  auto SetSlopeTargets(SlopeTargets<Count>& slopes,
+                       Eigen::Index column,
+                       std::size_t stage,
+                       const State& state,
+                       const State& gradient) const noexcept -> void {
+    const Eigen::Matrix<Scalar, N, M> columns = forward_model_.control_drift_mat()(stage == 0 ? 0 : stage - 1, state);
+    for (std::size_t index = 0; index < kControlDim; ++index) {
+      const auto control_column = static_cast<Eigen::Index>(index);
+      slopes.directions[index].col(column) = columns.col(control_column);
+      slopes.slopes[index][column] = columns.col(control_column).dot(gradient);
     }
   }
 
@@ -628,21 +927,23 @@ class DtFbsdeIterativeSolver {
     return SamplingSeed(iteration_) ^ ((static_cast<std::uint64_t>(stage) * 3U + half) * 0xBF58476D1CE4E5B9ULL);
   }
 
-  // The mean cost of the policy over `table`, on NumEvaluationSamples rollouts with no exploration
-  // and a fixed noise seed.
-  [[nodiscard]] auto Evaluate(const std::vector<ValueFunctionT>& table) const noexcept -> Costs {
+  // The mean cost of the policy over `table`, on the first `rollouts` of the NumEvaluationSamples
+  // evaluation rollouts, with no exploration and a fixed noise seed.
+  [[nodiscard]] auto Evaluate(const std::vector<ValueFunctionT>& table,
+                              std::size_t rollouts = NumEvaluationSamples) const noexcept -> Costs {
     return EvaluatePolicyByRollouts(forward_model_,
                                     MakePolicy(table),
                                     running_cost_,
                                     terminal_cost_,
                                     initial_mean_,
                                     initial_covariance_factor_,
-                                    NumEvaluationSamples,
+                                    rollouts,
                                     kNumControlStages,
                                     seed_ ^ kPolicyEvaluationStream);
   }
 
-  ForwardModelT forward_model_;
+  // The model at the diffusion scale the solver is working on.
+  Model forward_model_;
   RunningCost running_cost_;
   TerminalCostT terminal_cost_;
   State initial_mean_;
@@ -659,7 +960,15 @@ class DtFbsdeIterativeSolver {
   std::vector<ValueFunctionT> trial_;
   // The two independently fitted halves of a double-estimation backward pass.
   std::array<std::vector<ValueFunctionT>, 2> halves_;
-  Scalar current_cost_ = std::numeric_limits<Scalar>::infinity();
+  Costs current_costs_{.total = std::numeric_limits<Scalar>::infinity()};
+  // The current policy's cost on the screening rollouts, when screening.
+  Scalar current_screened_cost_ = Scalar{0};
+
+  // The exploration inflation's base, the factor the stalls since the last improvement have
+  // multiplied it by, and how many iterations in a row have failed to lower the cost.
+  Scalar base_inflation_ = Scalar{1};
+  Scalar stall_factor_ = Scalar{1};
+  std::size_t stalled_iterations_ = 0;
 
   // The most recent forward pass: the states at every stage and the control that produced each
   // column's state at the next. On the heap: at the batch sizes this is used at they run to

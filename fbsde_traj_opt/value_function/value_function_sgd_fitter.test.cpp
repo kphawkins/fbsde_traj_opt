@@ -459,5 +459,64 @@ TEST(ValueFunctionSgdFitterTest, EveryEpochVisitsEverySample) {
   }
 }
 
+TEST(ValueFunctionSgdFitterSlopeTest, ReportsTheModelsSlopeResidualAlongEachDirection) {
+  const Result<Model> model = Model::Make(SpreadParameters(3, 0.5), kSharpness, kDiagonalOffset);
+  ASSERT_TRUE(model.has_value());
+  const SampleStates all_states = SpreadStates(5, 1.5);
+  Fitter::StateBatch states = all_states.leftCols<kBatchSize>();
+  ValueFunctionSlopeTargets<State, kBatchSize, 1> slopes;
+  Spread spread(9);
+  double squared = 0.0;
+  for (Eigen::Index column = 0; column < kBatchSize; ++column) {
+    const State direction(spread.Next(1.0), spread.Next(1.0));
+    slopes.directions[0].col(column) = direction;
+    slopes.slopes[0][column] = spread.Next(2.0);
+    const double residual = direction.dot(model->Gradient(states.col(column))) - slopes.slopes[0][column];
+    squared += residual * residual;
+  }
+  Fitter::ValueBatch targets;
+  model->Values<kBatchSize>(states, targets);
+
+  Options options;
+  options.learning_rate = 1e-12;
+  Result<Fitter> fitter = Fitter::Make(options, model->Parameters());
+  ASSERT_TRUE(fitter.has_value());
+  Model fitted = *model;
+  StepReport report;
+  ASSERT_TRUE(
+      fitter->FitMinibatch<1>(fitted, states, targets, Fitter::ValueBatch::Ones(), slopes, 1.0, report).has_value());
+  // The central difference matches the analytic gradient to well within the fit's needs.
+  EXPECT_NEAR(report.root_mean_squared_slope_residual, std::sqrt(squared / kBatchSize), 1e-6);
+}
+
+TEST(ValueFunctionSgdFitterSlopeTest, FittingSlopesAsWellAsValuesDrivesBothResidualsDown) {
+  const Result<Model> truth = Model::Make(SpreadParameters(3, 0.5), kSharpness, kDiagonalOffset);
+  ASSERT_TRUE(truth.has_value());
+  const SampleStates states = SpreadStates(5, 1.5);
+  SampleValues targets;
+  truth->Values<kNumSamples>(states, targets);
+  ValueFunctionSlopeTargets<State, kNumSamples, 2> slopes;
+  for (Eigen::Index column = 0; column < kNumSamples; ++column) {
+    const State gradient = truth->Gradient(states.col(column));
+    for (std::size_t axis = 0; axis < 2; ++axis) {
+      slopes.directions[axis].col(column) = State::Unit(static_cast<Eigen::Index>(axis));
+      slopes.slopes[axis][column] = gradient[static_cast<Eigen::Index>(axis)];
+    }
+  }
+
+  Result<Model> model = Model::Make(SpreadParameters(3, 0.5) + SpreadParameters(11, 0.2), kSharpness, kDiagonalOffset);
+  ASSERT_TRUE(model.has_value());
+  Options options;
+  options.learning_rate = 0.02;
+  Result<Fitter> fitter = Fitter::Make(options, model->Parameters());
+  ASSERT_TRUE(fitter.has_value());
+  std::vector<StepReport> history;
+  ASSERT_TRUE(
+      (fitter->FitEpochs<kNumSamples, 2>(*model, states, targets, SampleValues::Ones(), slopes, 1.0, 300, 17, history))
+          .has_value());
+  EXPECT_LT(history.back().root_mean_squared_slope_residual, 0.1 * history.front().root_mean_squared_slope_residual);
+  EXPECT_LT(history.back().root_mean_squared_residual, 0.1 * history.front().root_mean_squared_residual);
+}
+
 }  // namespace
 }  // namespace fbsde_traj_opt

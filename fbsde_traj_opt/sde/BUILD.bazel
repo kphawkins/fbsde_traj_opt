@@ -46,6 +46,30 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "diffusion_scaled_forward_sde_model",
+    hdrs = ["diffusion_scaled_forward_sde_model.hpp"],
+    copts = FBSDE_COPTS,
+    deps = ["@eigen"],
+)
+
+cc_test(
+    name = "diffusion_scaled_forward_sde_model_test",
+    size = "small",
+    srcs = ["diffusion_scaled_forward_sde_model.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":composed_forward_sde_model",
+        ":diffusion_scaled_forward_sde_model",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
 cc_test(
     name = "composed_forward_sde_model_test",
     size = "small",

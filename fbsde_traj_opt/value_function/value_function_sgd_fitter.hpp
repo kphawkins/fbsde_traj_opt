@@ -17,6 +17,7 @@
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/adam_optimizer.hpp"
 #include "fbsde_traj_opt/value_function/value_function_approx_concepts.hpp"
+#include "fbsde_traj_opt/value_function/value_function_slope_targets.hpp"
 
 namespace fbsde_traj_opt {
 
@@ -55,6 +56,13 @@ namespace fbsde_traj_opt {
 //     minibatch-to-minibatch jitter that the next stage would otherwise have to estimate through.
 //
 // All three are off by default; each is enabled by giving its option a positive value.
+//
+// Slope targets (ValueFunctionSlopeTargets) optionally add a second residual: for each sample and
+// each of its directions `d`, the model's slope `d' grad V~` against a target slope, weighted by
+// `slope_weight`. The model's slope and its parameter gradient are both taken by the central
+// difference of SlopeDifferenceStep() -- of its values and of the parameter gradients it already
+// provides -- so any batched parameterized model can be fitted to slopes without offering
+// derivatives of its gradient. The Huber variant and the trust region act on the values alone.
 //
 // `ValueFunctionT` is the model being fitted and `BatchSize` the minibatch size. Both the model's
 // evaluation and the optimizer state are fixed-size, so a fitting step allocates nothing; the
@@ -103,6 +111,10 @@ struct ValueFunctionSgdStepReport {
 
   // The square root of the above, in the units of the value function itself.
   Scalar root_mean_squared_residual = Scalar{0};
+
+  // The root-mean-square slope residual over the minibatch and its directions, before the step;
+  // zero when the step had no slope targets.
+  Scalar root_mean_squared_slope_residual = Scalar{0};
 
   // The Euclidean norm of the loss gradient, after clipping.
   Scalar gradient_norm = Scalar{0};
@@ -187,6 +199,19 @@ class ValueFunctionSgdFitter {
                     const ValueBatch& targets,
                     const ValueBatch& sample_weights,
                     StepReport& report_out) noexcept -> Result<> {
+    return FitMinibatch<0>(value_function, states, targets, sample_weights, {}, Scalar{0}, report_out);
+  }
+
+  // As above, with each sample's slopes along its `D` directions also drawn toward `slopes`, the
+  // squared slope residual weighted by `slope_weight` times the sample's weight.
+  template <int D>
+  auto FitMinibatch(ValueFunctionT& value_function,
+                    const StateBatch& states,
+                    const ValueBatch& targets,
+                    const ValueBatch& sample_weights,
+                    const ValueFunctionSlopeTargets<State, BatchSize, D>& slopes,
+                    Scalar slope_weight,
+                    StepReport& report_out) noexcept -> Result<> {
     const ParameterVector parameters = value_function.Parameters();
 
     ValueBatch values;
@@ -207,6 +232,11 @@ class ValueFunctionSgdFitter {
     }
 
     ParameterVector gradient = (parameter_gradients * loss_derivatives.transpose()) / static_cast<Scalar>(BatchSize);
+    if constexpr (D > 0) {
+      if (slope_weight > Scalar{0}) {
+        gradient += slope_weight * SlopeGradient<D>(value_function, states, sample_weights, slopes, report_out);
+      }
+    }
     if (options_.proximal_weight > Scalar{0}) {
       gradient += options_.proximal_weight * (parameters - anchor_);
     }
@@ -279,6 +309,21 @@ class ValueFunctionSgdFitter {
                  std::size_t num_epochs,
                  std::uint64_t seed,
                  std::vector<StepReport>& history_out) noexcept -> Result<> {
+    return FitEpochs<NumSamples, 0>(
+        value_function, states, targets, sample_weights, {}, Scalar{0}, num_epochs, seed, history_out);
+  }
+
+  // As above, with slope targets weighted by `slope_weight`; see FitMinibatch().
+  template <int NumSamples, int D>
+  auto FitEpochs(ValueFunctionT& value_function,
+                 const ValueFunctionStateBatch<State, NumSamples>& states,
+                 const ValueFunctionValueBatch<State, NumSamples>& targets,
+                 const ValueFunctionValueBatch<State, NumSamples>& sample_weights,
+                 const ValueFunctionSlopeTargets<State, NumSamples, D>& slopes,
+                 Scalar slope_weight,
+                 std::size_t num_epochs,
+                 std::uint64_t seed,
+                 std::vector<StepReport>& history_out) noexcept -> Result<> {
     static_assert(NumSamples >= 1, "Fitting needs at least one sample.");
     constexpr auto kSampleCount = static_cast<std::size_t>(NumSamples);
     constexpr std::size_t kBatchesPerEpoch = (kSampleCount + kBatchSize - 1) / kBatchSize;
@@ -293,6 +338,7 @@ class ValueFunctionSgdFitter {
         StateBatch batch_states;
         ValueBatch batch_targets;
         ValueBatch batch_weights;
+        ValueFunctionSlopeTargets<State, BatchSize, D> batch_slopes;
         for (std::size_t slot = 0; slot < kBatchSize; ++slot) {
           const std::size_t index = order[((batch * kBatchSize) + slot) % kSampleCount];
           const auto column = static_cast<Eigen::Index>(slot);
@@ -300,10 +346,15 @@ class ValueFunctionSgdFitter {
           batch_states.col(column) = states.col(source);
           batch_targets[column] = targets[source];
           batch_weights[column] = sample_weights[source];
+          for (std::size_t direction = 0; direction < static_cast<std::size_t>(D); ++direction) {
+            batch_slopes.directions[direction].col(column) = slopes.directions[direction].col(source);
+            batch_slopes.slopes[direction][column] = slopes.slopes[direction][source];
+          }
         }
 
         StepReport report;
-        if (const Result<> stepped = FitMinibatch(value_function, batch_states, batch_targets, batch_weights, report);
+        if (const Result<> stepped = FitMinibatch<D>(
+                value_function, batch_states, batch_targets, batch_weights, batch_slopes, slope_weight, report);
             !stepped.has_value()) {
           return ErrorResult(stepped.error().message, stepped.error().location);
         }
@@ -366,6 +417,49 @@ class ValueFunctionSgdFitter {
                          const ParameterVector& anchor,
                          Optimizer optimizer) noexcept
       : options_(options), anchor_(anchor), averaged_parameters_(anchor), optimizer_(std::move(optimizer)) {}
+
+  // The parameter gradient of the slope loss `(1/2B) sum_s w_s sum_k (d_k' grad V~(x_s) - t_ks)^2`,
+  // with the model's slope and its parameter gradient both by the central difference of
+  // SlopeDifferenceStep(). Records the slope residual in `report_out`.
+  template <int D>
+  auto SlopeGradient(const ValueFunctionT& value_function,
+                     const StateBatch& states,
+                     const ValueBatch& sample_weights,
+                     const ValueFunctionSlopeTargets<State, BatchSize, D>& slopes,
+                     StepReport& report_out) const noexcept -> ParameterVector {
+    ParameterVector gradient = ParameterVector::Zero();
+    auto squared = Scalar{0};
+    for (std::size_t direction = 0; direction < static_cast<std::size_t>(D); ++direction) {
+      StateBatch forward;
+      StateBatch backward;
+      ValueBatch scale;
+      for (std::size_t slot = 0; slot < kBatchSize; ++slot) {
+        const auto column = static_cast<Eigen::Index>(slot);
+        const State state = states.col(column);
+        const State along = slopes.directions[direction].col(column);
+        const Scalar length = along.norm();
+        const Scalar step = SlopeDifferenceStep(state);
+        const State offset = length > Scalar{0} ? State((step / length) * along) : State(State::Zero());
+        forward.col(column) = state + offset;
+        backward.col(column) = state - offset;
+        scale[column] = length / (Scalar{2} * step);
+      }
+      ValueBatch forward_values;
+      ValueBatch backward_values;
+      ParameterGradientBatch forward_gradients;
+      ParameterGradientBatch backward_gradients;
+      value_function.template ValuesAndParameterGradients<BatchSize>(forward, forward_values, forward_gradients);
+      value_function.template ValuesAndParameterGradients<BatchSize>(backward, backward_values, backward_gradients);
+      const ValueBatch residuals = (forward_values - backward_values).cwiseProduct(scale) - slopes.slopes[direction];
+      squared += residuals.squaredNorm();
+      gradient += ((forward_gradients - backward_gradients) *
+                   residuals.cwiseProduct(scale).cwiseProduct(sample_weights).transpose()) /
+                  static_cast<Scalar>(BatchSize);
+    }
+    report_out.root_mean_squared_slope_residual =
+        std::sqrt(squared / static_cast<Scalar>(BatchSize * static_cast<std::size_t>(D)));
+    return gradient;
+  }
 
   // A Fisher-Yates shuffle over a SplitMix64 stream. Deterministic in `seed`, so a fitting run
   // repeats exactly; not a statistical generator, and not asked to be one.

@@ -15,6 +15,7 @@
 
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/value_function_approx_concepts.hpp"
+#include "fbsde_traj_opt/value_function/value_function_slope_targets.hpp"
 
 namespace fbsde_traj_opt {
 
@@ -221,18 +222,61 @@ class PolynomialValueFunctionApprox {
       normal_matrix.template selfadjointView<Eigen::Lower>().rankUpdate(features, weights[column]);
       normal_vector += (weights[column] * targets[column]) * features;
     }
-    normal_matrix.diagonal().array() += ridge * static_cast<Scalar>(NumSamples);
+    return SolveNormalEquations(normal_matrix, normal_vector, ridge * static_cast<Scalar>(NumSamples));
+  }
 
-    const Eigen::LDLT<ParameterMat> factorization(normal_matrix.template selfadjointView<Eigen::Lower>());
-    RESULT_ASSERT(factorization.info() == Eigen::Success,
-                  "PolynomialValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add "
-                  "a ridge weight or more varied samples.");
-    const ParameterVector solution = factorization.solve(normal_vector);
-    RESULT_ASSERT(solution.allFinite(),
-                  "PolynomialValueFunctionApprox::FitWeightedLeastSquares: the fit produced non-finite "
-                  "coefficients.");
-    parameters_ = solution;
-    return SuccessResult();
+  // As above, with slope rows: also matches each sample's slope `d' grad V` along each of its `D`
+  // directions to the target in `slopes`,
+  //
+  //   theta = argmin sum_s w_s [ (phi(x_s)' theta - y_s)^2
+  //                              + slope_weight sum_k (d_ks' grad phi(x_s)' theta - t_ks)^2 ]
+  //           + ridge * S * || theta ||^2.
+  //
+  // A slope is linear in the coefficients just as a value is, so the fit stays a closed-form
+  // solve; see ValueFunctionSlopeTargets for why a policy wants it.
+  //
+  // Fails, leaving the model untouched, as the plain fit does, or if the slope weight is negative
+  // or not finite, or a slope target is not finite.
+  template <int NumSamples, int D>
+  auto FitWeightedLeastSquares(const StateBatch<NumSamples>& states,
+                               const ValueBatch<NumSamples>& targets,
+                               const ValueBatch<NumSamples>& weights,
+                               const ValueFunctionSlopeTargets<State, NumSamples, D>& slopes,
+                               Scalar slope_weight,
+                               Scalar ridge) noexcept -> Result<> {
+    RESULT_ASSERT(weights.allFinite() && (weights.array() >= Scalar{0}).all(),
+                  "PolynomialValueFunctionApprox::FitWeightedLeastSquares: every weight must be finite and "
+                  "non-negative.");
+    RESULT_ASSERT(std::isfinite(ridge) && ridge >= Scalar{0},
+                  "PolynomialValueFunctionApprox::FitWeightedLeastSquares: the ridge weight must be finite and "
+                  "non-negative.");
+    RESULT_ASSERT(std::isfinite(slope_weight) && slope_weight >= Scalar{0},
+                  "PolynomialValueFunctionApprox::FitWeightedLeastSquares: the slope weight must be finite and "
+                  "non-negative.");
+    RESULT_ASSERT(targets.allFinite(),
+                  "PolynomialValueFunctionApprox::FitWeightedLeastSquares: every target must be finite.");
+    for (std::size_t direction = 0; direction < static_cast<std::size_t>(D); ++direction) {
+      RESULT_ASSERT(slopes.slopes[direction].allFinite() && slopes.directions[direction].allFinite(),
+                    "PolynomialValueFunctionApprox::FitWeightedLeastSquares: every slope target and direction "
+                    "must be finite.");
+    }
+
+    ParameterMat normal_matrix = ParameterMat::Zero();
+    ParameterVector normal_vector = ParameterVector::Zero();
+    for (std::size_t sample = 0; sample < kSampleCount<NumSamples>; ++sample) {
+      const auto column = static_cast<Eigen::Index>(sample);
+      const State state = states.col(column);
+      const ParameterVector features = Features(state);
+      normal_matrix.template selfadjointView<Eigen::Lower>().rankUpdate(features, weights[column]);
+      normal_vector += (weights[column] * targets[column]) * features;
+      for (std::size_t direction = 0; direction < static_cast<std::size_t>(D); ++direction) {
+        const ParameterVector slope_features = FeatureSlopes(state, slopes.directions[direction].col(column));
+        const Scalar weight = slope_weight * weights[column];
+        normal_matrix.template selfadjointView<Eigen::Lower>().rankUpdate(slope_features, weight);
+        normal_vector += (weight * slopes.slopes[direction][column]) * slope_features;
+      }
+    }
+    return SolveNormalEquations(normal_matrix, normal_vector, ridge * static_cast<Scalar>(NumSamples));
   }
 
   template <int BatchSize>
@@ -340,6 +384,46 @@ class PolynomialValueFunctionApprox {
       }
     }
     return powers;
+  }
+
+  // Solves the ridge-regularized normal equations whose lower triangle is in `normal_matrix`, and
+  // adopts the solution.
+  auto SolveNormalEquations(ParameterMat normal_matrix, const ParameterVector& normal_vector, Scalar ridge) noexcept
+      -> Result<> {
+    normal_matrix.diagonal().array() += ridge;
+    const Eigen::LDLT<ParameterMat> factorization(normal_matrix.template selfadjointView<Eigen::Lower>());
+    RESULT_ASSERT(factorization.info() == Eigen::Success,
+                  "PolynomialValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add "
+                  "a ridge weight or more varied samples.");
+    const ParameterVector solution = factorization.solve(normal_vector);
+    RESULT_ASSERT(solution.allFinite(),
+                  "PolynomialValueFunctionApprox::FitWeightedLeastSquares: the fit produced non-finite "
+                  "coefficients.");
+    parameters_ = solution;
+    return SuccessResult();
+  }
+
+  // The slope of every basis function along `direction`, `sum_k d_k d phi / d x_k`, by the same
+  // lowered-exponent rule as Derivatives().
+  [[nodiscard]] auto FeatureSlopes(const State& state, const State& direction) const noexcept -> ParameterVector {
+    const PowerTable powers = Powers(state);
+    ParameterVector slopes = ParameterVector::Zero();
+    for (std::size_t term = 0; term < kExponents.size(); ++term) {
+      const std::array<int, N>& exponents = kExponents[term];
+      for (std::size_t axis = 0; axis < kStateDim; ++axis) {
+        if (exponents[axis] == 0) {
+          continue;
+        }
+        auto product = static_cast<Scalar>(exponents[axis]) * inverse_scale_[static_cast<Eigen::Index>(axis)] *
+                       direction[static_cast<Eigen::Index>(axis)];
+        for (std::size_t other = 0; other < kStateDim; ++other) {
+          const int exponent = exponents[other] - (other == axis ? 1 : 0);
+          product *= powers[other][static_cast<std::size_t>(exponent)];
+        }
+        slopes[static_cast<Eigen::Index>(term)] += product;
+      }
+    }
+    return slopes;
   }
 
   [[nodiscard]] auto Features(const State& state) const noexcept -> ParameterVector {
