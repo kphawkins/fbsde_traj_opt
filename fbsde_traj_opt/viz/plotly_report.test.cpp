@@ -152,6 +152,46 @@ TEST(PlotlyReportTest, PageDefinesADistinctDarkPalette) {
   EXPECT_EQ(html.find("filter: invert"), std::string::npos);
 }
 
+TEST(PlotlyReportTest, EveryColorscaleRoleUsedIsDefinedByThePagePalette) {
+  constexpr std::array<double, 2> kGridX{0.0, 1.0};
+  constexpr std::array<double, 2> kGridY{0.0, 1.0};
+  constexpr std::array<double, 4> kGridZ{1.0, 2.0, 3.0, 4.0};
+
+  PlotlyReport report("Title", "");
+  PlotlyFigure sequential("Value", "Position", "Velocity");
+  ASSERT_TRUE(sequential.AddHeatmap(kGridX, kGridY, kGridZ, HeatmapStyle{.value_label = "Cost"}).has_value());
+  report.AddFigure(std::move(sequential));
+
+  PlotlyFigure diverging("Error", "Position", "Velocity");
+  ASSERT_TRUE(
+      diverging.AddHeatmap(kGridX, kGridY, kGridZ, HeatmapStyle{.colorscale_role = PlotColorscaleRole::kDiverging})
+          .has_value());
+  report.AddFigure(std::move(diverging));
+
+  const std::string html = report.ToHtml();
+
+  // Every stop the page's resolver will ask for must be defined, in both modes.
+  for (const std::string_view stop : {"--scale-sequential-0:",
+                                      "--scale-sequential-1:",
+                                      "--scale-sequential-2:",
+                                      "--scale-sequential-3:",
+                                      "--scale-sequential-4:",
+                                      "--scale-diverging-0:",
+                                      "--scale-diverging-1:",
+                                      "--scale-diverging-2:"}) {
+    EXPECT_NE(html.find(stop), std::string::npos) << stop;
+  }
+
+  // The sequential ramp is reversed rather than repeated in dark mode, so that its "least" end
+  // stays nearest whichever surface it is drawn on.
+  EXPECT_NE(html.find("--scale-sequential-0: #cde2fb;"), std::string::npos);
+  EXPECT_NE(html.find("--scale-sequential-0: #0d366b;"), std::string::npos);
+
+  // The diverging midpoint is neutral gray in both modes: zero must read as nothing.
+  EXPECT_NE(html.find("--scale-diverging-1:  #f0efec;"), std::string::npos);
+  EXPECT_NE(html.find("--scale-diverging-1:  #383835;"), std::string::npos);
+}
+
 TEST(PlotlyReportTest, WriteHtmlCreatesMissingParentDirectories) {
   const std::filesystem::path directory =
       std::filesystem::temp_directory_path() / "fbsde_plotly_report_test" / "nested";

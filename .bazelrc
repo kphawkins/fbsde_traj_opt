@@ -53,6 +53,11 @@ test --test_output=errors
 test --test_summary=terse
 test --test_verbose_timeout_warnings
 
+# Tests tagged "slow" take more than a minute each, so a plain `bazel test //...` skips them.
+# Run them with --config=slow. CI always runs them.
+test --test_tag_filters=-slow
+test:slow --test_tag_filters=
+
 # ---------------------------------------------------------------------------
 # CI: no interactive progress, and keep going to see every failure.
 # Used as: bazel test --config=ci //...
@@ -62,6 +67,7 @@ build:ci --color=no
 build:ci --curses=no
 build:ci --keep_going
 build:ci --announce_rc
+test:ci --test_tag_filters=
 
 # ---------------------------------------------------------------------------
 # Machine-local overrides. Not committed; see .gitignore.

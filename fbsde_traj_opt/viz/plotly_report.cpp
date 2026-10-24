@@ -55,6 +55,14 @@ constexpr std::string_view kPageTemplate = R"HTML(<!DOCTYPE html>
   --series-6:       #008300;
   --series-7:       #4a3aa7;
   --series-8:       #e34948;
+  --scale-sequential-0: #cde2fb;
+  --scale-sequential-1: #86b6ef;
+  --scale-sequential-2: #3987e5;
+  --scale-sequential-3: #1c5cab;
+  --scale-sequential-4: #0d366b;
+  --scale-diverging-0:  #1c5cab;
+  --scale-diverging-1:  #f0efec;
+  --scale-diverging-2:  #e34948;
 }
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
@@ -75,6 +83,14 @@ constexpr std::string_view kPageTemplate = R"HTML(<!DOCTYPE html>
     --series-6:       #008300;
     --series-7:       #9085e9;
     --series-8:       #e66767;
+    --scale-sequential-0: #0d366b;
+    --scale-sequential-1: #1c5cab;
+    --scale-sequential-2: #3987e5;
+    --scale-sequential-3: #86b6ef;
+    --scale-sequential-4: #cde2fb;
+    --scale-diverging-0:  #3987e5;
+    --scale-diverging-1:  #383835;
+    --scale-diverging-2:  #e66767;
   }
 }
 :root[data-theme="dark"] {
@@ -95,6 +111,14 @@ constexpr std::string_view kPageTemplate = R"HTML(<!DOCTYPE html>
   --series-6:       #008300;
   --series-7:       #9085e9;
   --series-8:       #e66767;
+  --scale-sequential-0: #0d366b;
+  --scale-sequential-1: #1c5cab;
+  --scale-sequential-2: #3987e5;
+  --scale-sequential-3: #86b6ef;
+  --scale-sequential-4: #cde2fb;
+  --scale-diverging-0:  #3987e5;
+  --scale-diverging-1:  #383835;
+  --scale-diverging-2:  #e66767;
 }
 * { box-sizing: border-box; }
 body {
@@ -167,10 +191,42 @@ td:first-child, th:first-child { text-align: left; }
     return getComputedStyle(document.documentElement).getPropertyValue("--" + name).trim();
   }
 
-  // Replaces each trace's color role with the color that role currently resolves to.
+  // How many stops each continuous scale is defined with. The stop hexes themselves live in the
+  // palette above as --<role>-0 .. --<role>-(n-1); only the count has to be agreed here.
+  var COLORSCALE_STOPS = { "scale-sequential": 5, "scale-diverging": 3 };
+
+  // Builds a Plotly colorscale -- [[position, color], ...] -- from a role's palette stops. The
+  // sequential role's stops are themselves reversed between light and dark mode, so that the end
+  // of the ramp meaning "least" always sits nearest the surface it is drawn on.
+  function ResolveColorscale(role) {
+    var count = COLORSCALE_STOPS[role] || 2;
+    var stops = [];
+    for (var index = 0; index < count; index += 1) {
+      stops.push([index / (count - 1), ResolveToken(role + "-" + index)]);
+    }
+    return stops;
+  }
+
+  // Replaces each trace's color role with the color, or the color scale, that role currently
+  // resolves to.
   function ThemedData(data) {
+    var ink = ResolveToken("text-primary");
+    var secondary = ResolveToken("text-secondary");
+    var axis = ResolveToken("axis-line");
+
     return data.map(function (trace) {
       var themed = Object.assign({}, trace);
+      if (trace.colorscaleRole) {
+        delete themed.colorscaleRole;
+        themed.colorscale = ResolveColorscale(trace.colorscaleRole);
+        themed.colorbar = Object.assign({}, trace.colorbar, {
+          outlinecolor: axis,
+          tickcolor: axis,
+          tickfont: { color: secondary, size: 12 },
+          title: Object.assign({}, (trace.colorbar || {}).title, { font: { color: ink, size: 13 } })
+        });
+        return themed;
+      }
       var color = ResolveToken(trace.colorRole || "series-1");
       delete themed.colorRole;
       themed.line = Object.assign({}, trace.line, { color: color });
@@ -196,7 +252,31 @@ td:first-child, th:first-child { text-align: left; }
       });
     }
 
-    return Object.assign({}, layout, {
+    // The animation controls are chrome, not data: they wear the page's ink and surface, never a
+    // series color, so that nothing on screen reads as a data color unless it is one.
+    function ThemedMenus(menus) {
+      return (menus || []).map(function (menu) {
+        return Object.assign({}, menu, {
+          bgcolor: surface, bordercolor: axis, borderwidth: 1,
+          font: { family: FONT, color: ink, size: 12 }
+        });
+      });
+    }
+
+    function ThemedSliders(sliders) {
+      return (sliders || []).map(function (slider) {
+        return Object.assign({}, slider, {
+          bgcolor: axis, bordercolor: axis, borderwidth: 1,
+          activebgcolor: ink, tickcolor: axis,
+          font: { family: FONT, color: secondary, size: 11 },
+          currentvalue: Object.assign({}, slider.currentvalue, {
+            font: { family: FONT, color: ink, size: 12 }
+          })
+        });
+      });
+    }
+
+    var themed = Object.assign({}, layout, {
       paper_bgcolor: surface,
       plot_bgcolor: surface,
       font: { family: FONT, size: 13, color: secondary },
@@ -205,6 +285,9 @@ td:first-child, th:first-child { text-align: left; }
       legend: Object.assign({}, layout.legend, { font: { color: ink, size: 12 } }),
       hoverlabel: { bgcolor: surface, bordercolor: axis, font: { family: FONT, color: ink, size: 12 } }
     });
+    if (layout.updatemenus) { themed.updatemenus = ThemedMenus(layout.updatemenus); }
+    if (layout.sliders) { themed.sliders = ThemedSliders(layout.sliders); }
+    return themed;
   }
 
   function FormatNumber(value) {
@@ -216,7 +299,41 @@ td:first-child, th:first-child { text-align: left; }
   // The table twin of a figure. Only legended traces are tabulated: a cloud of hundreds of faint
   // sample lines is the one thing a table cannot usefully say, and the mean and the reference
   // lines are what a reader wants the numbers for anyway.
+  // The table twin of a heatmap: the grid itself, x across the header and y down the first
+  // column. A reader who cannot distinguish two steps of the ramp -- or who is reading this on
+  // paper -- gets the numbers rather than nothing.
+  function BuildGridTable(figure, trace) {
+    var table = document.createElement("table");
+    var head = document.createElement("tr");
+    var body = document.createElement("tbody");
+
+    function AddCell(row, text, header) {
+      var cell = document.createElement(header ? "th" : "td");
+      cell.textContent = text;
+      row.appendChild(cell);
+    }
+
+    AddCell(head, figure.layout.yaxis.title.text + " \\ " + figure.layout.xaxis.title.text, true);
+    trace.x.forEach(function (x) { AddCell(head, FormatNumber(x), true); });
+
+    trace.z.forEach(function (row, index) {
+      var element = document.createElement("tr");
+      AddCell(element, FormatNumber(trace.y[index]), true);
+      row.forEach(function (value) { AddCell(element, FormatNumber(value), false); });
+      body.appendChild(element);
+    });
+
+    var header = document.createElement("thead");
+    header.appendChild(head);
+    table.appendChild(header);
+    table.appendChild(body);
+    return table;
+  }
+
   function BuildTable(figure) {
+    var heatmap = figure.data.find(function (trace) { return trace.type === "heatmap"; });
+    if (heatmap) { return BuildGridTable(figure, heatmap); }
+
     var series = figure.data.filter(function (trace) { return trace.showlegend !== false; });
     if (series.length === 0) { return null; }
 
@@ -277,6 +394,19 @@ td:first-child, th:first-child { text-align: left; }
     return table;
   }
 
+  // What Plotly is handed, in the object form, so that an animated figure's frames travel with
+  // its data. Frames carry values only -- no colors -- so a theme change re-resolves the traces
+  // and the chrome and leaves the frames as they are.
+  function Spec(figure) {
+    var spec = {
+      data: ThemedData(figure.data),
+      layout: ThemedLayout(figure.layout),
+      config: PLOT_CONFIG
+    };
+    if (figure.frames) { spec.frames = figure.frames; }
+    return spec;
+  }
+
   var plotNodes = [];
 
   function Render() {
@@ -308,7 +438,7 @@ td:first-child, th:first-child { text-align: left; }
       }
 
       container.appendChild(card);
-      Plotly.newPlot(plot, ThemedData(figure.data), ThemedLayout(figure.layout), PLOT_CONFIG);
+      Plotly.newPlot(plot, Spec(figure));
       plotNodes.push(plot);
     });
   }
@@ -317,7 +447,7 @@ td:first-child, th:first-child { text-align: left; }
   // already drawn, so this recolors in place rather than rebuilding each figure.
   function Retheme() {
     plotNodes.forEach(function (plot, index) {
-      Plotly.react(plot, ThemedData(FIGURES[index].data), ThemedLayout(FIGURES[index].layout), PLOT_CONFIG);
+      Plotly.react(plot, Spec(FIGURES[index]));
     });
     document.querySelectorAll(".swatch").forEach(function (swatch) {
       swatch.style.background = ResolveToken(swatch.dataset.role);
