@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gradient Target Derivation</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\(', right: '\\)', display: false}], throwOnError: false});"></script>
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --surface: #ffffff;
+    --text: #1f2328;
+    --muted: #5b636d;
+    --rule: #e3e0d8;
+    --accent: #2f5fa7;
+    --accent-soft: #e8eef8;
+    --warn: #8a5a00;
+    --warn-soft: #fbf1dc;
+    --good: #2d6a3e;
+    --good-soft: #e5f2e8;
+    --fig-contour: #b9c3d3;
+    --fig-point: #2f5fa7;
+    --fig-chosen: #c2410c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171a;
+      --surface: #1c1f23;
+      --text: #e6e3dc;
+      --muted: #a0a7b0;
+      --rule: #30343a;
+      --accent: #8fb3ec;
+      --accent-soft: #1f2a3a;
+      --warn: #e7b65a;
+      --warn-soft: #2e2618;
+      --good: #8fd3a0;
+      --good-soft: #1b2b20;
+      --fig-contour: #3e4a5c;
+      --fig-point: #8fb3ec;
+      --fig-chosen: #f39a62;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171a;
+    --surface: #1c1f23;
+    --text: #e6e3dc;
+    --muted: #a0a7b0;
+    --rule: #30343a;
+    --accent: #8fb3ec;
+    --accent-soft: #1f2a3a;
+    --warn: #e7b65a;
+    --warn-soft: #2e2618;
+    --good: #8fd3a0;
+    --good-soft: #1b2b20;
+    --fig-contour: #3e4a5c;
+    --fig-point: #8fb3ec;
+    --fig-chosen: #f39a62;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.65 Georgia, "Iowan Old Style", "Times New Roman", serif;
+  }
+  main { max-width: 820px; margin: 0 auto; padding: 40px 16px 80px; }
+  h1 { font-size: 1.9rem; line-height: 1.25; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); margin: 0 0 28px; font-size: 1rem; }
+  h2 {
+    font-size: 1.25rem; margin: 44px 0 10px; padding-top: 14px; border-top: 1px solid var(--rule);
+  }
+  h2 .step { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  p, li { max-width: 72ch; }
+  code {
+    font: 0.86em/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--accent-soft); padding: 1px 5px; border-radius: 4px;
+  }
+  .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+  .box {
+    background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent);
+    border-radius: 6px; padding: 14px 18px; margin: 18px 0;
+  }
+  .box.result { border-left-color: var(--good); background: var(--good-soft); }
+  .box.caveat { border-left-color: var(--warn); background: var(--warn-soft); }
+  .box h3 { margin: 0 0 6px; font-size: 1rem; }
+  .box p:last-child, .box ul:last-child { margin-bottom: 0; }
+  figure { margin: 22px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { color: var(--muted); font-size: 0.92rem; margin-top: 6px; }
+  table { border-collapse: collapse; margin: 12px 0; font-size: 0.95rem; }
+  td, th { border-bottom: 1px solid var(--rule); padding: 6px 12px 6px 0; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: normal; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>The gradient target for DT-FBSDE</h1>
+<p class="subtitle">Differentiating the noiseless Taylor target to get a value-function slope target for every
+sample, and why the Taylor Q-function policy needs it.</p>
+
+<div class="box result">
+  <h3>Result</h3>
+  <p>For a sample \(x\) at stage \(i\), with the minimizing control \(u^\star\) and landing point
+  \(\varphi = x + f_i(x) + B_i(x)\,u^\star\):</p>
+  $$\hat G_i(x) \;=\; \nabla_x \hat Y_i(x) \;\approx\; J_\varphi(x, u^\star)^{\top}\, \nabla V_{i+1}(\varphi),
+  \qquad J_\varphi = I + \frac{\partial f_i}{\partial x} + \frac{\partial \big(B_i(x)\,u^\star\big)}{\partial x}.$$
+  <p>It is the discrete costate (adjoint) recursion, it is exact when \(V_{i+1}\) is quadratic and the
+  dynamics are linear, and \(Z_i = \sigma_i^{\top} \hat G_i\) in FBSDE terms.</p>
+</div>
+
+<h2><span class="step">0</span>Setup: the pieces as the solver has them</h2>
+<p>The forward model is a control-affine step with standard normal noise \(w\):</p>
+$$x_{i+1} = x + f_i(x) + B_i(x)\,u + \Sigma_i(x)\,w, \qquad w \sim \mathcal N(0, I), \qquad \Sigma_i = \sigma_i \sqrt{\Delta t}.$$
+<p>Write the noise-free landing point under control \(u\) as</p>
+$$\varphi_i(x, u) = x + f_i(x) + B_i(x)\,u .$$
+<p>The running cost is L1 in the control and does not depend on the state, \(\ell_i(x, u) = c\,\lVert u\rVert_1\)
+with \(c = c_0\,\Delta t\) (here \(c = 0.0625\)), over the box \(u \in [-1, 1]^M\).</p>
+<p>The expected next-stage value is replaced by its second-order Taylor expansion about the landing point. With
+\(\mathbb E[w] = 0\) and \(\mathbb E[w w^{\top}] = I\),</p>
+$$\mathbb E\big[V_{i+1}(\varphi + \Sigma w)\big] \approx V_{i+1}(\varphi) + \nabla V_{i+1}(\varphi)^{\top}\Sigma\,\mathbb E[w]
++ \tfrac12\,\mathbb E\big[w^{\top}\Sigma^{\top}\nabla^2 V_{i+1}(\varphi)\,\Sigma w\big]
+= V_{i+1}(\varphi) + \tfrac12 \operatorname{tr}\!\big(\Sigma^{\top}\nabla^2 V_{i+1}(\varphi)\,\Sigma\big).$$
+<p>That gives the Taylor Q-function (thesis eq. 4.65) the policy minimizes, and the value target the backward pass
+fits:</p>
+$$\tilde Q_i(x, u) = c\,\lVert u\rVert_1 + V_{i+1}\big(\varphi_i(x,u)\big)
++ \tfrac12\operatorname{tr}\!\Big(\Sigma_i^{\top}\,\nabla^2 V_{i+1}\big(\varphi_i(x,u)\big)\,\Sigma_i\Big),$$
+$$u^\star(x) = \arg\min_{u \in [-1,1]^M} \tilde Q_i(x, u), \qquad \hat Y_i(x) = \tilde Q_i\big(x, u^\star(x)\big).$$
+<p>Today the regression fits \(V_i(x_j) \approx \hat Y_i(x_j)\) and nothing else. The goal here is a second target,
+\(\hat G_i(x) \approx \nabla V_i(x)\), computed as cheaply and as noise-free as \(\hat Y_i\).</p>
+
+<h2><span class="step">1</span>Why the policy runs on slopes, not values</h2>
+<p>The policy compares \(\tilde Q_i(x,u)\) across candidate controls at one fixed state. Every candidate lands on
+the same line through \(x + f_i(x)\), spaced along the control column \(b = B_i(x)\):</p>
+
+<figure>
+<svg viewBox="0 0 640 260" role="img" aria-label="Landing points for controls -1, 0 and +1 lie on a line along b across the contours of the next-stage value function">
+  <g fill="none" stroke="var(--fig-contour)" stroke-width="1.5">
+    <ellipse cx="470" cy="150" rx="70" ry="38" transform="rotate(-18 470 150)"/>
+    <ellipse cx="470" cy="150" rx="135" ry="72" transform="rotate(-18 470 150)"/>
+    <ellipse cx="470" cy="150" rx="205" ry="108" transform="rotate(-18 470 150)"/>
+    <ellipse cx="470" cy="150" rx="280" ry="148" transform="rotate(-18 470 150)"/>
+  </g>
+  <text x="470" y="155" text-anchor="middle" font-size="13" fill="var(--muted)">low V</text>
+  <circle cx="70" cy="200" r="5" fill="var(--text)"/>
+  <text x="58" y="225" font-size="14" fill="var(--text)">x</text>
+  <line x1="70" y1="200" x2="250" y2="150" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="120" y="160" font-size="13" fill="var(--muted)">x + f(x)</text>
+  <line x1="250" y1="230" x2="250" y2="40" stroke="var(--fig-point)" stroke-width="1.5"/>
+  <circle cx="250" cy="215" r="6" fill="var(--fig-point)"/>
+  <circle cx="250" cy="150" r="6" fill="var(--fig-point)"/>
+  <circle cx="250" cy="85" r="8" fill="none" stroke="var(--fig-chosen)" stroke-width="3"/>
+  <circle cx="250" cy="85" r="6" fill="var(--fig-point)"/>
+  <text x="262" y="220" font-size="13" fill="var(--text)">u = −1</text>
+  <text x="262" y="155" font-size="13" fill="var(--text)">u = 0</text>
+  <text x="262" y="90" font-size="13" fill="var(--text)">u = +1 (chosen)</text>
+  <line x1="236" y1="150" x2="236" y2="88" stroke="var(--text)" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="200" y="122" font-size="14" fill="var(--text)">b</text>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--text)"/>
+    </marker>
+  </defs>
+</svg>
+<figcaption>The candidates differ only in where along \(b\) they land. Adding a constant to \(V_{i+1}\) moves all of them
+equally and changes no decision; what decides is how \(V_{i+1}\) changes along \(b\).</figcaption>
+</figure>
+
+<p>Comparing two candidates at the same state, to first order,</p>
+$$\tilde Q_i(x, u + \Delta u) - \tilde Q_i(x, u) \approx c\big(\lVert u+\Delta u\rVert_1 - \lVert u\rVert_1\big)
++ \Delta u\; b^{\top}\nabla V_{i+1}(\varphi) .$$
+<p>So the decision is a contest between the fuel price \(c\) and the slope \(b^{\top}\nabla V_{i+1}\). In continuous
+time it is exactly the bang-off-bang rule \(u^\star = -\operatorname{sign}(b^{\top}\nabla V)\) when
+\(|b^{\top}\nabla V| > c\), else \(0\). A fit with small value error but the wrong slope along \(b\) flips these
+decisions, and nothing in a value-only regression constrains that slope.</p>
+
+<h2><span class="step">2</span>Differentiate the target: the chain rule</h2>
+<p>\(\hat Y_i\) depends on \(x\) directly and through the control it chose:</p>
+$$\nabla_x \hat Y_i(x) = \underbrace{\nabla_x \tilde Q_i(x, u)\Big|_{u = u^\star(x)}}_{\text{at fixed } u}
+\;+\; \Big(\frac{\partial u^\star}{\partial x}\Big)^{\!\top} \nabla_u \tilde Q_i\big(x, u^\star(x)\big).$$
+
+<h2><span class="step">3</span>The control's own derivative drops out (envelope argument)</h2>
+<p>Split \(\tilde Q_i = c\lVert u\rVert_1 + S_i(x, u)\) with \(S_i\) smooth. Take any open set of states on which the
+minimizer keeps the same pattern, and look at one control coordinate \(j\):</p>
+<table>
+  <tr><th>where \(u^\star_j\) sits</th><th>what vanishes</th></tr>
+  <tr><td>at a bound, \(u^\star_j = \pm 1\)</td><td>\(\partial u^\star_j/\partial x = 0\): it stays at the bound nearby</td></tr>
+  <tr><td>at the kink, \(u^\star_j = 0\)</td><td>\(\partial u^\star_j/\partial x = 0\): it coasts nearby</td></tr>
+  <tr><td>interior, \(0 &lt; |u^\star_j| &lt; 1\)</td><td>\(\partial \tilde Q_i/\partial u_j = c\,\operatorname{sign}(u^\star_j) + \partial S_i/\partial u_j = 0\): the first-order condition</td></tr>
+</table>
+<p>Every term of \(\sum_j (\partial u^\star_j/\partial x)\,\partial \tilde Q_i/\partial u_j\) has one zero factor, so the
+second term of step 2 is zero. (In the interior case \(u^\star_j\) is differentiable by the implicit function
+theorem when \(\partial^2 S_i/\partial u_j^2 &gt; 0\), which the policy requires before it uses a stationary point.)
+The states where the pattern switches form surfaces of measure zero; \(\hat Y_i\) is continuous across them but has a
+kink, so the gradient exists almost everywhere. Hence</p>
+$$\nabla_x \hat Y_i(x) = \nabla_x \tilde Q_i(x, u)\Big|_{u = u^\star(x)} \quad \text{almost everywhere.}$$
+
+<h2><span class="step">4</span>Differentiate at fixed control, term by term</h2>
+<p>The fuel term has no \(x\) in it: \(\nabla_x\, c\lVert u\rVert_1 = 0\).</p>
+<p>The value term, by the chain rule through the landing point:</p>
+$$\nabla_x\, V_{i+1}\big(\varphi_i(x,u)\big) = J_\varphi^{\top}\,\nabla V_{i+1}(\varphi), \qquad
+J_\varphi = \frac{\partial \varphi_i}{\partial x} = I + \frac{\partial f_i}{\partial x} + \sum_{m=1}^{M} u_m \frac{\partial b_m}{\partial x},$$
+<p>where \(b_m\) is the \(m\)-th column of \(B_i\).</p>
+<p>The noise-curvature term \(T(x) = \tfrac12 \operatorname{tr}\big(\Sigma_i^{\top}\nabla^2 V_{i+1}(\varphi)\Sigma_i\big)\),
+for a constant diffusion (both benchmarks), changes with \(x\) only through \(\varphi\):</p>
+$$\nabla_x T = \tfrac12\, J_\varphi^{\top}\, \nabla_\varphi \operatorname{tr}\!\big(\Sigma_i^{\top}\nabla^2 V_{i+1}(\varphi)\,\Sigma_i\big),
+\qquad \Big[\nabla_\varphi \operatorname{tr}(\cdot)\Big]_k = \sum_{a,b} \big(\Sigma_i\Sigma_i^{\top}\big)_{ab}\,
+\frac{\partial^3 V_{i+1}}{\partial \varphi_a\,\partial \varphi_b\,\partial \varphi_k}.$$
+<p>(A state-dependent diffusion would add \(\operatorname{tr}\big(\Sigma_i^{\top}\nabla^2 V_{i+1}\,\partial\Sigma_i/\partial x_k\big)\)
+to each component.) Altogether, exactly:</p>
+$$\hat G_i(x) = J_\varphi^{\top}\Big[\nabla V_{i+1}(\varphi) + \tfrac12\,\nabla_\varphi \operatorname{tr}\!\big(\Sigma_i^{\top}\nabla^2 V_{i+1}(\varphi)\,\Sigma_i\big)\Big]_{u = u^\star(x)} .$$
+
+<h2><span class="step">5</span>Drop the third-derivative term</h2>
+<p>The bracket's second part is of size \(\lVert\Sigma_i\rVert^2\,\lVert\nabla^3 V_{i+1}\rVert\). It vanishes when
+\(V_{i+1}\) is quadratic, which is exactly the case where the Taylor estimator itself is exact, and keeping it would
+carry the expansion past the second order that \(\tilde Q_i\) was built at. With
+\(\Sigma_i \sim 0.1\sqrt{\Delta t}\) here, it is small. Dropping it:</p>
+<div class="box result">
+$$\hat G_i(x) \approx J_\varphi\big(x, u^\star(x)\big)^{\top}\;\nabla V_{i+1}\big(\varphi_i(x, u^\star(x))\big).$$
+</div>
+
+<h2><span class="step">6</span>What it is, and a check it must pass</h2>
+<p><strong>The costate recursion.</strong> Writing \(\lambda_i = \nabla V_i\) along a trajectory, this is
+\(\lambda_i = A_i^{\top}\lambda_{i+1}\) with \(A_i = J_\varphi\): the discrete Pontryagin adjoint, and the gradient
+half of a DDP backward pass. It is anchored at the terminal stage, where \(\lambda_K = \nabla\) of the terminal cost
+exactly, just as \(\hat Y\) is anchored by the terminal cost.</p>
+<p><strong>The Z process.</strong> In continuous time \(Z_t = \sigma^{\top}\nabla V\), so with \(\Sigma_i = \sigma_i\sqrt{\Delta t}\),
+\(Z_i = \sigma_i^{\top}\hat G_i\). Like \(\hat Y_i\), this estimate reads no noise realization; the usual
+least-squares Monte Carlo alternative, \(Z_i \approx \mathbb E[\hat Y_{i+1}\,\Delta W_i]/\Delta t\), has variance growing
+like \(1/\Delta t\) and does not suit small batches.</p>
+<p><strong>The exactness check.</strong> Take linear dynamics \(\varphi = A x + B u\) and a quadratic
+\(V_{i+1}(y) = \tfrac12 y^{\top}P y + p^{\top}y + r\). Then \(\nabla^2 V_{i+1} = P\) is constant, the trace term is a
+constant, \(J_\varphi = A\), and</p>
+$$\hat G_i(x) = A^{\top}\big(P\,\varphi + p\big) = \nabla_x \hat Y_i(x) \quad \text{a.e., with no approximation.}$$
+<p>That makes a unit test: on the double integrator with a quadratic table, \(\hat G_i\) must match a central finite
+difference of \(\hat Y_i\) away from switching surfaces.</p>
+
+<h2><span class="step">7</span>Computing it on the two benchmarks</h2>
+<p><strong>Double integrator.</strong> Zero-order hold of a unit mass with \(\Delta t = 1/16\):</p>
+$$A = \begin{pmatrix} 1 &amp; \Delta t \\ 0 &amp; 1 \end{pmatrix}, \qquad b = \begin{pmatrix} \Delta t^2/2 \\ \Delta t \end{pmatrix},
+\qquad \hat G_i(x) = A^{\top}\,\nabla V_{i+1}(A x + b\,u^\star).$$
+<p><strong>Pendulum.</strong> \(\ddot\theta = a_1\dot\theta + a_2\sin\theta + a_3 u\), stepped by RK4. To first order
+in \(\Delta t\), for intuition only (the code should use the RK4 step itself):</p>
+$$J_\varphi \approx \begin{pmatrix} 1 &amp; \Delta t \\ a_2\Delta t\cos\theta &amp; 1 + a_1\Delta t \end{pmatrix}, \qquad
+b \approx \begin{pmatrix} a_3\Delta t^2/2 \\ a_3\Delta t \end{pmatrix} \approx \begin{pmatrix} 0.008 \\ 0.25 \end{pmatrix}.$$
+<p><strong>In the solver.</strong> No model exposes a Jacobian today, so take it by central differences of the
+noise-free step at the chosen control, \(\varphi_i(x,u) = \) <code>forward_model(i, x, u, 0)</code>:</p>
+$$J_\varphi\,e_k \approx \frac{\varphi_i(x + h e_k,\, u^\star) - \varphi_i(x - h e_k,\, u^\star)}{2h},$$
+<p>\(2N\) model calls per sample, then \(\hat G_i = J_\varphi^{\top}\) times the next stage's <code>Gradient()</code> at
+\(\varphi\). With double estimation, use the scoring half's gradient at the choosing half's \(u^\star\), the same
+pairing the value target uses.</p>
+
+<h2><span class="step">8</span>Using it: a fit that constrains the slope</h2>
+<p>Add a gradient residual to the regression, projected on the direction the previous stage's policy will probe
+\(V_i\) along, \(b = B_{i-1}\) (nearly constant on both benchmarks):</p>
+$$\min_\theta \sum_j w_j\Big[\big(V_\theta(x_j) - \hat Y_i(x_j)\big)^2 + \gamma\,\big\lVert b^{\top}\big(\nabla V_\theta(x_j) - \hat G_i(x_j)\big)\big\rVert^2\Big].$$
+<p>\(b\) is the change in state per unit of control, and the control is dimensionless, so \(b^{\top}\nabla V\) is in cost
+units: it is the value difference across one full control step. The projected residual is therefore directly comparable
+with the decision threshold \(c = 0.0625\), and \(\gamma \approx 1\) is the natural starting weight; the check in step 9
+found \(\gamma \approx 10\) works best. (This corrects
+my earlier remark that \(\gamma\) should be about \(1/\lVert B\rVert^2\): that holds for an unprojected gradient
+residual, not this one.)</p>
+<p>For the polynomial model \(\nabla V_\theta\) is linear in \(\theta\), so this stays a closed-form least squares with
+extra rows. For the soft-min model, SGD needs \(\partial(\nabla V_\theta)/\partial\theta\), which
+<code>SoftMinQuadraticValueFunctionApprox</code> does not provide yet.</p>
+
+<h2><span class="step">9</span>Does a slope target help? A ceiling check</h2>
+<p>Before building \(\hat G_i\) into the solver, the pendulum diagnostic
+(<code>l1_pendulum_gap_diagnosis --sobolev-only</code>) fits the polynomial model in closed form to the
+<em>optimal</em> value function's values and to its slope along \(b\) (central differences of the grid optimum),
+weighting the samples off the optimal paths by 0.01, and scores the Taylor Q-function policy over the fit on 1024
+held-out rollouts. The grid optimum costs 2.272, and the same policy over the exact optimal value function costs
+2.286 (0.6% above).</p>
+<table>
+  <tr><th>\(\gamma\)</th><th>degree 6</th><th>degree 8</th><th>value error on the optimal paths</th></tr>
+  <tr><td>0 (values only)</td><td>2.434 (+7.1%)</td><td>2.434 (+7.1%)</td><td>0.10</td></tr>
+  <tr><td>0.1</td><td>2.419 (+6.5%)</td><td>2.421 (+6.5%)</td><td>0.09</td></tr>
+  <tr><td>1</td><td>2.378 (+4.7%)</td><td>2.382 (+4.8%)</td><td>0.07</td></tr>
+  <tr><td>10</td><td><strong>2.337 (+2.8%)</strong></td><td>2.346 (+3.3%)</td><td>0.05</td></tr>
+  <tr><td>100</td><td>3.149 (+39%)</td><td>5.560 (+145%)</td><td>0.05</td></tr>
+</table>
+<p>Constraining the slope closes more than half of the gap a value-only fit leaves. The best weight here is
+\(\gamma \approx 10\), not the \(\gamma \approx 1\) suggested in step 8, and at \(\gamma = 100\) the policy breaks: its
+terminal cost jumps from 0.05 to 0.9 and 3.3 while the fit error on the paths stays at 0.05, so the slope term is
+then overriding the values somewhere the paths do not cover. The weight needs tuning, not a units argument.</p>
+<p>These slope targets come from the exact optimal value function: this is the ceiling. In the solver,
+\(\hat G_i\) is built from the <em>fitted</em> \(\nabla V_{i+1}\), so its errors propagate backward, and the solver
+check has still to be run.</p>
+
+<div class="box caveat">
+  <h3>Caveats</h3>
+  <ul>
+    <li><strong>Double estimation.</strong> The control is chosen by one half's table and scored by the other's, so
+    \(\nabla_u \tilde Q\) of the scorer is not exactly zero at an interior control. The leftover term is the product of two
+    small errors, but it is not zero.</li>
+    <li><strong>Policy-evaluation targets.</strong> With <code>kCurrentPolicy</code>, \(u = \mu(x)\) comes from a different
+    table, and the term \((\partial\mu/\partial x)^{\top}\nabla_u\tilde Q\) survives wherever \(\mu\) is interior. The runs so far
+    used <code>kDoubleGreedy</code>.</li>
+    <li><strong>The target floor.</strong> Where \(\max(\hat Y_i, 0)\) clamps, the gradient target is zero.</li>
+    <li><strong>Error propagation.</strong> \(\hat G_i\) uses the fitted \(\nabla V_{i+1}\), so slope errors propagate backward
+    as value errors do; the difference is that slopes are now supervised at all.</li>
+    <li><strong>Curvature.</strong> Interior controls also depend on \(b^{\top}\nabla^2 V_{i+1}\,b\), which a gradient target
+    does not constrain directly.</li>
+  </ul>
+</div>
+
+</main>
+</body>
+</html>
