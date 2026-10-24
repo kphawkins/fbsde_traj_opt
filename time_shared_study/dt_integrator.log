@@ -1,0 +1,53 @@
+
+=== L1 double integrator: grid optimum 4.1367 ===
+poly6                                    seed 0: final gap    +0.53% after 30.0 s
+poly6                                    seed 1: final gap    +0.53% after 30.1 s
+poly6                                    seed 2: final gap    +0.41% after 30.0 s
+poly6                                    seed 3: final gap    +0.62% after 30.0 s
+poly6:slope=0                            seed 0: final gap    +1.26% after 30.1 s
+poly6:slope=0                            seed 1: final gap    +2.18% after 30.2 s
+poly6:slope=0                            seed 2: final gap    +1.36% after 30.1 s
+poly6:slope=0                            seed 3: final gap    +3.48% after 30.0 s
+poly6:time=linear,knots=16               seed 0: final gap    +0.65% after 30.1 s
+poly6:time=linear,knots=16               seed 1: final gap    +0.41% after 30.0 s
+poly6:time=linear,knots=16               seed 2: final gap    +0.42% after 30.0 s
+poly6:time=linear,knots=16               seed 3: final gap    +0.90% after 30.0 s
+poly6:time=linear,knots=16,slope=0       seed 0: final gap    +1.77% after 30.1 s
+poly6:time=linear,knots=16,slope=0       seed 1: final gap    +1.32% after 30.0 s
+poly6:time=linear,knots=16,slope=0       seed 2: final gap    +1.31% after 30.1 s
+poly6:time=linear,knots=16,slope=0       seed 3: final gap    +1.76% after 30.2 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2 seed 0: final gap    +0.61% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2 seed 1: final gap    +0.45% after 30.1 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2 seed 2: final gap    +0.48% after 30.1 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2 seed 3: final gap    +0.74% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,slope=0 seed 0: final gap    +1.41% after 30.1 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,slope=0 seed 1: final gap    +2.25% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,slope=0 seed 2: final gap    +0.91% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,slope=0 seed 3: final gap    +2.71% after 30.2 s
+poly6:rank=6,time=linear,knots=16,balance=1,sweeps=2 seed 0: final gap    +0.77% after 30.1 s
+poly6:rank=6,time=linear,knots=16,balance=1,sweeps=2 seed 1: final gap    +0.52% after 30.0 s
+poly6:rank=6,time=linear,knots=16,balance=1,sweeps=2 seed 2: final gap    +0.32% after 30.0 s
+poly6:rank=6,time=linear,knots=16,balance=1,sweeps=2 seed 3: final gap    +0.74% after 30.2 s
+poly6:rank=6,time=linear,knots=16,balance=1,sweeps=2,slope=0 seed 0: final gap    +1.28% after 30.1 s
+poly6:rank=6,time=linear,knots=16,balance=1,sweeps=2,slope=0 seed 1: final gap    +1.84% after 30.0 s
+poly6:rank=6,time=linear,knots=16,balance=1,sweeps=2,slope=0 seed 2: final gap    +1.37% after 30.0 s
+poly6:rank=6,time=linear,knots=16,balance=1,sweeps=2,slope=0 seed 3: final gap    +1.74% after 30.1 s
+poly6:time=linear,knots=16,pass=fresh    seed 0: final gap    +0.37% after 30.0 s
+poly6:time=linear,knots=16,pass=fresh    seed 1: final gap    +0.50% after 30.0 s
+poly6:time=linear,knots=16,pass=fresh    seed 2: DT-FBSDE failed at iteration 109: TimeSharedLinearFit::SolveKnots: the fit is not finite.
+poly6:time=linear,knots=16,pass=fresh    seed 2: final gap     +nan% after 10.2 s
+poly6:time=linear,knots=16,pass=fresh    seed 3: final gap    +0.43% after 30.1 s
+poly6:time=linear,knots=16,pass=fresh,slope=0 seed 0: DT-FBSDE failed at iteration 124: TimeSharedLinearFit::SolveKnots: the fit is not finite.
+poly6:time=linear,knots=16,pass=fresh,slope=0 seed 0: final gap     +nan% after 12.9 s
+poly6:time=linear,knots=16,pass=fresh,slope=0 seed 1: DT-FBSDE failed at iteration 126: TimeSharedLinearFit::SolveKnots: the fit is not finite.
+poly6:time=linear,knots=16,pass=fresh,slope=0 seed 1: final gap     +nan% after 13.2 s
+poly6:time=linear,knots=16,pass=fresh,slope=0 seed 2: final gap    +2.23% after 30.1 s
+poly6:time=linear,knots=16,pass=fresh,slope=0 seed 3: final gap  +133.02% after 30.1 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=fresh seed 0: final gap    +1.57% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=fresh seed 1: final gap    +3.08% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=fresh seed 2: final gap    +5.40% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=fresh seed 3: final gap    +1.22% after 30.1 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=fresh,slope=0 seed 0: final gap   +24.42% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=fresh,slope=0 seed 1: final gap    +6.75% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=fresh,slope=0 seed 2: final gap    +5.58% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=fresh,slope=0 seed 3: final gap   +11.12% after 30.1 s

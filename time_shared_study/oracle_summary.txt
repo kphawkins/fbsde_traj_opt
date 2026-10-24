@@ -1,0 +1,169 @@
+problem                       S noise  ridge shape                    params  n   med gap     worst    rmse
+L1 double integrator          8     0   1e-3 const x16                   448  8  +677.38% +1062.32%   0.735
+L1 double integrator          8     0   1e-3 const x8                    224  8  +768.30% +2391.24%   0.930
+L1 double integrator          8     0   1e-3 linear x16                  448  8  +662.75% +1309.17%   0.638
+L1 double integrator          8     0   1e-3 linear x4                   112  8  +339.47% +1109.48%   1.088
+L1 double integrator          8     0   1e-3 linear x8                   224  8  +553.92%  +690.33%   0.692
+L1 double integrator          8     0   1e-3 per stage                  1792  8  +570.67% +1441.88%   0.643
+L1 double integrator          8     0   1e-3 rank 12                    1104  8  +569.93% +1463.20%   0.644
+L1 double integrator          8     0   1e-3 rank 3                      276  8  +597.47% +1302.70%   0.673
+L1 double integrator          8     0   1e-3 rank 4                      368  8  +646.50% +1363.14%   0.661
+L1 double integrator          8     0   1e-3 rank 4 + linear x16         176  8  +580.36% +1291.79%   0.660
+L1 double integrator          8     0   1e-3 rank 6                      552  8  +752.72% +1248.57%   0.658
+L1 double integrator          8     0   1e-3 rank 6 + linear x16         264  8  +659.80% +1087.06%   0.649
+L1 double integrator          8     0   1e-3 rank 8                      736  8  +584.25% +1460.07%   0.647
+L1 double integrator          8     0   1e-3 rank 8 + linear x16         352  8  +675.90% +1243.39%   0.638
+L1 double integrator          8     0   1e-6 const x16                   448  8   +46.69% +1115.08%   0.381
+L1 double integrator          8     0   1e-6 const x8                    224  8  +569.28% +2038.17%   0.539
+L1 double integrator          8     0   1e-6 linear x16                  448  8    +4.30%   +29.49%   0.117
+L1 double integrator          8     0   1e-6 linear x4                   112  8  +100.58%  +620.01%   0.391
+L1 double integrator          8     0   1e-6 linear x8                   224  8   +13.44%   +53.77%   0.219
+L1 double integrator          8     0   1e-6 per stage                  1792  8    +2.61%   +11.56%   0.111
+L1 double integrator          8     0   1e-6 rank 12                    1104  8    +2.57%   +10.33%   0.111
+L1 double integrator          8     0   1e-6 rank 3                      276  8    +6.66%  +989.03%   0.223
+L1 double integrator          8     0   1e-6 rank 4                      368  8    +5.50%   +71.93%   0.158
+L1 double integrator          8     0   1e-6 rank 4 + linear x16         176  8    +5.12%   +17.55%   0.147
+L1 double integrator          8     0   1e-6 rank 6                      552  8    +2.57%   +11.52%   0.115
+L1 double integrator          8     0   1e-6 rank 6 + linear x16         264  8    +4.78%    +9.82%   0.126
+L1 double integrator          8     0   1e-6 rank 8                      736  8    +2.46%    +9.30%   0.109
+L1 double integrator          8     0   1e-6 rank 8 + linear x16         352  8    +4.05%   +10.16%   0.120
+L1 double integrator         32     0   1e-3 const x16                   448  8   +39.37%  +119.63%   0.678
+L1 double integrator         32     0   1e-3 const x8                    224  8   +30.30%  +123.42%   0.955
+L1 double integrator         32     0   1e-3 linear x16                  448  8   +38.04%  +108.62%   0.539
+L1 double integrator         32     0   1e-3 linear x4                   112  8   +67.12%  +160.88%   1.164
+L1 double integrator         32     0   1e-3 linear x8                   224  8   +32.24%  +144.42%   0.588
+L1 double integrator         32     0   1e-3 per stage                  1792  8   +22.03%  +103.84%   0.539
+L1 double integrator         32     0   1e-3 rank 12                    1104  8   +22.06%  +101.17%   0.539
+L1 double integrator         32     0   1e-3 rank 3                      276  8   +35.28%  +176.38%   0.592
+L1 double integrator         32     0   1e-3 rank 4                      368  8   +45.92%  +165.99%   0.563
+L1 double integrator         32     0   1e-3 rank 4 + linear x16         176  8   +46.86%  +166.12%   0.567
+L1 double integrator         32     0   1e-3 rank 6                      552  8   +28.60%   +88.52%   0.544
+L1 double integrator         32     0   1e-3 rank 6 + linear x16         264  8   +32.84%   +98.68%   0.545
+L1 double integrator         32     0   1e-3 rank 8                      736  8   +22.87%   +94.99%   0.541
+L1 double integrator         32     0   1e-3 rank 8 + linear x16         352  8   +38.00%  +108.51%   0.541
+L1 double integrator         32     0   1e-6 const x16                   448  8   +11.22%   +19.94%   0.316
+L1 double integrator         32     0   1e-6 const x8                    224  8   +33.86%   +83.17%   0.524
+L1 double integrator         32     0   1e-6 linear x16                  448  8    +7.10%   +13.23%   0.081
+L1 double integrator         32     0   1e-6 linear x4                   112  8   +16.26%   +35.48%   0.589
+L1 double integrator         32     0   1e-6 linear x8                   224  8    +7.61%   +13.57%   0.210
+L1 double integrator         32     0   1e-6 per stage                  1792  8    +6.18%   +11.62%   0.063
+L1 double integrator         32     0   1e-6 rank 12                    1104  8    +6.40%   +12.06%   0.063
+L1 double integrator         32     0   1e-6 rank 3                      276  8    +8.06%   +10.21%   0.196
+L1 double integrator         32     0   1e-6 rank 4                      368  8    +8.49%   +13.00%   0.091
+L1 double integrator         32     0   1e-6 rank 4 + linear x16         176  8    +8.37%   +11.59%   0.104
+L1 double integrator         32     0   1e-6 rank 6                      552  8    +7.40%   +10.31%   0.069
+L1 double integrator         32     0   1e-6 rank 6 + linear x16         264  8    +7.77%   +10.26%   0.088
+L1 double integrator         32     0   1e-6 rank 8                      736  8    +6.47%   +11.49%   0.064
+L1 double integrator         32     0   1e-6 rank 8 + linear x16         352  8    +7.41%   +12.37%   0.083
+L1 double integrator        512     0   1e-3 const x16                   448  1   +24.13%   +24.13%   0.668
+L1 double integrator        512     0   1e-3 const x8                    224  1   +25.93%   +25.93%   0.956
+L1 double integrator        512     0   1e-3 linear x16                  448  1   +26.41%   +26.41%   0.483
+L1 double integrator        512     0   1e-3 linear x4                   112  1   +63.90%   +63.90%   1.171
+L1 double integrator        512     0   1e-3 linear x8                   224  1   +33.21%   +33.21%   0.560
+L1 double integrator        512     0   1e-3 per stage                  1792  1   +25.38%   +25.38%   0.479
+L1 double integrator        512     0   1e-3 rank 12                    1104  1   +25.22%   +25.22%   0.480
+L1 double integrator        512     0   1e-3 rank 3                      276  1   +30.32%   +30.32%   0.535
+L1 double integrator        512     0   1e-3 rank 4                      368  1   +31.26%   +31.26%   0.501
+L1 double integrator        512     0   1e-3 rank 4 + linear x16         176  1   +31.31%   +31.31%   0.504
+L1 double integrator        512     0   1e-3 rank 6                      552  1   +27.73%   +27.73%   0.481
+L1 double integrator        512     0   1e-3 rank 6 + linear x16         264  1   +28.34%   +28.34%   0.485
+L1 double integrator        512     0   1e-3 rank 8                      736  1   +26.25%   +26.25%   0.481
+L1 double integrator        512     0   1e-3 rank 8 + linear x16         352  1   +26.53%   +26.53%   0.485
+L1 double integrator        512     0   1e-6 const x16                   448  1   +12.19%   +12.19%   0.313
+L1 double integrator        512     0   1e-6 const x8                    224  1   +39.53%   +39.53%   0.529
+L1 double integrator        512     0   1e-6 linear x16                  448  1    +9.15%    +9.15%   0.098
+L1 double integrator        512     0   1e-6 linear x4                   112  1   +11.24%   +11.24%   0.641
+L1 double integrator        512     0   1e-6 linear x8                   224  1   +11.21%   +11.21%   0.224
+L1 double integrator        512     0   1e-6 per stage                  1792  1    +9.37%    +9.37%   0.085
+L1 double integrator        512     0   1e-6 rank 12                    1104  1    +9.52%    +9.52%   0.085
+L1 double integrator        512     0   1e-6 rank 3                      276  1   +11.31%   +11.31%   0.220
+L1 double integrator        512     0   1e-6 rank 4                      368  1   +12.25%   +12.25%   0.155
+L1 double integrator        512     0   1e-6 rank 4 + linear x16         176  1   +14.29%   +14.29%   0.169
+L1 double integrator        512     0   1e-6 rank 6                      552  1    +9.76%    +9.76%   0.090
+L1 double integrator        512     0   1e-6 rank 6 + linear x16         264  1    +9.54%    +9.54%   0.102
+L1 double integrator        512     0   1e-6 rank 8                      736  1    +9.99%    +9.99%   0.088
+L1 double integrator        512     0   1e-6 rank 8 + linear x16         352  1    +9.56%    +9.56%   0.100
+L1 inverted pendulum          8     0   1e-3 const x16                   448  8 +2389.55% +5489.81%   0.884
+L1 inverted pendulum          8     0   1e-3 const x8                    224  8 +3275.48% +8689.72%   0.814
+L1 inverted pendulum          8     0   1e-3 linear x16                  448  8 +2338.28% +4590.11%   0.801
+L1 inverted pendulum          8     0   1e-3 linear x4                   112  8 +3550.67% +11432.22%   1.162
+L1 inverted pendulum          8     0   1e-3 linear x8                   224  8 +1889.50% +4090.11%   0.838
+L1 inverted pendulum          8     0   1e-3 per stage                  1792  8 +2715.84% +5262.45%   1.002
+L1 inverted pendulum          8     0   1e-3 rank 12                    1104  8 +2685.26% +5316.01%   1.001
+L1 inverted pendulum          8     0   1e-3 rank 3                      276  8 +3384.43% +5836.38%   0.968
+L1 inverted pendulum          8     0   1e-3 rank 4                      368  8 +3536.21% +5286.38%   1.037
+L1 inverted pendulum          8     0   1e-3 rank 4 + linear x16         176  8 +3225.28% +4920.39%   0.823
+L1 inverted pendulum          8     0   1e-3 rank 6                      552  8 +2708.15% +4862.55%   1.014
+L1 inverted pendulum          8     0   1e-3 rank 6 + linear x16         264  8 +2537.35% +4715.95%   0.810
+L1 inverted pendulum          8     0   1e-3 rank 8                      736  8 +2524.43% +5074.99%   1.000
+L1 inverted pendulum          8     0   1e-3 rank 8 + linear x16         352  8 +2570.04% +4660.68%   0.798
+L1 inverted pendulum          8     0   1e-6 const x16                   448  8   +83.69%  +539.26%   0.506
+L1 inverted pendulum          8     0   1e-6 const x8                    224  8   +74.77% +3595.64%   0.549
+L1 inverted pendulum          8     0   1e-6 linear x16                  448  8  +281.59% +1546.49%   0.436
+L1 inverted pendulum          8     0   1e-6 linear x4                   112  8  +871.82% +2633.02%   0.823
+L1 inverted pendulum          8     0   1e-6 linear x8                   224  8  +233.56% +1030.81%   0.500
+L1 inverted pendulum          8     0   1e-6 per stage                  1792  8  +131.31% +4915.61%   0.715
+L1 inverted pendulum          8     0   1e-6 rank 12                    1104  8  +155.57% +5158.41%   0.712
+L1 inverted pendulum          8     0   1e-6 rank 3                      276  8 +1540.90% +6562.39%   0.691
+L1 inverted pendulum          8     0   1e-6 rank 4                      368  8 +1609.09% +9924.50%   0.601
+L1 inverted pendulum          8     0   1e-6 rank 4 + linear x16         176  8 +2998.65% +6013.06%   0.519
+L1 inverted pendulum          8     0   1e-6 rank 6                      552  8  +771.77% +5403.78%   0.655
+L1 inverted pendulum          8     0   1e-6 rank 6 + linear x16         264  8 +1363.09% +4571.55%   0.488
+L1 inverted pendulum          8     0   1e-6 rank 8                      736  8  +562.37% +4802.39%   0.770
+L1 inverted pendulum          8     0   1e-6 rank 8 + linear x16         352  8  +668.10% +3698.19%   0.469
+L1 inverted pendulum         32     0   1e-3 const x16                   448  8 +1454.03% +3280.70%   1.090
+L1 inverted pendulum         32     0   1e-3 const x8                    224  8 +1418.74% +2321.92%   1.075
+L1 inverted pendulum         32     0   1e-3 linear x16                  448  8 +1207.28% +2403.56%   1.080
+L1 inverted pendulum         32     0   1e-3 linear x4                   112  8 +1975.88% +7306.30%   1.533
+L1 inverted pendulum         32     0   1e-3 linear x8                   224  8 +1217.29% +1730.93%   1.100
+L1 inverted pendulum         32     0   1e-3 per stage                  1792  8 +1141.04% +2280.26%   1.155
+L1 inverted pendulum         32     0   1e-3 rank 12                    1104  8 +1121.29% +2092.62%   1.155
+L1 inverted pendulum         32     0   1e-3 rank 3                      276  8 +2457.03% +4238.00%   1.183
+L1 inverted pendulum         32     0   1e-3 rank 4                      368  8 +2070.81% +4126.63%   1.125
+L1 inverted pendulum         32     0   1e-3 rank 4 + linear x16         176  8 +2380.91% +4137.56%   1.067
+L1 inverted pendulum         32     0   1e-3 rank 6                      552  8 +1480.98% +3883.88%   1.149
+L1 inverted pendulum         32     0   1e-3 rank 6 + linear x16         264  8 +1416.23% +4076.21%   1.087
+L1 inverted pendulum         32     0   1e-3 rank 8                      736  8 +1181.55% +2931.35%   1.155
+L1 inverted pendulum         32     0   1e-3 rank 8 + linear x16         352  8 +1341.24% +2984.40%   1.082
+L1 inverted pendulum         32     0   1e-6 const x16                   448  8   +22.08%   +41.50%   0.581
+L1 inverted pendulum         32     0   1e-6 const x8                    224  8   +38.16%  +101.37%   0.567
+L1 inverted pendulum         32     0   1e-6 linear x16                  448  8   +21.08%  +119.43%   0.578
+L1 inverted pendulum         32     0   1e-6 linear x4                   112  8   +50.21%   +80.41%   1.124
+L1 inverted pendulum         32     0   1e-6 linear x8                   224  8   +39.22%  +521.92%   0.616
+L1 inverted pendulum         32     0   1e-6 per stage                  1792  8   +21.57%   +37.05%   0.615
+L1 inverted pendulum         32     0   1e-6 rank 12                    1104  8   +30.85%  +265.40%   0.630
+L1 inverted pendulum         32     0   1e-6 rank 3                      276  8 +1614.81% +2697.15%   0.630
+L1 inverted pendulum         32     0   1e-6 rank 4                      368  8  +241.15% +2279.01%   0.679
+L1 inverted pendulum         32     0   1e-6 rank 4 + linear x16         176  8  +448.17% +1581.73%   0.621
+L1 inverted pendulum         32     0   1e-6 rank 6                      552  8   +69.23% +1425.99%   0.616
+L1 inverted pendulum         32     0   1e-6 rank 6 + linear x16         264  8   +51.15% +1181.50%   0.607
+L1 inverted pendulum         32     0   1e-6 rank 8                      736  8   +39.34% +1431.30%   0.627
+L1 inverted pendulum         32     0   1e-6 rank 8 + linear x16         352  8   +34.09% +1772.43%   0.588
+L1 inverted pendulum        512     0   1e-3 const x16                   448  1 +1498.27% +1498.27%   0.963
+L1 inverted pendulum        512     0   1e-3 const x8                    224  1 +1652.32% +1652.32%   1.058
+L1 inverted pendulum        512     0   1e-3 linear x16                  448  1 +1320.94% +1320.94%   0.927
+L1 inverted pendulum        512     0   1e-3 linear x4                   112  1 +2333.18% +2333.18%   1.357
+L1 inverted pendulum        512     0   1e-3 linear x8                   224  1 +1400.16% +1400.16%   0.987
+L1 inverted pendulum        512     0   1e-3 per stage                  1792  1 +1357.91% +1357.91%   0.918
+L1 inverted pendulum        512     0   1e-3 rank 12                    1104  1 +1376.43% +1376.43%   0.919
+L1 inverted pendulum        512     0   1e-3 rank 3                      276  1 +3402.76% +3402.76%   1.036
+L1 inverted pendulum        512     0   1e-3 rank 4                      368  1 +1172.81% +1172.81%   0.983
+L1 inverted pendulum        512     0   1e-3 rank 4 + linear x16         176  1 +1169.18% +1169.18%   0.986
+L1 inverted pendulum        512     0   1e-3 rank 6                      552  1 +1350.46% +1350.46%   0.920
+L1 inverted pendulum        512     0   1e-3 rank 6 + linear x16         264  1 +1399.70% +1399.70%   0.927
+L1 inverted pendulum        512     0   1e-3 rank 8                      736  1 +1438.54% +1438.54%   0.917
+L1 inverted pendulum        512     0   1e-3 rank 8 + linear x16         352  1 +1408.48% +1408.48%   0.927
+L1 inverted pendulum        512     0   1e-6 const x16                   448  1   +19.49%   +19.49%   0.558
+L1 inverted pendulum        512     0   1e-6 const x8                    224  1   +33.62%   +33.62%   0.602
+L1 inverted pendulum        512     0   1e-6 linear x16                  448  1   +17.66%   +17.66%   0.550
+L1 inverted pendulum        512     0   1e-6 linear x4                   112  1   +27.66%   +27.66%   0.947
+L1 inverted pendulum        512     0   1e-6 linear x8                   224  1  +110.48%  +110.48%   0.562
+L1 inverted pendulum        512     0   1e-6 per stage                  1792  1   +18.20%   +18.20%   0.559
+L1 inverted pendulum        512     0   1e-6 rank 12                    1104  1   +42.26%   +42.26%   0.564
+L1 inverted pendulum        512     0   1e-6 rank 3                      276  1  +849.49%  +849.49%   0.596
+L1 inverted pendulum        512     0   1e-6 rank 4                      368  1  +887.77%  +887.77%   0.609
+L1 inverted pendulum        512     0   1e-6 rank 4 + linear x16         176  1  +836.22%  +836.22%   0.616
+L1 inverted pendulum        512     0   1e-6 rank 6                      552  1 +1158.96% +1158.96%   0.580
+L1 inverted pendulum        512     0   1e-6 rank 6 + linear x16         264  1 +1531.63% +1531.63%   0.577
+L1 inverted pendulum        512     0   1e-6 rank 8                      736  1 +1056.33% +1056.33%   0.565
+L1 inverted pendulum        512     0   1e-6 rank 8 + linear x16         352  1  +448.14%  +448.14%   0.560

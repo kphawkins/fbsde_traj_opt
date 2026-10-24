@@ -40,7 +40,10 @@
 // that many batches together, targets recomputed; linear models only), temp (DT-FBSDE's entropy
 // temperature; 0 weights every sample equally), target (greedy, the default
 // double estimation; current: the current policy's targets from one table; or taylor: the thesis's
-// off-policy drifted Taylor noiseless estimator of the current policy's value).
+// off-policy drifted Taylor noiseless estimator of the current policy's value). Linear models also
+// take the time-sharing keys of TimeSharedLinearFit -- time (stage|const|linear), knots, rank,
+// balance, sweeps; in the oracle samples, offset and noise; in DT-FBSDE pass and stale -- see
+// UsesTimeSharing() and time_shared_study/README.md.
 
 #include <algorithm>
 #include <array>
@@ -75,6 +78,7 @@
 #include "fbsde_traj_opt/value_function/linear_basis_value_function_approx.hpp"
 #include "fbsde_traj_opt/value_function/shallow_tanh_value_function_approx.hpp"
 #include "fbsde_traj_opt/value_function/soft_min_quadratic_value_function_approx.hpp"
+#include "fbsde_traj_opt/value_function/time_shared_linear_fit.hpp"
 #include "fbsde_traj_opt/value_function/value_function_sgd_fitter.hpp"
 #include "fbsde_traj_opt/value_function/value_function_slope_targets.hpp"
 #include "examples/fbrrt_comparison_experiment.hpp"
@@ -467,6 +471,8 @@ auto OracleWeights(const OracleData<BenchmarkT>& data, std::size_t stage, double
 
 struct OracleResult {
   int num_parameters = 0;
+  // Free parameters of the whole table: num_parameters per stage, or the time-shared count.
+  std::size_t table_parameters = 0;
   double policy_cost = 0.0;
   // The median over stages of the weights' effective sample size, (sum w)^2 / sum w^2, out of
   // kOracleSamples: how many of the training samples a stage's fit effectively rests on.
@@ -484,6 +490,112 @@ struct OracleResult {
   double policy_microseconds = 0.0;
 };
 
+// The time-sharing keys of a linear model: time (stage, const, or linear: the time basis), knots,
+// rank (a shared basis of that many directions; 0 is none), samples (the first that many of each
+// stage's training samples, from column `offset`), noise (Gaussian label noise, in units of the
+// stage's spread of targets), sweeps (alternating least squares), balance (1 weights each stage by
+// one over its targets' variance), and, in the dt phase, pass (after, the default: share only at
+// the end of each backward pass; gs: block Gauss-Seidel within it, see DtFbsdeTimeSharingPass) and
+// stale (Gauss-Seidel's weight on the previous pass's equations).
+auto UsesTimeSharing(const ModelSpec& spec) -> bool {
+  return spec.words.contains("time") || spec.numbers.contains("rank") || spec.numbers.contains("samples") ||
+         spec.numbers.contains("noise");
+}
+
+auto TimeSharingOptions(const ModelSpec& spec) -> Result<TimeSharedFitOptions> {
+  TimeSharedFitOptions options;
+  const std::string kind = spec.Word("time", "stage");
+  RESULT_ASSERT(kind == "stage" || kind == "const" || kind == "linear", "time is stage, const, or linear.");
+  options.kind = kind == "stage"   ? TimeBasisKind::kPerStage
+                 : kind == "const" ? TimeBasisKind::kPiecewiseConstant
+                                   : TimeBasisKind::kPiecewiseLinear;
+  options.num_knots = static_cast<std::size_t>(spec.Number("knots", 8.0));
+  options.rank = static_cast<std::size_t>(spec.Number("rank", 0.0));
+  options.sweeps = static_cast<std::size_t>(spec.Number("sweeps", 6.0));
+  options.balance_stages = spec.Number("balance", 0.0) != 0.0;
+  return SuccessResult(options);
+}
+
+// The oracle's fit through TimeSharedLinearFit: each stage's normal equations from its first
+// `samples` training samples (the rest weighted zero), with the entropy weights computed on those
+// alone, then the shared fit over all stages but the terminal one.
+template <typename VF, typename BenchmarkT>
+auto FitTimeSharedOracleTable(const OracleData<BenchmarkT>& data,
+                              const ModelSpec& spec,
+                              std::vector<VF>& table) -> Result<> {
+  using State = typename BenchmarkT::State;
+  using Values = ValueFunctionValueBatch<State, kOracleSamples>;
+  const std::size_t control_stages = table.size() - 1;
+  const auto samples = static_cast<int>(spec.Number("samples", kOracleSamples));
+  const auto offset = static_cast<int>(spec.Number("offset", 0.0));
+  RESULT_ASSERT(samples >= 1 && offset >= 0 && offset + samples <= kOracleSamples,
+                "samples and offset must pick a range of the oracle's training samples.");
+  const double temperature = spec.Number("temperature", 2.0);
+  RESULT_ASSIGN_OR_RETURN(const TimeSharedFitOptions options, TimeSharingOptions(spec));
+  RESULT_ASSIGN_OR_RETURN(TimeSharedLinearFit<VF> fit, TimeSharedLinearFit<VF>::Make(options, control_stages));
+  for (std::size_t stage = 0; stage < control_stages; ++stage) {
+    Values weights = Values::Zero();
+    const Values heuristic = data.accrued[stage] + data.values[stage];
+    const auto kept = heuristic.segment(offset, samples);
+    const double mean = kept.mean();
+    const double spread = std::sqrt((kept.array() - mean).square().mean()) + 1e-12;
+    if (temperature > 0.0) {
+      weights.segment(offset, samples) = (-(kept.array() - kept.minCoeff()) / (spread * temperature)).exp().matrix();
+    } else {
+      weights.segment(offset, samples).setOnes();
+    }
+    // Label noise, as DT-FBSDE's targets carry: Gaussian, `noise` times the stage's spread of values
+    // (and of slopes) over the kept samples.
+    Values values = data.values[stage];
+    ValueFunctionSlopeTargets<State, kOracleSamples, 1> slopes = data.slopes[stage];
+    if (const double noise = spec.Number("noise", 0.0); noise > 0.0) {
+      const CounterBasedNormalSampler sampler(kOracleDataSeed ^ 0xA5A5A5A5ULL);
+      const auto spread_of = [&](const Values& row) {
+        const auto part = row.segment(offset, samples);
+        return std::sqrt((part.array() - part.mean()).square().mean());
+      };
+      const double value_spread = spread_of(values);
+      const double slope_spread = spread_of(slopes.slopes[0]);
+      for (int sample = offset; sample < offset + samples; ++sample) {
+        Eigen::Vector2d draw;
+        sampler.FillNoise(static_cast<std::size_t>(sample), stage, draw);
+        values[sample] += noise * value_spread * draw[0];
+        slopes.slopes[0][sample] += noise * slope_spread * draw[1];
+      }
+    }
+    typename VF::NormalEquations equations;
+    RESULT_RETURN_IF_ERROR((table[stage].template AccumulateNormalEquations<kOracleSamples, 1>(
+        data.states[stage], values, weights, slopes, spec.Number("slope", 1.0), equations)));
+    equations.samples = static_cast<double>(samples);
+    double stage_weight = 1.0;
+    if (options.balance_stages) {
+      const auto kept_values = values.segment(offset, samples);
+      const double mean = kept_values.mean();
+      stage_weight = 1.0 / ((kept_values.array() - mean).square().mean() + (1e-6 * (1.0 + (mean * mean))));
+    }
+    RESULT_RETURN_IF_ERROR(fit.SetStage(stage, equations, spec.Number("ridge", 1e-6), nullptr, stage_weight));
+  }
+  RESULT_RETURN_IF_ERROR(fit.Fit());
+  return fit.WriteTable(std::span<VF>(table).first(control_stages));
+}
+
+// Free parameters of a fitted table, the terminal stage excluded: per stage, or shared.
+template <typename VF>
+auto TableParameters(const ModelSpec& spec, std::size_t num_stages) -> std::size_t {
+  if constexpr (IsLinearBasis<VF>::value) {
+    if (UsesTimeSharing(spec)) {
+      const Result<TimeSharedFitOptions> options = TimeSharingOptions(spec);
+      if (options.has_value()) {
+        const Result<TimeSharedLinearFit<VF>> fit = TimeSharedLinearFit<VF>::Make(*options, num_stages - 1);
+        if (fit.has_value()) {
+          return fit->NumParameters();
+        }
+      }
+    }
+  }
+  return static_cast<std::size_t>(VF::kNumParameters) * (num_stages - 1);
+}
+
 // Fits a table to the grid's values and slopes, stage by stage; see RunOracle().
 template <typename VF, typename BenchmarkT>
 auto FitOracleTable(const BenchmarkT& benchmark,
@@ -496,6 +608,12 @@ auto FitOracleTable(const BenchmarkT& benchmark,
   table.back() = start.terminal;
   const double ridge = spec.Number("ridge", 1e-6);
   const double slope_weight = spec.Number("slope", 1.0);
+  if constexpr (IsLinearBasis<VF>::value) {
+    if (UsesTimeSharing(spec)) {
+      RESULT_RETURN_IF_ERROR(FitTimeSharedOracleTable(data, spec, table));
+      return SuccessResult(std::move(table));
+    }
+  }
   const Clock::time_point fit_start = Clock::now();
   for (std::size_t stage = 0; stage + 1 < num_stages; ++stage) {
     const ValueFunctionValueBatch<State, kOracleSamples> weights =
@@ -540,6 +658,7 @@ auto RunOracle(const BenchmarkT& benchmark,
   RESULT_ASSIGN_OR_RETURN(std::vector<VF> table, (FitOracleTable<VF>(benchmark, data, spec, num_stages)));
   OracleResult result;
   result.num_parameters = VF::kNumParameters;
+  result.table_parameters = TableParameters<VF>(spec, num_stages);
   result.fit_seconds = std::chrono::duration<double>(Clock::now() - fit_start).count();
   double value_sum = 0.0;
   double slope_sum = 0.0;
@@ -861,6 +980,16 @@ auto ApplyTargetKnobs(const ModelSpec& spec, DtFbsdeIterativeOptions<double>& so
   }
 }
 
+// The time-sharing keys of a spec (see UsesTimeSharing) and its pass mode.
+auto ApplyTimeSharingKnobs(const ModelSpec& spec, DtFbsdeIterativeOptions<double>& solver) -> void {
+  if (const Result<TimeSharedFitOptions> sharing = TimeSharingOptions(spec); sharing.has_value()) {
+    solver.time_sharing = *sharing;
+  }
+  solver.time_sharing_pass =
+      spec.Word("pass", "after") == "gs" ? DtFbsdeTimeSharingPass::kGaussSeidel : DtFbsdeTimeSharingPass::kAfterPass;
+  solver.time_sharing_stale_weight = spec.Number("stale", solver.time_sharing_stale_weight);
+}
+
 // The batch sweep's best 2-D configuration (dt_fbsde_batch_sweep_main.cpp), with the spec's slope
 // weight and SGD settings.
 auto TwoDimensionalDtOptions(const ModelSpec& spec, double default_slope) -> DtFbsdeIterativeOptions<double> {
@@ -878,6 +1007,7 @@ auto TwoDimensionalDtOptions(const ModelSpec& spec, double default_slope) -> DtF
   solver.normal_equation_memory = spec.Number("memory", 0.0);
   solver.reset_normal_equations_on_acceptance = spec.Number("reset", 0.0) != 0.0;
   solver.replay_batches = static_cast<std::size_t>(spec.Number("replay", 0.0));
+  ApplyTimeSharingKnobs(spec, solver);
   ApplyTargetKnobs(spec, solver);
   return solver;
 }
@@ -1257,15 +1387,16 @@ auto StudyTwoDimensional(const BenchmarkT& benchmark,
         RESULT_ASSIGN_OR_RETURN(const OracleResult result,
                                 (RunOracle<VF>(benchmark, grid, *data, spec, NumStages, options.held_out)));
         std::cout << std::format(
-            "{:<32} gap {:+9.2f}%  rmse on optimal tube {:7.3f}  on own rollouts {:8.3f} ({:5.1f}% off by >1)  "
-            "disagree {:5.1f}%\n",
+            "{:<32} {:>6} params  gap {:+9.2f}%  rmse on optimal tube {:7.3f}  on own rollouts {:8.3f} ({:5.1f}% off "
+            "by >1)  disagree {:5.1f}%\n",
             spec.text,
+            result.table_parameters,
             100.0 * (result.policy_cost / optimum - 1.0),
             result.value_rmse,
             result.on_policy_rmse,
             100.0 * result.on_policy_large_error,
             100.0 * result.disagreement);
-        csv << std::format("{},\"{}\",{},{:.6f},{:.6f},{:.6f},{:.6f},{:.6f},{:.4f},{:.3f},{:.5f}\n",
+        csv << std::format("{},\"{}\",{},{:.6f},{:.6f},{:.6f},{:.6f},{:.6f},{:.4f},{:.3f},{:.5f},{},{:.6f},{:.5f}\n",
                            problem,
                            spec.text,
                            result.num_parameters,
@@ -1276,7 +1407,10 @@ auto StudyTwoDimensional(const BenchmarkT& benchmark,
                            result.fit_seconds,
                            result.policy_microseconds,
                            result.effective_samples,
-                           result.disagreement);
+                           result.disagreement,
+                           result.table_parameters,
+                           result.on_policy_rmse,
+                           result.on_policy_large_error);
         csv.flush();
         return SuccessResult();
       }
@@ -1341,6 +1475,7 @@ auto StudyDoublePendulum(const StudyOptions& options, std::ofstream& csv) -> Res
         solver_options.stop_uphill_line_search = true;
         solver_options.screening_rollouts = 32;
       }
+      ApplyTimeSharingKnobs(spec, solver_options);
       ApplyTargetKnobs(spec, solver_options);
       // The batch is a compile-time size: the comparison's 4096, or the 128 the sigma-point study
       // found faster here.
@@ -1394,11 +1529,12 @@ auto Run(StudyOptions options) -> Result<> {
   RESULT_ASSERT(csv.good(), "could not open the CSV file.");
   csv << (options.phase == "oracle"
               ? "problem,model,num_parameters,policy_cost,grid_optimum,value_rmse,slope_rmse,fit_seconds,policy_us,"
-                "effective_samples,disagreement\n"
+                "effective_samples,disagreement,table_parameters,on_policy_rmse,on_policy_large_error\n"
           : options.phase == "policy" ? "problem,value_function,policy,held_out_cost,grid_optimum\n"
-          : options.phase == "dagger" ? "problem,model,round,samples_per_stage,held_out_cost,grid_optimum,on_policy_rmse,"
-                                        "on_policy_large_error\n"
-                                      : "problem,model,seed,iteration,seconds,held_out_cost,line_search_cost\n");
+          : options.phase == "dagger"
+              ? "problem,model,round,samples_per_stage,held_out_cost,grid_optimum,on_policy_rmse,"
+                "on_policy_large_error\n"
+              : "problem,model,seed,iteration,seconds,held_out_cost,line_search_cost\n");
   if (options.include_integrator) {
     RESULT_ASSIGN_OR_RETURN(const L1DoubleIntegrator integrator, MakeL1DoubleIntegrator());
     RESULT_RETURN_IF_ERROR((StudyTwoDimensional<kL1DoubleIntegratorNumStages>(

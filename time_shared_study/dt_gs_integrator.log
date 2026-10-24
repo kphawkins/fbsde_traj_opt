@@ -1,0 +1,14 @@
+
+=== L1 double integrator: grid optimum 4.1367 ===
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 0: DT-FBSDE failed at iteration 128: TimeSharedLinearFit::SolveKnots: the fit is not finite.
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 0: final gap     +nan% after 13.0 s
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 1: DT-FBSDE failed at iteration 156: TimeSharedLinearFit::SolveKnots: the fit is not finite.
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 1: final gap     +nan% after 16.6 s
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 2: DT-FBSDE failed at iteration 135: TimeSharedLinearFit::SolveKnots: the fit is not finite.
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 2: final gap     +nan% after 13.9 s
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 3: DT-FBSDE failed at iteration 219: TimeSharedLinearFit::SolveKnots: the fit is not finite.
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 3: final gap     +nan% after 20.7 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1 seed 0: final gap   +25.66% after 30.1 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1 seed 1: final gap  +105.65% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1 seed 2: final gap    +2.46% after 30.1 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1 seed 3: final gap   +10.68% after 30.1 s

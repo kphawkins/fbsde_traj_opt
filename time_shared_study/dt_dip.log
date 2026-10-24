@@ -1,0 +1,8 @@
+
+=== L1 double inverted pendulum ===
+poly4:batch=128,inflation=6,uphill=1     seed 0: final cost   11.2301 after 180.5 s
+poly4:batch=128,inflation=6,uphill=1     seed 1: final cost   16.7887 after 181.7 s
+poly4:batch=128,inflation=6,uphill=1,time=linear,knots=16 seed 0: final cost   22.7322 after 181.6 s
+poly4:batch=128,inflation=6,uphill=1,time=linear,knots=16 seed 1: final cost   23.7066 after 181.2 s
+poly4:batch=128,inflation=6,uphill=1,rank=8,time=linear,knots=16,balance=1,sweeps=2 seed 0: final cost    5.7084 after 181.4 s
+poly4:batch=128,inflation=6,uphill=1,rank=8,time=linear,knots=16,balance=1,sweeps=2 seed 1: final cost   18.0192 after 181.0 s

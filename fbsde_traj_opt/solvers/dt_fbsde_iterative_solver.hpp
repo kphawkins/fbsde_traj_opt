@@ -37,6 +37,7 @@
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
 #include "fbsde_traj_opt/utils/phase_profiler.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
+#include "fbsde_traj_opt/value_function/time_shared_linear_fit.hpp"
 #include "fbsde_traj_opt/value_function/value_function_approx_concepts.hpp"
 #include "fbsde_traj_opt/value_function/value_function_gauss_newton_fitter.hpp"
 #include "fbsde_traj_opt/value_function/value_function_sgd_fitter.hpp"
@@ -163,6 +164,24 @@ namespace fbsde_traj_opt {
 
 // Which policy the Taylor noiseless target evaluates; see DtFbsdeIterativeOptions::taylor_target_policy.
 enum class DtFbsdeTaylorTargetPolicy : std::uint8_t { kCurrent, kGreedy };
+
+// How a backward pass with time sharing (DtFbsdeIterativeOptions::time_sharing) shares parameters
+// stage by stage. Every pass ends with a joint solve over all stages' equations; the choice is what
+// the targets *within* the pass read, since stage k's targets read stage k+1's fit.
+enum class DtFbsdeTimeSharingPass : std::uint8_t {
+  // Each stage is fitted on its own, as without time sharing; only the closing solve shares. The
+  // table the line search sees is the shared one.
+  kAfterPass,
+  // Each stage re-solves the knots around it (block Gauss-Seidel) from the stages this pass has
+  // fitted so far and, scaled by DtFbsdeIterativeOptions::time_sharing_stale_weight, the previous
+  // pass's equations of the stages it has not reached yet. Counted fully, those dominate a knot's
+  // solve until the pass reaches them, so each stage's fit lags a pass behind and value information
+  // crawls back from the terminal stage; dropped, a knot first reached by one stage at a small
+  // interpolation weight is nearly undetermined. On the 2-D benchmarks every weight tried (0, 0.1,
+  // 1) stalls or diverges to a non-finite fit within a few hundred iterations
+  // (time_shared_study/README.md); kAfterPass does not.
+  kGaussSeidel,
+};
 
 // Which control the backward pass's targets are taken at; see BackwardPass().
 enum class DtFbsdeBackwardTarget : std::uint8_t {
@@ -329,6 +348,18 @@ struct DtFbsdeIterativeOptions {
   // Taylor residual the bias bound multiplies. It costs a second evaluation of the next stage per
   // off-policy sample, so it is off unless a study asks for it.
   bool measure_taylor_residual = false;
+
+  // Parameters shared across stages, for a representation that exposes its normal equations; see
+  // TimeSharedLinearFit. The default, one coefficient vector per stage and no shared basis, is the
+  // per-stage table. Every pass keeps each stage's normal equations and ends with a joint solve over
+  // all of them -- with a shared basis of rank r, alternating between the basis and the stages'
+  // mixing weights -- whose result is the table the line search blends toward. The first pass with
+  // a shared basis fits stage by stage and starts the basis from those fits. Not with replay.
+  //
+  // How a pass shares parameters before its closing joint solve; see DtFbsdeTimeSharingPass.
+  TimeSharedFitOptions time_sharing{};
+  DtFbsdeTimeSharingPass time_sharing_pass = DtFbsdeTimeSharingPass::kAfterPass;
+  Scalar time_sharing_stale_weight = Scalar{0.1};
 };
 
 // The normal equations a representation lets DtFbsdeIterativeSolver carry across iterations, if it
@@ -345,6 +376,23 @@ struct DtFbsdeNormalEquationsOf<ValueFunctionT> {
   static constexpr bool kSupported = true;
   using type = typename ValueFunctionT::NormalEquations;
 };
+
+// The time-shared fit DtFbsdeIterativeSolver keeps for a representation, if it can; see
+// DtFbsdeIterativeOptions::time_sharing.
+template <typename ValueFunctionT>
+struct DtFbsdeTimeSharedFitOf {
+  using type = char;
+};
+
+template <typename ValueFunctionT>
+  requires requires { typename ValueFunctionT::NormalEquations; }
+struct DtFbsdeTimeSharedFitOf<ValueFunctionT> {
+  using type = TimeSharedLinearFit<ValueFunctionT>;
+};
+
+[[nodiscard]] inline auto TimeSharingEnabled(const TimeSharedFitOptions& options) noexcept -> bool {
+  return options.kind != TimeBasisKind::kPerStage || options.rank > 0;
+}
 
 // What one iteration did.
 template <typename Scalar = double>
@@ -509,6 +557,13 @@ class DtFbsdeIterativeSolver {
                        options.normal_equation_memory == Scalar{0}),
                   "DtFbsdeIterativeSolver::Make: replay needs a representation that exposes its normal equations, the "
                   "double-estimation backward target, and no normal equation memory.");
+    RESULT_ASSERT(std::isfinite(options.time_sharing_stale_weight) && options.time_sharing_stale_weight >= Scalar{0} &&
+                      options.time_sharing_stale_weight <= Scalar{1},
+                  "DtFbsdeIterativeSolver::Make: the time sharing's stale weight must lie in [0, 1].");
+    RESULT_ASSERT(!TimeSharingEnabled(options.time_sharing) ||
+                      (DtFbsdeNormalEquationsOf<ValueFunctionT>::kSupported && options.replay_batches <= 1),
+                  "DtFbsdeIterativeSolver::Make: time sharing needs a representation that exposes its normal "
+                  "equations, and no replay.");
     RESULT_ASSERT((lower_bounds.array() <= Scalar{0}).all() && (upper_bounds.array() >= Scalar{0}).all() &&
                       lower_bounds.allFinite() && upper_bounds.allFinite(),
                   "DtFbsdeIterativeSolver::Make: every control's bounds must be finite and contain zero.");
@@ -529,6 +584,16 @@ class DtFbsdeIterativeSolver {
                                   terminal_value_function,
                                   options,
                                   seed);
+    if constexpr (DtFbsdeNormalEquationsOf<ValueFunctionT>::kSupported) {
+      if (TimeSharingEnabled(options.time_sharing)) {
+        for (std::size_t half = 0; half < 2; ++half) {
+          RESULT_ASSIGN_OR_RETURN(SharedFit fit, SharedFit::Make(options.time_sharing, kNumControlStages));
+          RESULT_RETURN_IF_ERROR(
+              fit.Initialize(std::span<const ValueFunctionT>(solver.current_).first(kNumControlStages)));
+          solver.shared_fits_.push_back(std::move(fit));
+        }
+      }
+    }
     solver.current_costs_ = solver.Evaluate(solver.current_);
     if (options.screening_rollouts > 0) {
       solver.current_screened_cost_ = solver.Evaluate(solver.current_, options.screening_rollouts).total;
@@ -775,6 +840,7 @@ class DtFbsdeIterativeSolver {
   using SlopeTargets = ValueFunctionSlopeTargets<State, Count, M>;
 
   using NormalEquations = typename DtFbsdeNormalEquationsOf<ValueFunctionT>::type;
+  using SharedFit = typename DtFbsdeTimeSharedFitOf<ValueFunctionT>::type;
 
   // One half of a double-estimation batch.
   static constexpr int kHalf = kSampleCount / 2;
@@ -1191,6 +1257,17 @@ class DtFbsdeIterativeSolver {
         }
       });
       fitted_[stage] = current_[stage];
+      if (!shared_fits_.empty()) {
+        RESULT_RETURN_IF_ERROR(FitSharedStage<kSampleCount>(fitted_,
+                                                            stage,
+                                                            0,
+                                                            states,
+                                                            targets,
+                                                            accrued_before_[stage],
+                                                            slopes_wanted ? &slopes : nullptr,
+                                                            Accumulator(stage, 0)));
+        continue;
+      }
       if (const Result<> fitted = FitStage<kSampleCount>(fitted_[stage],
                                                          states,
                                                          targets,
@@ -1202,7 +1279,7 @@ class DtFbsdeIterativeSolver {
         return fitted;
       }
     }
-    return SuccessResult();
+    return FinishSharedPass(fitted_, 0);
   }
 
   // The backward pass with the off-policy drifted Taylor noiseless estimator (Hawkins (2021),
@@ -1311,6 +1388,19 @@ class DtFbsdeIterativeSolver {
         stats.taylor_residual += residuals.sum() / off_policy_count;
       }
       fitted_[stage] = current_[stage];
+      if (!shared_fits_.empty()) {
+        RESULT_RETURN_IF_ERROR(
+            FitSharedStage<kSampleCount>(fitted_,
+                                         stage,
+                                         0,
+                                         states,
+                                         targets,
+                                         accrued_before_[stage],
+                                         slopes_wanted ? &slopes : nullptr,
+                                         Accumulator(stage, 0),
+                                         options_.girsanov_weight > Scalar{0} ? &girsanov_weights : nullptr));
+        continue;
+      }
       if (const Result<> fitted = FitStage<kSampleCount>(fitted_[stage],
                                                          states,
                                                          targets,
@@ -1324,6 +1414,7 @@ class DtFbsdeIterativeSolver {
         return fitted;
       }
     }
+    RESULT_RETURN_IF_ERROR(FinishSharedPass(fitted_, 0));
     const auto stages = static_cast<Scalar>(kNumControlStages);
     last_girsanov_drift_ = drift_norm_sum / stages;
     last_first_order_correction_ = correction_sum / stages;
@@ -1415,6 +1506,17 @@ class DtFbsdeIterativeSolver {
         }
         targets_of(states, targets, slopes);
         const profiling::ScopedPhase fit_phase(profiling::Phase::kBackwardFit);
+        if (!shared_fits_.empty()) {
+          RESULT_RETURN_IF_ERROR(FitSharedStage<kHalf>(halves_[half],
+                                                       stage,
+                                                       half,
+                                                       states,
+                                                       targets,
+                                                       accrued,
+                                                       slopes_wanted ? &slopes : nullptr,
+                                                       Accumulator(stage, half)));
+          continue;
+        }
         if (const Result<> fitted = FitStage<kHalf>(halves_[half][stage],
                                                     states,
                                                     targets,
@@ -1434,7 +1536,108 @@ class DtFbsdeIterativeSolver {
         return averaged;
       }
     }
+    if (shared_fits_.empty()) {
+      return SuccessResult();
+    }
+    // The pass's closing joint solves move every stage, so the average is taken again.
+    for (std::size_t half = 0; half < 2; ++half) {
+      RESULT_RETURN_IF_ERROR(FinishSharedPass(halves_[half], half));
+    }
+    for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
+      RESULT_RETURN_IF_ERROR(fitted_[stage].SetParameters(
+          Scalar{0.5} * (halves_[0][stage].Parameters() + halves_[1][stage].Parameters())));
+    }
     return SuccessResult();
+  }
+
+  // Fits stage `stage` of `table` through the time-shared fit of `half` (zero for the single-table
+  // passes); see DtFbsdeIterativeOptions::time_sharing. The stage's normal equations -- carried
+  // across iterations through `accumulator` when there is a memory -- replace its previous ones in
+  // the shared fit, and the knots around the stage are re-solved and written back to every stage
+  // they reach. Before a shared basis exists, the stage is fitted on its own.
+  template <int Count>
+  auto FitSharedStage(std::vector<ValueFunctionT>& table,
+                      std::size_t stage,
+                      std::size_t half,
+                      const ValueFunctionStateBatch<State, Count>& states,
+                      const ValueFunctionValueBatch<State, Count>& targets,
+                      const ValueFunctionValueBatch<State, Count>& accrued,
+                      const SlopeTargets<Count>* slopes,
+                      NormalEquations* accumulator,
+                      const ValueFunctionValueBatch<State, Count>* extra_weights = nullptr) noexcept -> Result<> {
+    if constexpr (DtFbsdeNormalEquationsOf<ValueFunctionT>::kSupported) {
+      ValueFunctionValueBatch<State, Count> weights = SampleWeights<Count>(targets, accrued);
+      if (extra_weights != nullptr) {
+        weights = weights.cwiseProduct(*extra_weights);
+      }
+      NormalEquations fresh;
+      NormalEquations& equations = accumulator != nullptr ? *accumulator : fresh;
+      if (accumulator != nullptr) {
+        accumulator->Decay(options_.normal_equation_memory);
+      }
+      ValueFunctionT& value_function = table[stage];
+      if (slopes == nullptr) {
+        RESULT_RETURN_IF_ERROR(
+            value_function.template AccumulateNormalEquations<Count>(states, targets, weights, equations));
+      } else {
+        RESULT_RETURN_IF_ERROR((value_function.template AccumulateNormalEquations<Count, M>(
+            states, targets, weights, *slopes, options_.slope_weight, equations)));
+      }
+      const typename ValueFunctionT::ParameterVector anchor = current_[stage].Parameters();
+      const bool anchored = [&] {
+        if constexpr (requires { value_function.Anchor(); }) {
+          return value_function.Anchor() == decltype(value_function.Anchor())::kCurrent;
+        } else {
+          return false;
+        }
+      }();
+      SharedFit& fit = shared_fits_[half];
+      Scalar stage_weight = Scalar{1};
+      if (options_.time_sharing.balance_stages) {
+        const Scalar mean = targets.mean();
+        const Scalar variance = (targets.array() - mean).square().mean();
+        stage_weight = Scalar{1} / (variance + (Scalar{1e-6} * (Scalar{1} + (mean * mean))));
+      }
+      if (stage + 1 == kNumControlStages) {
+        fit.BeginPass();
+      }
+      RESULT_RETURN_IF_ERROR(
+          fit.SetStage(stage, equations, options_.ridge, anchored ? &anchor : nullptr, stage_weight));
+      if (options_.time_sharing_pass == DtFbsdeTimeSharingPass::kAfterPass ||
+          (fit.Rank() > 0 && !fit.HasSharedBasis())) {
+        return value_function.FitNormalEquations(equations, options_.ridge);
+      }
+      RESULT_RETURN_IF_ERROR(fit.SolveAroundStage(stage, options_.time_sharing_stale_weight));
+      return fit.WriteAroundStage(stage, std::span<ValueFunctionT>(table));
+    } else {
+      (void)table, (void)stage, (void)half, (void)states, (void)targets, (void)accrued, (void)slopes, (void)accumulator,
+          (void)extra_weights;
+      return ErrorResult("DtFbsdeIterativeSolver: time sharing needs a representation with normal equations.");
+    }
+  }
+
+  // Closes a pass of the time-shared fit of `half` and writes it into `table`: the shared basis
+  // started from this pass's stage-by-stage fits, or refitted to every stage's equations, and the
+  // coefficients solved jointly. Does nothing without time sharing.
+  auto FinishSharedPass(std::vector<ValueFunctionT>& table, std::size_t half) noexcept -> Result<> {
+    if constexpr (DtFbsdeNormalEquationsOf<ValueFunctionT>::kSupported) {
+      if (shared_fits_.empty()) {
+        return SuccessResult();
+      }
+      SharedFit& fit = shared_fits_[half];
+      if (fit.Rank() > 0 && fit.HasSharedBasis() && options_.time_sharing_pass != DtFbsdeTimeSharingPass::kAfterPass) {
+        for (std::size_t sweep = 0; sweep < options_.time_sharing.sweeps; ++sweep) {
+          RESULT_RETURN_IF_ERROR(fit.SolveSharedBasis());
+          RESULT_RETURN_IF_ERROR(fit.SolveCoefficients());
+        }
+      } else {
+        RESULT_RETURN_IF_ERROR(fit.Fit());
+      }
+      return fit.WriteTable(std::span<ValueFunctionT>(table).first(kNumControlStages));
+    } else {
+      (void)table, (void)half;
+      return SuccessResult();
+    }
   }
 
   // Writes `(1 - step) V~_current + step V~_fitted` into `trial_`, coefficient by coefficient --
@@ -1659,6 +1862,10 @@ class DtFbsdeIterativeSolver {
   std::vector<std::array<NormalEquations, 2>> accumulated_ =
       options_.normal_equation_memory > Scalar{0} ? std::vector<std::array<NormalEquations, 2>>(NumStages)
                                                   : std::vector<std::array<NormalEquations, 2>>();
+
+  // The time-shared fits, one per half of a double-estimation pass (the first serves the other
+  // passes); empty unless the options ask for time sharing.
+  std::vector<SharedFit> shared_fits_;
 
   // The half-batches kept for replay, newest first, per stage and half; empty unless replaying.
   std::vector<std::array<std::deque<ReplayBlock>, 2>> replay_ =
