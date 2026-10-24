@@ -91,12 +91,23 @@ cc_test(
 )
 
 cc_library(
+    name = "value_function_slope_targets",
+    hdrs = ["value_function_slope_targets.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":value_function_approx_concepts",
+        "@eigen",
+    ],
+)
+
+cc_library(
     name = "value_function_sgd_fitter",
     hdrs = ["value_function_sgd_fitter.hpp"],
     copts = FBSDE_COPTS,
     deps = [
         ":adam_optimizer",
         ":value_function_approx_concepts",
+        ":value_function_slope_targets",
         "//fbsde_traj_opt/utils:result",
         "@eigen",
     ],
@@ -123,6 +134,7 @@ cc_library(
     copts = FBSDE_COPTS,
     deps = [
         ":value_function_approx_concepts",
+        ":value_function_slope_targets",
         "//fbsde_traj_opt/utils:result",
         "@eigen",
     ],

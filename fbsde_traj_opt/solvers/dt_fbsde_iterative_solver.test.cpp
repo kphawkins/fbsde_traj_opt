@@ -3,6 +3,7 @@
 
 #include "fbsde_traj_opt/solvers/dt_fbsde_iterative_solver.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -222,7 +223,182 @@ TEST(DtFbsdeIterativeSolverOptionsTest, MakeRejectsOutOfRangeOptions) {
   EXPECT_TRUE(rejected([](auto& options) { options.probe_fraction = 1.0; }));
   EXPECT_TRUE(rejected([](auto& options) { options.ridge = -1.0; }));
   EXPECT_TRUE(rejected([](auto& options) { options.entropy_temperature = -1.0; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.screening_rollouts = 65; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.diffusion_inflation_growth = 0.5; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.max_diffusion_inflation = 0.5; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.base_diffusion_inflation = 0.5; }));
+  EXPECT_TRUE(rejected([](auto& options) {
+    options.base_diffusion_inflation = 4.0;
+    options.max_diffusion_inflation = 2.0;
+  }));
+  EXPECT_TRUE(rejected([](auto& options) { options.stall_relative_improvement = -0.1; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.stall_patience = 0; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.uninflated_path_fraction = 1.5; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.slope_weight = -1.0; }));
+  EXPECT_FALSE(rejected([](auto& options) { options.screening_rollouts = 64; }));
   EXPECT_FALSE(rejected([](auto&) {}));
+}
+
+TEST(DtFbsdeIterativeSolverLineSearchTest, ScreeningAndStoppingUphillStillOnlyAcceptImprovements) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+  options.target_floor = 0.0;
+  options.exploration_decay = 0.5;
+  options.stop_uphill_line_search = true;
+  options.screening_rollouts = 16;
+  Result<Solver> solver = MakeSolver(fixture, options);
+  ASSERT_TRUE(solver.has_value()) << solver.error();
+
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  double previous = solver->CurrentCost();
+  for (std::size_t iteration = 0; iteration < 12; ++iteration) {
+    const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+    ASSERT_TRUE(report.has_value()) << report.error();
+    // A screen can only reject; acceptance is still decided on every evaluation rollout.
+    EXPECT_LE(report->mean_cost, previous + 1e-12);
+    EXPECT_EQ(report->accepted_step > 0.0, report->mean_cost < previous);
+    previous = report->mean_cost;
+  }
+  EXPECT_LT(solver->CurrentCost(), 0.02 * coasting_cost);
+}
+
+TEST(DtFbsdeIterativeSolverInflationTest, InflatesTheNoiseWhileStalledAndResetsOnImprovement) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.target_floor = 0.0;
+  options.exploration_decay = 0.5;
+  // Only the full step is tried, so that some iterations stall.
+  options.max_step_halvings = 0;
+  options.diffusion_inflation_growth = 2.0;
+  options.max_diffusion_inflation = 4.0;
+  Result<Solver> solver = MakeSolver(fixture, options);
+  ASSERT_TRUE(solver.has_value()) << solver.error();
+
+  double expected_inflation = 1.0;
+  std::size_t inflated = 0;
+  for (std::size_t iteration = 0; iteration < 20; ++iteration) {
+    const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+    ASSERT_TRUE(report.has_value()) << report.error();
+    EXPECT_DOUBLE_EQ(report->diffusion_inflation, expected_inflation);
+    inflated += report->diffusion_inflation > 1.0 ? 1 : 0;
+    expected_inflation = report->accepted_step > 0.0 ? 1.0 : std::min(2.0 * expected_inflation, 4.0);
+  }
+  EXPECT_GT(inflated, 0U);
+}
+
+TEST(DtFbsdeIterativeSolverContinuationTest, ADiffusionScaleRescoresTheProblemButNotTheDeployedPolicy) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.target_floor = 0.0;
+  options.screening_rollouts = 16;
+  Result<Solver> solver = MakeSolver(fixture, options);
+  ASSERT_TRUE(solver.has_value()) << solver.error();
+  for (std::size_t iteration = 0; iteration < 3; ++iteration) {
+    ASSERT_TRUE(solver->Iterate().has_value());
+  }
+  const double unscaled_cost = solver->CurrentCost();
+  const Eigen::Vector2d state = fixture.initial.Mean();
+  const Eigen::Matrix<double, 1, 1> deployed = solver->CurrentPolicy()(0, state);
+
+  EXPECT_FALSE(solver->SetDiffusionScale(0.0).has_value());
+  ASSERT_TRUE(solver->SetDiffusionScale(4.0).has_value());
+  EXPECT_DOUBLE_EQ(solver->DiffusionScale(), 4.0);
+  // Four times the noise on a quadratic terminal cost costs more on the same rollouts.
+  EXPECT_GT(solver->CurrentCost(), unscaled_cost);
+  // The deployed policy acts on the problem as posed, whatever the solver is working on.
+  EXPECT_EQ(solver->CurrentPolicy()(0, state), deployed);
+
+  const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+  ASSERT_TRUE(report.has_value()) << report.error();
+  EXPECT_DOUBLE_EQ(report->diffusion_scale, 4.0);
+
+  ASSERT_TRUE(solver->SetDiffusionScale(1.0).has_value());
+  // Back at the problem as posed, the cost is re-scored there: below what four times the noise cost.
+  EXPECT_LT(solver->CurrentCost(), report->mean_cost);
+}
+
+TEST(DtFbsdeIterativeSolverInflationTest, AnExplorationBaseSetBetweenIterationsIsWhatTheNextOneUses) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.target_floor = 0.0;
+  options.uninflated_path_fraction = 0.5;
+  Result<Solver> solver = MakeSolver(fixture, options);
+  ASSERT_TRUE(solver.has_value()) << solver.error();
+  EXPECT_FALSE(solver->SetExplorationInflation(0.5).has_value());
+  ASSERT_TRUE(solver->SetExplorationInflation(12.0).has_value());
+  const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+  ASSERT_TRUE(report.has_value()) << report.error();
+  // A base above the cap is used as it is: the cap bounds the stalls' growth, not the base.
+  EXPECT_DOUBLE_EQ(report->diffusion_inflation, 12.0);
+  EXPECT_DOUBLE_EQ(report->diffusion_scale, 1.0);
+}
+
+TEST(DtFbsdeIterativeSolverSlopeTest, MatchingSlopesInClosedFormStillConverges) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+  options.target_floor = 0.0;
+  options.exploration_decay = 0.5;
+  options.slope_weight = 1.0;
+  Result<Solver> solver = MakeSolver(fixture, options);
+  ASSERT_TRUE(solver.has_value()) << solver.error();
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  double previous = solver->CurrentCost();
+  for (std::size_t iteration = 0; iteration < 12; ++iteration) {
+    const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+    ASSERT_TRUE(report.has_value()) << report.error();
+    EXPECT_LE(report->mean_cost, previous + 1e-12);
+    previous = report->mean_cost;
+  }
+  EXPECT_LT(solver->CurrentCost(), 0.02 * coasting_cost);
+}
+
+TEST(DtFbsdeIterativeSolverSlopeTest, MatchingSlopesBySgdStillConverges) {
+  using SoftMin = SoftMinQuadraticValueFunctionApprox<2, 3>;
+  using SoftMinSolver = DtFbsdeIterativeSolver<2, 1, 256, kStages, 64, Model, TerminalCost, SoftMin>;
+  const Fixture fixture = MakeFixture();
+  const Eigen::Matrix2d terminal_matrix = Eigen::Vector2d(5.0, 2.0).asDiagonal();
+  const auto terminal_parameters =
+      SoftMin::QuadraticParameters(terminal_matrix, Eigen::Vector2d::Zero(), 0.0, 1.0, 1e-3);
+  const auto initial_parameters =
+      SoftMin::QuadraticParametersAt(terminal_matrix,
+                                     {Eigen::Vector2d(0.0, 0.0), Eigen::Vector2d(1.0, 0.0), Eigen::Vector2d(-0.5, 0.5)},
+                                     0.0,
+                                     1.0,
+                                     1e-3);
+  ASSERT_TRUE(terminal_parameters.has_value() && initial_parameters.has_value());
+  const auto terminal = SoftMin::Make(*terminal_parameters, 1.0, 1e-3);
+  const auto initial = SoftMin::Make(*initial_parameters, 1.0, 1e-3);
+  ASSERT_TRUE(terminal.has_value() && initial.has_value());
+
+  DtFbsdeIterativeOptions<double> options;
+  options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+  options.target_floor = 0.0;
+  options.exploration_decay = 0.5;
+  options.sgd.learning_rate = 0.05;
+  options.sgd_epochs = 20;
+  options.slope_weight = 1.0;
+  Result<SoftMinSolver> solver = SoftMinSolver::Make(fixture.model,
+                                                     fixture.running_cost,
+                                                     fixture.terminal_cost,
+                                                     fixture.initial,
+                                                     Eigen::Matrix<double, 1, 1>(-1.0),
+                                                     Eigen::Matrix<double, 1, 1>(1.0),
+                                                     *initial,
+                                                     *terminal,
+                                                     options,
+                                                     7);
+  ASSERT_TRUE(solver.has_value()) << solver.error();
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  double previous = solver->CurrentCost();
+  for (std::size_t iteration = 0; iteration < 8; ++iteration) {
+    const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+    ASSERT_TRUE(report.has_value()) << report.error();
+    EXPECT_LE(report->mean_cost, previous + 1e-12);
+    previous = report->mean_cost;
+  }
+  EXPECT_LT(solver->CurrentCost(), 0.05 * coasting_cost);
 }
 
 }  // namespace
