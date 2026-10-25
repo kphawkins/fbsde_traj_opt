@@ -1008,6 +1008,8 @@ auto PrintUsage() -> void {
       << "  --mpc-iterations N       MPPI-MPC iterations per control step (default 2)\n"
       << "  --mpc-noise S            MPPI-MPC control noise (default 0.1)\n"
       << "  --mpc-ilqr-iterations N  iLQR-MPC iterations per control step (default 2)\n"
+      << "  --integrator-slope-weight G  DT-FBSDE's slope weight on the double integrator (default 10; 0 fits values alone)\n"
+      << "  --pendulum-slope-weight G    DT-FBSDE's slope weight on the pendulum (default 1; 0 fits values alone)\n"
       << "  --dip-dt-config C        DT-FBSDE on the double inverted pendulum: sweep (default) or comparison\n"
       << "  --dip-slope-weight G     its slope weight under the sweep configuration (default 10)\n"
       << "  --mppi-time-budget S     cap on MPPI's charged seconds per run (default: the benchmark's)\n"
@@ -1100,6 +1102,10 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
     } else if (argument == "--dip-dt-config") {
       RESULT_ASSERT(value == "comparison" || value == "sweep", "--dip-dt-config is comparison or sweep.");
       options.double_pendulum_sweep_config = value == "sweep";
+    } else if (argument == "--integrator-slope-weight") {
+      options.integrator_slope_weight = number;
+    } else if (argument == "--pendulum-slope-weight") {
+      options.pendulum_slope_weight = number;
     } else if (argument == "--dip-slope-weight") {
       options.double_pendulum_slope_weight = number;
     } else if (argument == "--mppi-time-budget") {
