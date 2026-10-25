@@ -3,6 +3,12 @@
 Where the default DT-FBSDE configuration spends its time, on the two 2-D benchmarks (double
 integrator, pendulum swing-up) and on the double inverted pendulum. `report.html` is the write-up.
 
+## Update (2026-10-25)
+
+The report now leads with the default after slope targets were dropped, profiled per stage and with
+the time-shared value functions; see `time_shared/README.md`. The findings below are the earlier
+profile, which ran with slope targets.
+
 ## Findings (2026-10-24)
 
 - **2-D:** the line search takes 70–80% of an iteration, and most of that is the 32-rollout
