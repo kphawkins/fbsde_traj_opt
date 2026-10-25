@@ -358,8 +358,8 @@ auto RunConfig(const BenchmarkT& benchmark,
   });
 }
 
-// The batch sweep's best 2-D options, with the configuration's sampler.
-auto TwoDimensionalOptions(const Config& config, double default_slope) -> DtFbsdeIterativeOptions<double> {
+// The batch sweep's best 2-D options, without slope matching unless asked, with the configuration's sampler.
+auto TwoDimensionalOptions(const Config& config) -> DtFbsdeIterativeOptions<double> {
   DtFbsdeIterativeOptions<double> solver = DtFbsdeOptions(FbrrtComparisonOptions{});
   solver.stop_uphill_line_search = true;
   solver.screening_rollouts = 32;
@@ -367,7 +367,7 @@ auto TwoDimensionalOptions(const Config& config, double default_slope) -> DtFbsd
   solver.base_diffusion_inflation = inflation;
   solver.max_diffusion_inflation = inflation;
   solver.uninflated_path_fraction = inflation > 1.0 ? 0.5 : 0.0;
-  solver.slope_weight = config.Number("slope", default_slope);
+  solver.slope_weight = config.Number("slope", 0.0);
   solver.sigma_point_rule = RuleOf(config.sampler);
   solver.sigma_point_probes = config.Number("probes", 1.0) != 0.0;
   solver.randomize_sigma_point_rotation = config.Word("rotate", "fixed") == "random";
@@ -378,7 +378,6 @@ template <std::size_t NumStages, typename BenchmarkT>
 auto StudyTwoDimensional(const BenchmarkT& benchmark,
                          const Eigen::Vector2d& lower,
                          const Eigen::Vector2d& upper,
-                         double default_slope,
                          const StudyOptions& options,
                          std::ofstream& csv,
                          std::ofstream& summary_csv) -> Result<> {
@@ -394,7 +393,7 @@ auto StudyTwoDimensional(const BenchmarkT& benchmark,
                            grid.Value(0, benchmark.initial_distribution.Mean()));
   for (const std::string& text : options.configs) {
     const Config config = ParseConfig(text);
-    const DtFbsdeIterativeOptions<double> solver_options = TwoDimensionalOptions(config, default_slope);
+    const DtFbsdeIterativeOptions<double> solver_options = TwoDimensionalOptions(config);
     const std::size_t batch = solver_options.sigma_point_rule == SigmaPointRule::kNone
                                   ? static_cast<std::size_t>(config.Number("batch", 16))
                                   : 2 * SigmaItems<2>(solver_options);
@@ -460,12 +459,12 @@ auto Run(const StudyOptions& options) -> Result<> {
   if (options.include_integrator) {
     RESULT_ASSIGN_OR_RETURN(const L1DoubleIntegrator integrator, MakeL1DoubleIntegrator());
     RESULT_RETURN_IF_ERROR((StudyTwoDimensional<kL1DoubleIntegratorNumStages>(
-        integrator, {-2.5, -3.5}, {4.5, 2.5}, 10.0, options, csv, summary_csv)));
+        integrator, {-2.5, -3.5}, {4.5, 2.5}, options, csv, summary_csv)));
   }
   if (options.include_pendulum) {
     RESULT_ASSIGN_OR_RETURN(const L1Pendulum pendulum, MakeL1Pendulum());
     RESULT_RETURN_IF_ERROR((StudyTwoDimensional<kL1PendulumNumStages>(
-        pendulum, {-2.0, -9.0}, {5.0, 9.0}, 1.0, options, csv, summary_csv)));
+        pendulum, {-2.0, -9.0}, {5.0, 9.0}, options, csv, summary_csv)));
   }
   if (options.include_double_pendulum) {
     RESULT_RETURN_IF_ERROR(StudyDoublePendulum(options, csv, summary_csv));

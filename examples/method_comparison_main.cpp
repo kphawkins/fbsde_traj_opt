@@ -18,7 +18,7 @@
 // The methods, and what is charged:
 //
 //   * DT-FBSDE: DtFbsdeIterativeSolver. On the 2-D benchmarks, the best configuration of the batch
-//     sweep (dt_fbsde_batch_sweep_main.cpp): a degree-6 polynomial, slope matching, batches of 16,
+//     sweep (dt_fbsde_batch_sweep_main.cpp): a degree-6 polynomial, batches of 16,
 //     half the paths at six times the noise, and a screened, stop-uphill line search. On the double
 //     inverted pendulum, the configuration of the FBRRT comparison, which is the only one tried there.
 //     Charged: Iterate().
@@ -158,17 +158,18 @@ struct DriverOptions {
   IlqrSeedOptions ilqr_seed{};
   double seed_exploration = -1.0;
 
-  // DT-FBSDE slope weights on the 2-D benchmarks (the batch sweep's best for each).
-  double integrator_slope_weight = 10.0;
-  double pendulum_slope_weight = 1.0;
+  // DT-FBSDE slope weights on the 2-D benchmarks. Off by default: slope matching gains a few points in 2-D
+  // (profile_study/slope_ablation_2d) but costs a large share of each iteration, and none on the DIP.
+  double integrator_slope_weight = 0.0;
+  double pendulum_slope_weight = 0.0;
 
   // DT-FBSDE on the double inverted pendulum: "comparison" is the FBRRT comparison's configuration
-  // (4096 paths, soft-min); "sweep" carries the 2-D recipe over -- slope matching at
-  // `double_pendulum_slope_weight`, mixed exploration, the screened stop-uphill line search -- on
+  // (4096 paths, soft-min); "sweep" carries the 2-D recipe over -- slope weight
+  // `double_pendulum_slope_weight` (0: off), mixed exploration, the screened stop-uphill line search -- on
   // the soft-min model with batches of kDoublePendulumSweepBatch. "sweep" is the default: a profile
   // put it at about a seventh of the comparison configuration's time per iteration.
   bool double_pendulum_sweep_config = true;
-  double double_pendulum_slope_weight = 10.0;
+  double double_pendulum_slope_weight = 0.0;
 
   // A cap on MPPI's budget below the benchmark's, for runs where its curve has long since flattened.
   double mppi_time_budget = 0.0;
@@ -1008,10 +1009,10 @@ auto PrintUsage() -> void {
       << "  --mpc-iterations N       MPPI-MPC iterations per control step (default 2)\n"
       << "  --mpc-noise S            MPPI-MPC control noise (default 0.1)\n"
       << "  --mpc-ilqr-iterations N  iLQR-MPC iterations per control step (default 2)\n"
-      << "  --integrator-slope-weight G  DT-FBSDE's slope weight on the double integrator (default 10; 0 fits values alone)\n"
-      << "  --pendulum-slope-weight G    DT-FBSDE's slope weight on the pendulum (default 1; 0 fits values alone)\n"
+      << "  --integrator-slope-weight G  DT-FBSDE's slope weight on the double integrator (default 0: values alone)\n"
+      << "  --pendulum-slope-weight G    DT-FBSDE's slope weight on the pendulum (default 0: values alone)\n"
       << "  --dip-dt-config C        DT-FBSDE on the double inverted pendulum: sweep (default) or comparison\n"
-      << "  --dip-slope-weight G     its slope weight under the sweep configuration (default 10)\n"
+      << "  --dip-slope-weight G     its slope weight under the sweep configuration (default 0)\n"
       << "  --mppi-time-budget S     cap on MPPI's charged seconds per run (default: the benchmark's)\n"
       << "  --seed-smoothing E       smoothing DT-FBSDE+iLQR's value expansions are taken at (default 1)\n"
       << "  --seed-ilqr-budget S     cap on DT-FBSDE+iLQR's charged seconds of iLQR (default 10)\n"
