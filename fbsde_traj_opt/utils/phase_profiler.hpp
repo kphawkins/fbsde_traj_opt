@@ -28,7 +28,8 @@ enum class Phase : std::size_t {
   kForwardSample,
   kForwardPolicy,
   // The backward pass, the targets of one stage (and half), each sample's target, and within it the
-  // chooser's argmin, the scorer's Q-value, and the slope target; then each fit and each averaging.
+  // chooser's argmin, the scorer's Q-value, and the slope target; then each fit and each averaging,
+  // and a time-shared fit's closing joint solve (DtFbsdeIterativeOptions::time_sharing).
   kBackwardPass,
   kBackwardTargets,
   kBackwardTargetSample,
@@ -37,6 +38,7 @@ enum class Phase : std::size_t {
   kBackwardSlopeTarget,
   kBackwardFit,
   kBackwardAverage,
+  kBackwardTimeShare,
   // The line search: the whole of it, each blend, each screening evaluation, each full evaluation.
   kLineSearch,
   kLineSearchBlend,
@@ -63,6 +65,7 @@ inline constexpr std::array<std::string_view, kPhaseCount> kPhaseNames{
     "backward.slope_target",
     "backward.fit",
     "backward.average",
+    "backward.time_share",
     "line_search",
     "line_search.blend",
     "line_search.screen_eval",

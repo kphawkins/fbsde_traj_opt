@@ -1624,6 +1624,7 @@ class DtFbsdeIterativeSolver {
       if (shared_fits_.empty()) {
         return SuccessResult();
       }
+      const profiling::ScopedPhase time_share_phase(profiling::Phase::kBackwardTimeShare);
       SharedFit& fit = shared_fits_[half];
       if (fit.Rank() > 0 && fit.HasSharedBasis() && options_.time_sharing_pass != DtFbsdeTimeSharingPass::kAfterPass) {
         for (std::size_t sweep = 0; sweep < options_.time_sharing.sweeps; ++sweep) {

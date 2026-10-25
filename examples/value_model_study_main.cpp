@@ -25,6 +25,10 @@
 //   bazel run -c opt //examples:value_model_study -- --phase dt --only pendulum --seeds 3 \
 //       --models "poly6;rbf7:anchor=current,ridge=1e-3"
 //
+// In the dt phase, --profile-csv PATH times DT-FBSDE's phases (fbsde_traj_opt/utils/phase_profiler.hpp)
+// over each run's Iterate() calls, held-out scoring excluded, and writes one row per run and phase
+// (problem,model,seed,phase,seconds,calls) plus a charged_total row of charged seconds and iterations.
+//
 // A model is written `name[:key=value,...]`. Names: poly2..poly10 and leg4..leg10 (monomials and
 // Legendre polynomials of that total degree), rbf5/rbf7/rbf9 (Gaussian RBFs on that many centers
 // per axis, plus a quadratic), spline3/spline5/spline7 (tensor cubic B-splines with that many knot
@@ -74,6 +78,7 @@
 #include "fbsde_traj_opt/sampling/counter_based_normal_sampler.hpp"
 #include "fbsde_traj_opt/solvers/dt_fbsde_iterative_solver.hpp"
 #include "fbsde_traj_opt/solvers/policy_rollout_evaluation.hpp"
+#include "fbsde_traj_opt/utils/phase_profiler.hpp"
 #include "fbsde_traj_opt/utils/result.hpp"
 #include "fbsde_traj_opt/value_function/linear_basis_value_function_approx.hpp"
 #include "fbsde_traj_opt/value_function/shallow_tanh_value_function_approx.hpp"
@@ -838,6 +843,9 @@ struct StudyOptions {
   // Per run, for the DT-FBSDE phase: iterations, accepted updates, failures, time, final cost.
   std::string runs_path = "value_model_study_runs.csv";
   std::ofstream* runs_csv = nullptr;
+  // Per run and phase, for the DT-FBSDE phase, when profiling: seconds and calls.
+  std::string profile_path{};
+  std::ofstream* profile_csv = nullptr;
   std::size_t dp_cells = 400;
 };
 
@@ -877,6 +885,8 @@ auto RunDtFbsde(const BenchmarkT& benchmark,
     return ErrorResult(solver->error().message, solver->error().location);
   }
   SolverT& dt = **solver;
+  const bool profiled = options.profile_csv != nullptr;
+  profiling::Reset();
   double charged = 0.0;
   double next = options.first_checkpoint;
   double cost = HeldOutCost(benchmark, dt.CurrentPolicy(), num_stages, options.held_out);
@@ -895,7 +905,9 @@ auto RunDtFbsde(const BenchmarkT& benchmark,
   record(0);
   for (std::size_t iteration = 1;; ++iteration) {
     const Clock::time_point start = Clock::now();
+    profiling::SetEnabled(profiled);
     const auto report = dt.Iterate();
+    profiling::SetEnabled(false);
     charged += std::chrono::duration<double>(Clock::now() - start).count();
     if (!report.has_value()) {
       // A model that makes the method fail is a result, not a crash: record it and stop the run.
@@ -950,6 +962,21 @@ auto RunDtFbsde(const BenchmarkT& benchmark,
                                      off_policy_correction_sum * per_iteration,
                                      residual_sum * per_iteration);
     options.runs_csv->flush();
+  }
+  if (profiled) {
+    const profiling::PhaseTotals phases = profiling::Snapshot();
+    for (std::size_t index = 0; index < profiling::kPhaseCount; ++index) {
+      *options.profile_csv << std::format("{},\"{}\",{},{},{:.6e},{}\n",
+                                          problem,
+                                          label,
+                                          seed_index,
+                                          profiling::kPhaseNames[index],
+                                          phases.seconds[index],
+                                          phases.calls[index]);
+    }
+    *options.profile_csv << std::format(
+        "{},\"{}\",{},charged_total,{:.6e},{}\n", problem, label, seed_index, charged, iterations);
+    options.profile_csv->flush();
   }
   return SuccessResult(std::make_pair(failures > 0 ? std::nan("") : cost, charged));
 }
@@ -1525,6 +1552,13 @@ auto Run(StudyOptions options) -> Result<> {
     }
     options.runs_csv = &runs;
   }
+  std::ofstream profile;
+  if (options.phase == "dt" && !options.profile_path.empty()) {
+    profile.open(options.profile_path);
+    RESULT_ASSERT(profile.good(), "could not open the profile CSV file.");
+    profile << "problem,model,seed,phase,seconds,calls\n";
+    options.profile_csv = &profile;
+  }
   std::ofstream csv(options.csv_path);
   RESULT_ASSERT(csv.good(), "could not open the CSV file.");
   csv << (options.phase == "oracle"
@@ -1583,6 +1617,8 @@ auto ParseOptions(int argc, char** argv, StudyOptions& options) -> Result<> {
       options.csv_path = value;
     } else if (argument == "--runs-csv") {
       options.runs_path = value;
+    } else if (argument == "--profile-csv") {
+      options.profile_path = value;
     } else {
       return ErrorResult("unrecognized argument; see the comment at the top of value_model_study_main.cpp.");
     }

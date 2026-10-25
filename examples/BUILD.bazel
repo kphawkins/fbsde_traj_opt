@@ -458,6 +458,7 @@ cc_binary(
         "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
         "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
         "//fbsde_traj_opt/solvers:policy_rollout_evaluation",
+        "//fbsde_traj_opt/utils:phase_profiler",
         "//fbsde_traj_opt/utils:result",
         "//fbsde_traj_opt/value_function:linear_basis_value_function_approx",
         "//fbsde_traj_opt/value_function:shallow_tanh_value_function_approx",
