@@ -33,7 +33,7 @@
 // pendulum the 4-D menu poly2/poly4/poly6, leg4/leg6, rbf4, spline2, softmin2/softmin4/softmin8,
 // tanh32. Keys: ridge, anchor (zero|current), width (RBF width per spacing), extent (spline domain
 // half-width in normalized units), sharpness (soft-min beta), lr and epochs (SGD), slope (DT-FBSDE's
-// slope weight; default the batch sweep's), scale (tanh output-weight scale), rough (the linear
+// slope weight; default 0), scale (tanh output-weight scale), rough (the linear
 // models' curvature penalty; see LinearBasisValueFunctionApprox), temperature (the oracle fit's
 // sample-weight temperature), memory and reset (DT-FBSDE's carried normal equations: the forgetting
 // factor, and 1 to clear them on every accepted update; linear models only), replay (fit the last
@@ -570,8 +570,9 @@ auto FitTimeSharedOracleTable(const OracleData<BenchmarkT>& data,
     double stage_weight = 1.0;
     if (options.balance_stages) {
       const auto kept_values = values.segment(offset, samples);
-      const double mean = kept_values.mean();
-      stage_weight = 1.0 / ((kept_values.array() - mean).square().mean() + (1e-6 * (1.0 + (mean * mean))));
+      const double kept_mean = kept_values.mean();
+      stage_weight =
+          1.0 / ((kept_values.array() - kept_mean).square().mean() + (1e-6 * (1.0 + (kept_mean * kept_mean))));
     }
     RESULT_RETURN_IF_ERROR(fit.SetStage(stage, equations, spec.Number("ridge", 1e-6), nullptr, stage_weight));
   }
@@ -990,9 +991,9 @@ auto ApplyTimeSharingKnobs(const ModelSpec& spec, DtFbsdeIterativeOptions<double
   solver.time_sharing_stale_weight = spec.Number("stale", solver.time_sharing_stale_weight);
 }
 
-// The batch sweep's best 2-D configuration (dt_fbsde_batch_sweep_main.cpp), with the spec's slope
-// weight and SGD settings.
-auto TwoDimensionalDtOptions(const ModelSpec& spec, double default_slope) -> DtFbsdeIterativeOptions<double> {
+// The batch sweep's best 2-D configuration (dt_fbsde_batch_sweep_main.cpp), without slope matching unless
+// the spec asks for it, and with the spec's SGD settings.
+auto TwoDimensionalDtOptions(const ModelSpec& spec) -> DtFbsdeIterativeOptions<double> {
   FbrrtComparisonOptions comparison;
   DtFbsdeIterativeOptions<double> solver = DtFbsdeOptions(comparison);
   solver.stop_uphill_line_search = true;
@@ -1000,7 +1001,7 @@ auto TwoDimensionalDtOptions(const ModelSpec& spec, double default_slope) -> DtF
   solver.base_diffusion_inflation = 6.0;
   solver.max_diffusion_inflation = 6.0;
   solver.uninflated_path_fraction = 0.5;
-  solver.slope_weight = spec.Number("slope", default_slope);
+  solver.slope_weight = spec.Number("slope", 0.0);
   solver.ridge = spec.Number("ridge", 1e-6);
   solver.sgd.learning_rate = spec.Number("lr", 0.05);
   solver.sgd_epochs = static_cast<std::size_t>(spec.Number("epochs", 50));
@@ -1243,7 +1244,6 @@ template <std::size_t NumStages, typename BenchmarkT>
 auto StudyTwoDimensional(const BenchmarkT& benchmark,
                          const Eigen::Vector2d& lower,
                          const Eigen::Vector2d& upper,
-                         double default_slope,
                          const StudyOptions& options,
                          std::ofstream& csv) -> Result<> {
   const std::string& problem = benchmark.name;
@@ -1354,7 +1354,7 @@ auto StudyTwoDimensional(const BenchmarkT& benchmark,
                                               typename BenchmarkT::ForwardModel,
                                               QuadraticRegulatorSdeTerminalCostTerm<2>,
                                               VF>;
-        const DtFbsdeIterativeOptions<double> solver_options = TwoDimensionalDtOptions(spec, default_slope);
+        const DtFbsdeIterativeOptions<double> solver_options = TwoDimensionalDtOptions(spec);
         for (std::size_t index = 0; index < options.num_seeds; ++index) {
           const std::uint64_t seed = options.seed + (1000U * static_cast<std::uint64_t>(index));
           auto solver = std::make_unique<Result<Solver>>(Solver::Make(benchmark.forward_model,
@@ -1423,7 +1423,7 @@ auto StudyTwoDimensional(const BenchmarkT& benchmark,
                                             typename BenchmarkT::ForwardModel,
                                             QuadraticRegulatorSdeTerminalCostTerm<2>,
                                             VF>;
-      const DtFbsdeIterativeOptions<double> solver_options = TwoDimensionalDtOptions(spec, default_slope);
+      const DtFbsdeIterativeOptions<double> solver_options = TwoDimensionalDtOptions(spec);
       for (std::size_t index = 0; index < options.num_seeds; ++index) {
         RESULT_ASSIGN_OR_RETURN(const auto outcome,
                                 (RunDtFbsde<Solver>(benchmark,
@@ -1538,12 +1538,12 @@ auto Run(StudyOptions options) -> Result<> {
   if (options.include_integrator) {
     RESULT_ASSIGN_OR_RETURN(const L1DoubleIntegrator integrator, MakeL1DoubleIntegrator());
     RESULT_RETURN_IF_ERROR((StudyTwoDimensional<kL1DoubleIntegratorNumStages>(
-        integrator, {-2.5, -3.5}, {4.5, 2.5}, 10.0, options, csv)));
+        integrator, {-2.5, -3.5}, {4.5, 2.5}, options, csv)));
   }
   if (options.include_pendulum) {
     RESULT_ASSIGN_OR_RETURN(const L1Pendulum pendulum, MakeL1Pendulum());
     RESULT_RETURN_IF_ERROR(
-        (StudyTwoDimensional<kL1PendulumNumStages>(pendulum, {-2.0, -9.0}, {5.0, 9.0}, 1.0, options, csv)));
+        (StudyTwoDimensional<kL1PendulumNumStages>(pendulum, {-2.0, -9.0}, {5.0, 9.0}, options, csv)));
   }
   if (options.include_double_pendulum && options.phase == "dt") {
     RESULT_RETURN_IF_ERROR(StudyDoublePendulum(options, csv));
