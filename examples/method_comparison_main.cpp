@@ -17,10 +17,10 @@
 //
 // The methods, and what is charged:
 //
-//   * DT-FBSDE: DtFbsdeIterativeSolver. On the 2-D benchmarks, the best configuration of the batch
-//     sweep (dt_fbsde_batch_sweep_main.cpp): a degree-6 polynomial, batches of 16,
-//     half the paths at six times the noise, and a screened, stop-uphill line search. On the double
-//     inverted pendulum, the configuration of the FBRRT comparison, which is the only one tried there.
+//   * DT-FBSDE: DtFbsdeIterativeSolver with the batch sweep's recipe (dt_fbsde_batch_sweep_main.cpp)
+//     on every benchmark: a degree-4 polynomial value function, the off-policy Taylor noiseless
+//     backward target, half the paths at six times the noise, and a screened, stop-uphill line
+//     search; batches of 16 on the 2-D benchmarks and 256 on the double inverted pendulum.
 //     Charged: Iterate().
 //   * DT-FBSDE+iLQR: DT-FBSDE warm-started from iLQR. The run begins as that seed's iLQR run does,
 //     from the same random controls. At iLQR iterations spaced geometrically by --seed-growth, and at
@@ -166,10 +166,14 @@ struct DriverOptions {
   // DT-FBSDE on the double inverted pendulum: "comparison" is the FBRRT comparison's configuration
   // (4096 paths, soft-min); "sweep" carries the 2-D recipe over -- slope weight
   // `double_pendulum_slope_weight` (0: off), mixed exploration, the screened stop-uphill line search -- on
-  // the soft-min model with batches of kDoublePendulumSweepBatch. "sweep" is the default: a profile
+  // the degree-4 polynomial with batches of kDoublePendulumSweepBatch. "sweep" is the default: a profile
   // put it at about a seventh of the comparison configuration's time per iteration.
   bool double_pendulum_sweep_config = true;
   double double_pendulum_slope_weight = 0.0;
+
+  // DT-FBSDE's backward target under the sweep recipe, on every benchmark. The Taylor noiseless target
+  // is the default; the double-greedy target was the default before it.
+  DtFbsdeBackwardTarget dt_backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
 
   // A cap on MPPI's budget below the benchmark's, for runs where its curve has long since flattened.
   double mppi_time_budget = 0.0;
@@ -830,9 +834,11 @@ auto CompareOn(const BenchmarkT& benchmark,
   return SuccessResult();
 }
 
-// The batch sweep's best DT-FBSDE configuration for a 2-D benchmark.
+// The DT-FBSDE recipe every benchmark runs by default: the batch sweep's best 2-D configuration, with the
+// backward target `options.dt_backward_target`.
 auto SweepDtFbsdeOptions(const DriverOptions& options, double slope_weight) -> DtFbsdeIterativeOptions<double> {
   DtFbsdeIterativeOptions<double> solver = DtFbsdeOptions(options.comparison);
+  solver.backward_target = options.dt_backward_target;
   solver.stop_uphill_line_search = true;
   solver.screening_rollouts = 32;
   solver.base_diffusion_inflation = 6.0;
@@ -842,7 +848,7 @@ auto SweepDtFbsdeOptions(const DriverOptions& options, double slope_weight) -> D
   return solver;
 }
 
-constexpr int kSweepPolynomialDegree = 6;
+constexpr int kSweepPolynomialDegree = 4;
 constexpr std::size_t kSweepBatch = 16;
 constexpr std::size_t kSweepLineSearchSamples = 256;
 constexpr std::size_t kDoublePendulumSweepBatch = 256;
@@ -933,11 +939,16 @@ auto Run(const DriverOptions& options) -> Result<> {
   if (options.include_double_pendulum) {
     constexpr std::size_t kStages = kL1DoubleInvertedPendulumNumStages;
     using SoftMin = SoftMinQuadraticValueFunctionApprox<4, kSoftMinComponents>;
+    using Polynomial = PolynomialValueFunctionApprox<4, kSweepPolynomialDegree>;
     using DipSetup = Setup<L1DoubleInvertedPendulum, 4096, kStages, SoftMin>;
     RESULT_ASSIGN_OR_RETURN(const L1DoubleInvertedPendulum double_pendulum, MakeL1DoubleInvertedPendulum());
+    // FBRRT and the comparison configuration keep the soft-min model; the sweep recipe uses the polynomial.
     RESULT_ASSIGN_OR_RETURN(
         const StartingTable<SoftMin> table,
         MakeStartingTable(double_pendulum, options.comparison, static_cast<const SoftMin*>(nullptr)));
+    RESULT_ASSIGN_OR_RETURN(
+        const StartingTable<Polynomial> sweep_table,
+        MakeStartingTable(double_pendulum, options.comparison, static_cast<const Polynomial*>(nullptr)));
     using SweepDtFbsde = DtFbsdeIterativeSolver<4,
                                                 1,
                                                 kDoublePendulumSweepBatch,
@@ -945,21 +956,21 @@ auto Run(const DriverOptions& options) -> Result<> {
                                                 kSweepLineSearchSamples,
                                                 L1DoubleInvertedPendulum::ForwardModel,
                                                 QuadraticRegulatorSdeTerminalCostTerm<4>,
-                                                SoftMin>;
+                                                Polynomial>;
     const DtFbsdeIterativeOptions<double> solver_options =
         options.double_pendulum_sweep_config ? SweepDtFbsdeOptions(options, options.double_pendulum_slope_weight)
                                              : DtFbsdeOptions(options.comparison);
     const auto run_dt_fbsde = [&](std::size_t index) {
       return options.double_pendulum_sweep_config
                  ? RunDtFbsde<SweepDtFbsde, L1DoubleInvertedPendulum, kStages>(
-                       double_pendulum, table, solver_options, options, options.double_pendulum_time_budget, index)
+                       double_pendulum, sweep_table, solver_options, options, options.double_pendulum_time_budget, index)
                  : RunDtFbsde<typename DipSetup::DtFbsde, L1DoubleInvertedPendulum, kStages>(
                        double_pendulum, table, solver_options, options, options.double_pendulum_time_budget, index);
     };
     const auto run_seeded_dt_fbsde = [&](std::size_t index) {
       return options.double_pendulum_sweep_config
                  ? RunSeededDtFbsde<SweepDtFbsde, L1DoubleInvertedPendulum, kStages>(
-                       double_pendulum, table, solver_options, options, options.double_pendulum_time_budget, index)
+                       double_pendulum, sweep_table, solver_options, options, options.double_pendulum_time_budget, index)
                  : RunSeededDtFbsde<typename DipSetup::DtFbsde, L1DoubleInvertedPendulum, kStages>(
                        double_pendulum, table, solver_options, options, options.double_pendulum_time_budget, index);
     };
@@ -1013,6 +1024,7 @@ auto PrintUsage() -> void {
       << "  --pendulum-slope-weight G    DT-FBSDE's slope weight on the pendulum (default 0: values alone)\n"
       << "  --dip-dt-config C        DT-FBSDE on the double inverted pendulum: sweep (default) or comparison\n"
       << "  --dip-slope-weight G     its slope weight under the sweep configuration (default 0)\n"
+      << "  --dt-target T            DT-FBSDE's backward target: taylor (default) or double-greedy\n"
       << "  --mppi-time-budget S     cap on MPPI's charged seconds per run (default: the benchmark's)\n"
       << "  --seed-smoothing E       smoothing DT-FBSDE+iLQR's value expansions are taken at (default 1)\n"
       << "  --seed-ilqr-budget S     cap on DT-FBSDE+iLQR's charged seconds of iLQR (default 10)\n"
@@ -1103,6 +1115,10 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
     } else if (argument == "--dip-dt-config") {
       RESULT_ASSERT(value == "comparison" || value == "sweep", "--dip-dt-config is comparison or sweep.");
       options.double_pendulum_sweep_config = value == "sweep";
+    } else if (argument == "--dt-target") {
+      RESULT_ASSERT(value == "taylor" || value == "double-greedy", "--dt-target is taylor or double-greedy.");
+      options.dt_backward_target =
+          value == "taylor" ? DtFbsdeBackwardTarget::kTaylorNoiseless : DtFbsdeBackwardTarget::kDoubleGreedy;
     } else if (argument == "--integrator-slope-weight") {
       options.integrator_slope_weight = number;
     } else if (argument == "--pendulum-slope-weight") {

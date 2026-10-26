@@ -1,0 +1,1295 @@
+problem,method,seed,iteration,seconds,held_out_cost
+L1 double integrator,DT-FBSDE,0,0,0.000000,89.163177
+L1 double integrator,DT-FBSDE,0,1,0.024446,44.186521
+L1 double integrator,DT-FBSDE,0,2,0.042186,44.186521
+L1 double integrator,DT-FBSDE,0,3,0.060383,44.186521
+L1 double integrator,DT-FBSDE,0,4,0.094011,42.837486
+L1 double integrator,DT-FBSDE,0,5,0.122658,20.617005
+L1 double integrator,DT-FBSDE,0,6,0.142040,20.617005
+L1 double integrator,DT-FBSDE,0,7,0.168336,10.645492
+L1 double integrator,DT-FBSDE,0,8,0.203733,9.054349
+L1 double integrator,DT-FBSDE,0,9,0.239650,9.126313
+L1 double integrator,DT-FBSDE,0,10,0.279602,5.328331
+L1 double integrator,DT-FBSDE,0,12,0.330774,5.328331
+L1 double integrator,DT-FBSDE,0,13,0.363900,5.307335
+L1 double integrator,DT-FBSDE,0,15,0.408984,5.307335
+L1 double integrator,DT-FBSDE,0,17,0.491893,4.873062
+L1 double integrator,DT-FBSDE,0,18,0.552101,4.656817
+L1 double integrator,DT-FBSDE,0,20,0.627436,4.471613
+L1 double integrator,DT-FBSDE,0,22,0.722012,4.497549
+L1 double integrator,DT-FBSDE,0,25,0.841566,4.296566
+L1 double integrator,DT-FBSDE,0,28,1.060844,4.297131
+L1 double integrator,DT-FBSDE,0,29,1.110662,4.297131
+L1 double integrator,DT-FBSDE,0,33,1.287038,4.286311
+L1 double integrator,DT-FBSDE,0,38,1.451784,4.265990
+L1 double integrator,DT-FBSDE,0,44,1.662286,4.213038
+L1 double integrator,DT-FBSDE,0,49,1.925435,4.213939
+L1 double integrator,DT-FBSDE,0,54,2.209264,4.217265
+L1 double integrator,DT-FBSDE,0,63,2.533106,4.217265
+L1 double integrator,DT-FBSDE,0,68,2.891807,4.216463
+L1 double integrator,DT-FBSDE,0,82,3.334881,4.216463
+L1 double integrator,DT-FBSDE,0,94,3.865011,4.216662
+L1 double integrator,DT-FBSDE,0,104,4.437569,4.211704
+L1 double integrator,DT-FBSDE,0,122,5.068836,4.212549
+L1 double integrator,DT-FBSDE,0,139,5.822427,4.208291
+L1 double integrator,DT-FBSDE,0,161,6.711526,4.208291
+L1 double integrator,DT-FBSDE,0,181,7.766022,4.209458
+L1 double integrator,DT-FBSDE,0,203,8.832450,4.210277
+L1 double integrator,DT-FBSDE,0,238,10.144772,4.207781
+L1 double integrator,DT-FBSDE,0,267,11.687088,4.191869
+L1 double integrator,DT-FBSDE,0,314,13.427239,4.190554
+L1 double integrator,DT-FBSDE,0,362,15.468664,4.188102
+L1 double integrator,DT-FBSDE,0,413,17.747230,4.188102
+L1 double integrator,DT-FBSDE,0,468,20.476032,4.188102
+L1 double integrator,DT-FBSDE,0,533,23.511489,4.188102
+L1 double integrator,DT-FBSDE,0,601,27.042582,4.179816
+L1 double integrator,DT-FBSDE,0,677,31.077059,4.172141
+L1 double integrator,DT-FBSDE,0,751,35.682753,4.171981
+L1 double integrator,DT-FBSDE,0,861,41.039952,4.172439
+L1 double integrator,DT-FBSDE,0,1018,47.195574,4.172439
+L1 double integrator,DT-FBSDE,0,1182,54.283762,4.171578
+L1 double integrator,DT-FBSDE,0,1297,60.038122,4.171578
+L1 double integrator,DT-FBSDE+iLQR,0,0,0.000000,89.163177
+L1 double integrator,DT-FBSDE+iLQR,0,1,0.039089,11.091567
+L1 double integrator,DT-FBSDE+iLQR,0,2,0.053605,11.091567
+L1 double integrator,DT-FBSDE+iLQR,0,3,0.087867,6.959336
+L1 double integrator,DT-FBSDE+iLQR,0,4,0.125057,4.779716
+L1 double integrator,DT-FBSDE+iLQR,0,5,0.161850,4.701768
+L1 double integrator,DT-FBSDE+iLQR,0,7,0.221749,4.491307
+L1 double integrator,DT-FBSDE+iLQR,0,8,0.252523,4.491307
+L1 double integrator,DT-FBSDE+iLQR,0,10,0.304102,4.410264
+L1 double integrator,DT-FBSDE+iLQR,0,13,0.365241,4.355487
+L1 double integrator,DT-FBSDE+iLQR,0,16,0.431727,4.359428
+L1 double integrator,DT-FBSDE+iLQR,0,24,0.507426,4.358706
+L1 double integrator,DT-FBSDE+iLQR,0,38,0.583135,4.357876
+L1 double integrator,DT-FBSDE+iLQR,0,47,0.645425,4.357592
+L1 double integrator,DT-FBSDE+iLQR,0,50,0.743869,4.267093
+L1 double integrator,DT-FBSDE+iLQR,0,51,0.827987,4.218466
+L1 double integrator,DT-FBSDE+iLQR,0,54,0.954705,4.218466
+L1 double integrator,DT-FBSDE+iLQR,0,56,1.124005,4.213768
+L1 double integrator,DT-FBSDE+iLQR,0,59,1.276512,4.206479
+L1 double integrator,DT-FBSDE+iLQR,0,63,1.502635,4.200974
+L1 double integrator,DT-FBSDE+iLQR,0,67,1.699471,4.199979
+L1 double integrator,DT-FBSDE+iLQR,0,72,1.919066,4.199979
+L1 double integrator,DT-FBSDE+iLQR,0,77,2.194702,4.199979
+L1 double integrator,DT-FBSDE+iLQR,0,82,2.521987,4.191679
+L1 double integrator,DT-FBSDE+iLQR,0,90,2.924612,4.191679
+L1 double integrator,DT-FBSDE+iLQR,0,97,3.363010,4.192768
+L1 double integrator,DT-FBSDE+iLQR,0,105,3.848091,4.192768
+L1 double integrator,DT-FBSDE+iLQR,0,115,4.389987,4.192768
+L1 double integrator,DT-FBSDE+iLQR,0,132,5.078069,4.192510
+L1 double integrator,DT-FBSDE+iLQR,0,144,5.815576,4.192510
+L1 double integrator,DT-FBSDE+iLQR,0,164,6.682679,4.192283
+L1 double integrator,DT-FBSDE+iLQR,0,184,7.690962,4.192283
+L1 double integrator,DT-FBSDE+iLQR,0,209,8.865581,4.191259
+L1 double integrator,DT-FBSDE+iLQR,0,231,10.237509,4.188751
+L1 double integrator,DT-FBSDE+iLQR,0,262,11.664079,4.188689
+L1 double integrator,DT-FBSDE+iLQR,0,305,13.419134,4.188689
+L1 double integrator,DT-FBSDE+iLQR,0,361,15.460571,4.187936
+L1 double integrator,DT-FBSDE+iLQR,0,422,17.760977,4.187936
+L1 double integrator,DT-FBSDE+iLQR,0,486,20.435641,4.187936
+L1 double integrator,DT-FBSDE+iLQR,0,551,23.461469,4.184931
+L1 double integrator,DT-FBSDE+iLQR,0,614,26.989096,4.181244
+L1 double integrator,DT-FBSDE+iLQR,0,696,31.103389,4.177543
+L1 double integrator,DT-FBSDE+iLQR,0,769,35.713838,4.169721
+L1 double integrator,DT-FBSDE+iLQR,0,872,41.083105,4.169960
+L1 double integrator,DT-FBSDE+iLQR,0,1013,47.266136,4.168818
+L1 double integrator,DT-FBSDE+iLQR,0,1171,54.263979,4.169006
+L1 double integrator,DT-FBSDE+iLQR,0,1325,60.002650,4.169246
+L1 double integrator,DT-FBSDE,1,0,0.000000,89.163177
+L1 double integrator,DT-FBSDE,1,1,0.042173,28.712021
+L1 double integrator,DT-FBSDE,1,2,0.096400,20.369931
+L1 double integrator,DT-FBSDE,1,3,0.127429,20.369931
+L1 double integrator,DT-FBSDE,1,4,0.160490,20.369931
+L1 double integrator,DT-FBSDE,1,5,0.194371,20.369931
+L1 double integrator,DT-FBSDE,1,6,0.238893,19.172665
+L1 double integrator,DT-FBSDE,1,7,0.283968,7.834000
+L1 double integrator,DT-FBSDE,1,8,0.318137,4.852337
+L1 double integrator,DT-FBSDE,1,9,0.390986,4.768162
+L1 double integrator,DT-FBSDE,1,10,0.447784,4.748169
+L1 double integrator,DT-FBSDE,1,11,0.507657,4.599320
+L1 double integrator,DT-FBSDE,1,12,0.567215,4.599320
+L1 double integrator,DT-FBSDE,1,14,0.637551,4.599320
+L1 double integrator,DT-FBSDE,1,16,0.740800,4.455052
+L1 double integrator,DT-FBSDE,1,18,0.825396,4.394013
+L1 double integrator,DT-FBSDE,1,23,0.958911,4.394013
+L1 double integrator,DT-FBSDE,1,25,1.106354,4.386387
+L1 double integrator,DT-FBSDE,1,27,1.287642,4.385421
+L1 double integrator,DT-FBSDE,1,31,1.442442,4.332577
+L1 double integrator,DT-FBSDE,1,34,1.746259,4.332577
+L1 double integrator,DT-FBSDE,1,37,1.944467,4.311169
+L1 double integrator,DT-FBSDE,1,41,2.204039,4.297799
+L1 double integrator,DT-FBSDE,1,50,2.555020,4.297799
+L1 double integrator,DT-FBSDE,1,59,2.973373,4.297011
+L1 double integrator,DT-FBSDE,1,70,3.326092,4.297011
+L1 double integrator,DT-FBSDE,1,81,3.839583,4.291559
+L1 double integrator,DT-FBSDE,1,93,4.481561,4.245549
+L1 double integrator,DT-FBSDE,1,110,5.135383,4.239158
+L1 double integrator,DT-FBSDE,1,118,5.890937,4.236449
+L1 double integrator,DT-FBSDE,1,132,6.676782,4.231130
+L1 double integrator,DT-FBSDE,1,154,7.706000,4.228238
+L1 double integrator,DT-FBSDE,1,172,8.830544,4.223180
+L1 double integrator,DT-FBSDE,1,202,10.233650,4.222075
+L1 double integrator,DT-FBSDE,1,226,11.697669,4.216101
+L1 double integrator,DT-FBSDE,1,249,13.427923,4.216101
+L1 double integrator,DT-FBSDE,1,276,15.466687,4.217627
+L1 double integrator,DT-FBSDE,1,331,17.752286,4.202150
+L1 double integrator,DT-FBSDE,1,395,20.423697,4.192510
+L1 double integrator,DT-FBSDE,1,453,23.497638,4.192321
+L1 double integrator,DT-FBSDE,1,545,26.999842,4.192321
+L1 double integrator,DT-FBSDE,1,655,31.043550,4.192321
+L1 double integrator,DT-FBSDE,1,779,35.675051,4.192638
+L1 double integrator,DT-FBSDE,1,876,41.050178,4.188038
+L1 double integrator,DT-FBSDE,1,1012,47.236126,4.182517
+L1 double integrator,DT-FBSDE,1,1164,54.254608,4.181633
+L1 double integrator,DT-FBSDE,1,1286,60.017978,4.176622
+L1 double integrator,DT-FBSDE+iLQR,1,0,0.000000,89.163177
+L1 double integrator,DT-FBSDE+iLQR,1,1,0.063597,7.419918
+L1 double integrator,DT-FBSDE+iLQR,1,2,0.124926,4.588308
+L1 double integrator,DT-FBSDE+iLQR,1,3,0.151134,4.588308
+L1 double integrator,DT-FBSDE+iLQR,1,4,0.207051,4.491358
+L1 double integrator,DT-FBSDE+iLQR,1,7,0.282861,4.425268
+L1 double integrator,DT-FBSDE+iLQR,1,8,0.346268,4.393551
+L1 double integrator,DT-FBSDE+iLQR,1,10,0.400621,4.353230
+L1 double integrator,DT-FBSDE+iLQR,1,13,0.424856,4.353230
+L1 double integrator,DT-FBSDE+iLQR,1,20,0.473402,4.353230
+L1 double integrator,DT-FBSDE+iLQR,1,33,0.549548,4.353230
+L1 double integrator,DT-FBSDE+iLQR,1,35,0.650355,4.353230
+L1 double integrator,DT-FBSDE+iLQR,1,37,0.756648,4.266335
+L1 double integrator,DT-FBSDE+iLQR,1,39,0.899595,4.267675
+L1 double integrator,DT-FBSDE+iLQR,1,40,0.980523,4.257937
+L1 double integrator,DT-FBSDE+iLQR,1,43,1.192166,4.257937
+L1 double integrator,DT-FBSDE+iLQR,1,46,1.277446,4.257937
+L1 double integrator,DT-FBSDE+iLQR,1,52,1.454783,4.257937
+L1 double integrator,DT-FBSDE+iLQR,1,57,1.732664,4.230366
+L1 double integrator,DT-FBSDE+iLQR,1,62,1.910230,4.230366
+L1 double integrator,DT-FBSDE+iLQR,1,66,2.217078,4.226240
+L1 double integrator,DT-FBSDE+iLQR,1,71,2.529554,4.215715
+L1 double integrator,DT-FBSDE+iLQR,1,80,2.932889,4.215715
+L1 double integrator,DT-FBSDE+iLQR,1,87,3.332037,4.215715
+L1 double integrator,DT-FBSDE+iLQR,1,94,3.950373,4.215715
+L1 double integrator,DT-FBSDE+iLQR,1,103,4.438534,4.215715
+L1 double integrator,DT-FBSDE+iLQR,1,118,5.073080,4.219233
+L1 double integrator,DT-FBSDE+iLQR,1,138,5.816243,4.219233
+L1 double integrator,DT-FBSDE+iLQR,1,159,6.669811,4.205072
+L1 double integrator,DT-FBSDE+iLQR,1,179,7.686146,4.204085
+L1 double integrator,DT-FBSDE+iLQR,1,204,8.841747,4.204085
+L1 double integrator,DT-FBSDE+iLQR,1,238,10.175606,4.202432
+L1 double integrator,DT-FBSDE+iLQR,1,269,11.683639,4.201202
+L1 double integrator,DT-FBSDE+iLQR,1,302,13.443746,4.201202
+L1 double integrator,DT-FBSDE+iLQR,1,342,15.433341,4.201202
+L1 double integrator,DT-FBSDE+iLQR,1,392,17.745415,4.200649
+L1 double integrator,DT-FBSDE+iLQR,1,445,20.406168,4.200649
+L1 double integrator,DT-FBSDE+iLQR,1,503,23.519653,4.200649
+L1 double integrator,DT-FBSDE+iLQR,1,574,27.000496,4.199003
+L1 double integrator,DT-FBSDE+iLQR,1,662,31.040924,4.197655
+L1 double integrator,DT-FBSDE+iLQR,1,764,35.675894,4.198628
+L1 double integrator,DT-FBSDE+iLQR,1,889,41.063388,4.190179
+L1 double integrator,DT-FBSDE+iLQR,1,996,47.198004,4.187649
+L1 double integrator,DT-FBSDE+iLQR,1,1137,54.312350,4.187012
+L1 double integrator,DT-FBSDE+iLQR,1,1255,60.025307,4.186653
+L1 double integrator,DT-FBSDE,2,0,0.000000,89.163177
+L1 double integrator,DT-FBSDE,2,1,0.040349,6.576682
+L1 double integrator,DT-FBSDE,2,2,0.058871,6.576682
+L1 double integrator,DT-FBSDE,2,3,0.077282,6.576682
+L1 double integrator,DT-FBSDE,2,4,0.098495,6.576682
+L1 double integrator,DT-FBSDE,2,5,0.148011,5.794597
+L1 double integrator,DT-FBSDE,2,6,0.191063,5.332580
+L1 double integrator,DT-FBSDE,2,7,0.227063,5.332580
+L1 double integrator,DT-FBSDE,2,8,0.264225,5.231836
+L1 double integrator,DT-FBSDE,2,9,0.309421,5.049032
+L1 double integrator,DT-FBSDE,2,10,0.393151,5.048197
+L1 double integrator,DT-FBSDE,2,11,0.427346,4.938282
+L1 double integrator,DT-FBSDE,2,12,0.470456,4.468861
+L1 double integrator,DT-FBSDE,2,14,0.570355,4.331055
+L1 double integrator,DT-FBSDE,2,17,0.654281,4.331055
+L1 double integrator,DT-FBSDE,2,19,0.725647,4.331055
+L1 double integrator,DT-FBSDE,2,22,0.843848,4.314666
+L1 double integrator,DT-FBSDE,2,24,0.991513,4.314666
+L1 double integrator,DT-FBSDE,2,28,1.105238,4.314666
+L1 double integrator,DT-FBSDE,2,30,1.426538,4.312858
+L1 double integrator,DT-FBSDE,2,31,1.561154,4.312858
+L1 double integrator,DT-FBSDE,2,32,1.657054,4.312858
+L1 double integrator,DT-FBSDE,2,36,2.010982,4.310355
+L1 double integrator,DT-FBSDE,2,40,2.230326,4.302293
+L1 double integrator,DT-FBSDE,2,44,2.516264,4.276085
+L1 double integrator,DT-FBSDE,2,49,2.888979,4.272053
+L1 double integrator,DT-FBSDE,2,58,3.333930,4.272053
+L1 double integrator,DT-FBSDE,2,64,3.862576,4.272053
+L1 double integrator,DT-FBSDE,2,75,4.403252,4.272053
+L1 double integrator,DT-FBSDE,2,89,5.073299,4.272053
+L1 double integrator,DT-FBSDE,2,104,5.902980,4.238217
+L1 double integrator,DT-FBSDE,2,122,6.699796,4.226388
+L1 double integrator,DT-FBSDE,2,136,7.747376,4.211351
+L1 double integrator,DT-FBSDE,2,150,8.842235,4.211351
+L1 double integrator,DT-FBSDE,2,167,10.263602,4.204330
+L1 double integrator,DT-FBSDE,2,200,11.667819,4.204380
+L1 double integrator,DT-FBSDE,2,236,13.418131,4.200644
+L1 double integrator,DT-FBSDE,2,281,15.430207,4.200644
+L1 double integrator,DT-FBSDE,2,315,17.774069,4.200644
+L1 double integrator,DT-FBSDE,2,364,20.410781,4.200635
+L1 double integrator,DT-FBSDE,2,409,23.550637,4.200635
+L1 double integrator,DT-FBSDE,2,470,27.006356,4.200635
+L1 double integrator,DT-FBSDE,2,529,31.034134,4.199257
+L1 double integrator,DT-FBSDE,2,598,35.705742,4.199257
+L1 double integrator,DT-FBSDE,2,686,41.043885,4.199333
+L1 double integrator,DT-FBSDE,2,807,47.230827,4.196889
+L1 double integrator,DT-FBSDE,2,954,54.287893,4.196889
+L1 double integrator,DT-FBSDE,2,1073,60.049707,4.196889
+L1 double integrator,DT-FBSDE+iLQR,2,0,0.000000,89.163177
+L1 double integrator,DT-FBSDE+iLQR,2,1,0.047174,5.923557
+L1 double integrator,DT-FBSDE+iLQR,2,2,0.095761,4.588308
+L1 double integrator,DT-FBSDE+iLQR,2,3,0.120180,4.588308
+L1 double integrator,DT-FBSDE+iLQR,2,4,0.173564,4.491358
+L1 double integrator,DT-FBSDE+iLQR,2,5,0.196870,4.491358
+L1 double integrator,DT-FBSDE+iLQR,2,7,0.258591,4.425268
+L1 double integrator,DT-FBSDE+iLQR,2,8,0.319921,4.393551
+L1 double integrator,DT-FBSDE+iLQR,2,10,0.396639,4.353230
+L1 double integrator,DT-FBSDE+iLQR,2,13,0.450214,4.359306
+L1 double integrator,DT-FBSDE+iLQR,2,16,0.503775,4.358749
+L1 double integrator,DT-FBSDE+iLQR,2,20,0.557246,4.358692
+L1 double integrator,DT-FBSDE+iLQR,2,38,0.660790,4.357426
+L1 double integrator,DT-FBSDE+iLQR,2,46,0.741817,4.253465
+L1 double integrator,DT-FBSDE+iLQR,2,48,0.880915,4.219899
+L1 double integrator,DT-FBSDE+iLQR,2,49,0.974179,4.210293
+L1 double integrator,DT-FBSDE+iLQR,2,51,1.132306,4.212994
+L1 double integrator,DT-FBSDE+iLQR,2,53,1.267068,4.212994
+L1 double integrator,DT-FBSDE+iLQR,2,56,1.556398,4.208091
+L1 double integrator,DT-FBSDE+iLQR,2,58,1.697314,4.206968
+L1 double integrator,DT-FBSDE+iLQR,2,61,1.909649,4.203761
+L1 double integrator,DT-FBSDE+iLQR,2,68,2.243417,4.203761
+L1 double integrator,DT-FBSDE+iLQR,2,72,2.575569,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,79,2.914536,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,87,3.317599,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,95,3.945171,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,102,4.398123,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,109,5.056694,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,120,5.806538,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,135,6.670082,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,149,7.715529,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,168,8.919642,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,195,10.141195,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,233,11.663184,4.201658
+L1 double integrator,DT-FBSDE+iLQR,2,267,13.429877,4.199295
+L1 double integrator,DT-FBSDE+iLQR,2,319,15.435392,4.200593
+L1 double integrator,DT-FBSDE+iLQR,2,380,17.739502,4.196942
+L1 double integrator,DT-FBSDE+iLQR,2,443,20.400245,4.196942
+L1 double integrator,DT-FBSDE+iLQR,2,522,23.492503,4.196942
+L1 double integrator,DT-FBSDE+iLQR,2,613,26.974512,4.198298
+L1 double integrator,DT-FBSDE+iLQR,2,711,31.031679,4.172638
+L1 double integrator,DT-FBSDE+iLQR,2,821,35.700407,4.172928
+L1 double integrator,DT-FBSDE+iLQR,2,940,41.043775,4.171687
+L1 double integrator,DT-FBSDE+iLQR,2,1076,47.206777,4.164132
+L1 double integrator,DT-FBSDE+iLQR,2,1244,54.295385,4.161494
+L1 double integrator,DT-FBSDE+iLQR,2,1387,60.007962,4.161494
+L1 double integrator,DT-FBSDE,3,0,0.000000,89.163177
+L1 double integrator,DT-FBSDE,3,1,0.029285,6.764550
+L1 double integrator,DT-FBSDE,3,2,0.047547,6.764550
+L1 double integrator,DT-FBSDE,3,3,0.066154,6.764550
+L1 double integrator,DT-FBSDE,3,4,0.085079,6.764550
+L1 double integrator,DT-FBSDE,3,5,0.117168,6.764550
+L1 double integrator,DT-FBSDE,3,6,0.137225,6.764550
+L1 double integrator,DT-FBSDE,3,7,0.173489,6.064984
+L1 double integrator,DT-FBSDE,3,8,0.193778,6.064984
+L1 double integrator,DT-FBSDE,3,9,0.244835,5.609213
+L1 double integrator,DT-FBSDE,3,11,0.313238,5.609213
+L1 double integrator,DT-FBSDE,3,12,0.373816,5.609213
+L1 double integrator,DT-FBSDE,3,13,0.414719,4.637050
+L1 double integrator,DT-FBSDE,3,14,0.469691,4.549169
+L1 double integrator,DT-FBSDE,3,16,0.756675,4.375821
+L1 double integrator,DT-FBSDE,3,18,0.916653,4.374859
+L1 double integrator,DT-FBSDE,3,19,1.032106,4.363642
+L1 double integrator,DT-FBSDE,3,21,1.117328,4.363642
+L1 double integrator,DT-FBSDE,3,25,1.381541,4.363642
+L1 double integrator,DT-FBSDE,3,26,1.441502,4.330996
+L1 double integrator,DT-FBSDE,3,28,1.699680,4.317487
+L1 double integrator,DT-FBSDE,3,31,1.928635,4.298502
+L1 double integrator,DT-FBSDE,3,37,2.222820,4.298502
+L1 double integrator,DT-FBSDE,3,41,2.551967,4.298502
+L1 double integrator,DT-FBSDE,3,46,2.944874,4.298502
+L1 double integrator,DT-FBSDE,3,55,3.339270,4.291355
+L1 double integrator,DT-FBSDE,3,62,3.853735,4.291355
+L1 double integrator,DT-FBSDE,3,73,4.406526,4.291355
+L1 double integrator,DT-FBSDE,3,84,5.146646,4.291355
+L1 double integrator,DT-FBSDE,3,91,5.799844,4.291355
+L1 double integrator,DT-FBSDE,3,105,6.699737,4.280198
+L1 double integrator,DT-FBSDE,3,126,7.717217,4.280198
+L1 double integrator,DT-FBSDE,3,143,8.852820,4.280198
+L1 double integrator,DT-FBSDE,3,165,10.144075,4.280198
+L1 double integrator,DT-FBSDE,3,193,11.675904,4.272341
+L1 double integrator,DT-FBSDE,3,221,13.439930,4.272341
+L1 double integrator,DT-FBSDE,3,255,15.453422,4.272341
+L1 double integrator,DT-FBSDE,3,291,17.791971,4.272341
+L1 double integrator,DT-FBSDE,3,347,20.428882,4.272341
+L1 double integrator,DT-FBSDE,3,390,23.464778,4.211856
+L1 double integrator,DT-FBSDE,3,427,27.056892,4.212396
+L1 double integrator,DT-FBSDE,3,492,31.044836,4.212183
+L1 double integrator,DT-FBSDE,3,555,35.715996,4.211113
+L1 double integrator,DT-FBSDE,3,632,41.048513,4.211113
+L1 double integrator,DT-FBSDE,3,727,47.256678,4.205759
+L1 double integrator,DT-FBSDE,3,828,54.268134,4.205759
+L1 double integrator,DT-FBSDE,3,897,60.010278,4.205759
+L1 double integrator,DT-FBSDE+iLQR,3,0,0.000000,89.163177
+L1 double integrator,DT-FBSDE+iLQR,3,1,0.054191,8.058042
+L1 double integrator,DT-FBSDE+iLQR,3,2,0.096129,4.588308
+L1 double integrator,DT-FBSDE+iLQR,3,3,0.112923,4.588308
+L1 double integrator,DT-FBSDE+iLQR,3,4,0.150828,4.491358
+L1 double integrator,DT-FBSDE+iLQR,3,5,0.167134,4.491358
+L1 double integrator,DT-FBSDE+iLQR,3,7,0.201539,4.425268
+L1 double integrator,DT-FBSDE+iLQR,3,8,0.235081,4.393551
+L1 double integrator,DT-FBSDE+iLQR,3,10,0.268719,4.353230
+L1 double integrator,DT-FBSDE+iLQR,3,16,0.339452,4.358749
+L1 double integrator,DT-FBSDE+iLQR,3,24,0.369939,4.358749
+L1 double integrator,DT-FBSDE+iLQR,3,38,0.419333,4.358749
+L1 double integrator,DT-FBSDE+iLQR,3,49,0.505396,4.357632
+L1 double integrator,DT-FBSDE+iLQR,3,51,0.569789,4.357632
+L1 double integrator,DT-FBSDE+iLQR,3,53,0.676227,4.281033
+L1 double integrator,DT-FBSDE+iLQR,3,54,0.732708,4.237670
+L1 double integrator,DT-FBSDE+iLQR,3,57,0.852858,4.229192
+L1 double integrator,DT-FBSDE+iLQR,3,58,1.014177,4.229192
+L1 double integrator,DT-FBSDE+iLQR,3,60,1.127907,4.217304
+L1 double integrator,DT-FBSDE+iLQR,3,62,1.283256,4.217304
+L1 double integrator,DT-FBSDE+iLQR,3,66,1.487104,4.217304
+L1 double integrator,DT-FBSDE+iLQR,3,69,1.650521,4.217304
+L1 double integrator,DT-FBSDE+iLQR,3,76,1.906038,4.217304
+L1 double integrator,DT-FBSDE+iLQR,3,82,2.214826,4.217201
+L1 double integrator,DT-FBSDE+iLQR,3,87,2.527456,4.217201
+L1 double integrator,DT-FBSDE+iLQR,3,93,2.905338,4.217201
+L1 double integrator,DT-FBSDE+iLQR,3,100,3.322920,4.213685
+L1 double integrator,DT-FBSDE+iLQR,3,108,3.856910,4.213685
+L1 double integrator,DT-FBSDE+iLQR,3,119,4.437032,4.212608
+L1 double integrator,DT-FBSDE+iLQR,3,128,5.064663,4.212236
+L1 double integrator,DT-FBSDE+iLQR,3,137,5.800882,4.212236
+L1 double integrator,DT-FBSDE+iLQR,3,155,6.684943,4.212236
+L1 double integrator,DT-FBSDE+iLQR,3,175,7.680768,4.212236
+L1 double integrator,DT-FBSDE+iLQR,3,192,8.873084,4.211705
+L1 double integrator,DT-FBSDE+iLQR,3,208,10.192253,4.211025
+L1 double integrator,DT-FBSDE+iLQR,3,228,11.678986,4.211025
+L1 double integrator,DT-FBSDE+iLQR,3,250,13.441192,4.211025
+L1 double integrator,DT-FBSDE+iLQR,3,273,15.540121,4.210580
+L1 double integrator,DT-FBSDE+iLQR,3,320,17.785633,4.202801
+L1 double integrator,DT-FBSDE+iLQR,3,386,20.401273,4.202801
+L1 double integrator,DT-FBSDE+iLQR,3,454,23.476007,4.202801
+L1 double integrator,DT-FBSDE+iLQR,3,527,27.013550,4.197717
+L1 double integrator,DT-FBSDE+iLQR,3,598,31.090865,4.196951
+L1 double integrator,DT-FBSDE+iLQR,3,669,35.701426,4.193056
+L1 double integrator,DT-FBSDE+iLQR,3,775,41.121642,4.192967
+L1 double integrator,DT-FBSDE+iLQR,3,900,47.181988,4.193022
+L1 double integrator,DT-FBSDE+iLQR,3,1061,54.309409,4.192134
+L1 double integrator,DT-FBSDE+iLQR,3,1155,60.002610,4.192134
+L1 double integrator,DT-FBSDE,4,0,0.000000,89.163177
+L1 double integrator,DT-FBSDE,4,1,0.032619,86.656983
+L1 double integrator,DT-FBSDE,4,2,0.064090,74.956171
+L1 double integrator,DT-FBSDE,4,3,0.091881,56.868156
+L1 double integrator,DT-FBSDE,4,4,0.137055,36.507451
+L1 double integrator,DT-FBSDE,4,5,0.170958,36.507451
+L1 double integrator,DT-FBSDE,4,6,0.205272,36.507451
+L1 double integrator,DT-FBSDE,4,8,0.251440,9.468543
+L1 double integrator,DT-FBSDE,4,9,0.276976,9.468543
+L1 double integrator,DT-FBSDE,4,10,0.314490,7.766460
+L1 double integrator,DT-FBSDE,4,11,0.359044,4.747572
+L1 double integrator,DT-FBSDE,4,13,0.430357,4.434375
+L1 double integrator,DT-FBSDE,4,14,0.469368,4.393513
+L1 double integrator,DT-FBSDE,4,17,0.632940,4.393496
+L1 double integrator,DT-FBSDE,4,18,0.740901,4.393496
+L1 double integrator,DT-FBSDE,4,20,0.833008,4.350352
+L1 double integrator,DT-FBSDE,4,23,0.993581,4.340043
+L1 double integrator,DT-FBSDE,4,25,1.131428,4.340043
+L1 double integrator,DT-FBSDE,4,28,1.268094,4.337704
+L1 double integrator,DT-FBSDE,4,30,1.453575,4.337616
+L1 double integrator,DT-FBSDE,4,32,1.695754,4.337616
+L1 double integrator,DT-FBSDE,4,35,1.907676,4.323855
+L1 double integrator,DT-FBSDE,4,41,2.194894,4.266487
+L1 double integrator,DT-FBSDE,4,46,2.573904,4.263718
+L1 double integrator,DT-FBSDE,4,53,2.891767,4.263718
+L1 double integrator,DT-FBSDE,4,60,3.315076,4.263718
+L1 double integrator,DT-FBSDE,4,69,3.881227,4.263718
+L1 double integrator,DT-FBSDE,4,80,4.497066,4.264956
+L1 double integrator,DT-FBSDE,4,87,5.084218,4.262213
+L1 double integrator,DT-FBSDE,4,100,5.866801,4.262213
+L1 double integrator,DT-FBSDE,4,114,6.700574,4.262213
+L1 double integrator,DT-FBSDE,4,128,7.684789,4.263398
+L1 double integrator,DT-FBSDE,4,147,8.914482,4.260775
+L1 double integrator,DT-FBSDE,4,171,10.182629,4.252294
+L1 double integrator,DT-FBSDE,4,201,11.744982,4.252718
+L1 double integrator,DT-FBSDE,4,234,13.432956,4.251208
+L1 double integrator,DT-FBSDE,4,286,15.474690,4.251208
+L1 double integrator,DT-FBSDE,4,349,17.755139,4.250644
+L1 double integrator,DT-FBSDE,4,404,20.408424,4.240784
+L1 double integrator,DT-FBSDE,4,479,23.522608,4.229514
+L1 double integrator,DT-FBSDE,4,538,27.020077,4.222546
+L1 double integrator,DT-FBSDE,4,619,31.109384,4.206004
+L1 double integrator,DT-FBSDE,4,709,35.725791,4.206095
+L1 double integrator,DT-FBSDE,4,819,41.030961,4.206095
+L1 double integrator,DT-FBSDE,4,956,47.191958,4.206095
+L1 double integrator,DT-FBSDE,4,1091,54.325977,4.206412
+L1 double integrator,DT-FBSDE,4,1212,60.013513,4.206412
+L1 double integrator,DT-FBSDE+iLQR,4,0,0.000000,89.163177
+L1 double integrator,DT-FBSDE+iLQR,4,1,0.054559,7.624722
+L1 double integrator,DT-FBSDE+iLQR,4,2,0.095202,4.588308
+L1 double integrator,DT-FBSDE+iLQR,4,3,0.111319,4.588308
+L1 double integrator,DT-FBSDE+iLQR,4,4,0.163077,4.491358
+L1 double integrator,DT-FBSDE+iLQR,4,5,0.187040,4.491358
+L1 double integrator,DT-FBSDE+iLQR,4,7,0.242523,4.425268
+L1 double integrator,DT-FBSDE+iLQR,4,8,0.293138,4.393551
+L1 double integrator,DT-FBSDE+iLQR,4,10,0.329974,4.353230
+L1 double integrator,DT-FBSDE+iLQR,4,16,0.358737,4.353230
+L1 double integrator,DT-FBSDE+iLQR,4,24,0.408587,4.353230
+L1 double integrator,DT-FBSDE+iLQR,4,34,0.507324,4.353230
+L1 double integrator,DT-FBSDE+iLQR,4,35,0.556902,4.355856
+L1 double integrator,DT-FBSDE+iLQR,4,37,0.643519,4.285794
+L1 double integrator,DT-FBSDE+iLQR,4,39,0.725491,4.301925
+L1 double integrator,DT-FBSDE+iLQR,4,41,0.821821,4.282235
+L1 double integrator,DT-FBSDE+iLQR,4,45,0.960529,4.278386
+L1 double integrator,DT-FBSDE+iLQR,4,49,1.136616,4.278386
+L1 double integrator,DT-FBSDE+iLQR,4,53,1.248342,4.278386
+L1 double integrator,DT-FBSDE+iLQR,4,57,1.456056,4.261376
+L1 double integrator,DT-FBSDE+iLQR,4,61,1.667620,4.258017
+L1 double integrator,DT-FBSDE+iLQR,4,65,1.898546,4.258017
+L1 double integrator,DT-FBSDE+iLQR,4,72,2.198683,4.214102
+L1 double integrator,DT-FBSDE+iLQR,4,79,2.506723,4.214102
+L1 double integrator,DT-FBSDE+iLQR,4,88,2.977848,4.213300
+L1 double integrator,DT-FBSDE+iLQR,4,95,3.315652,4.212930
+L1 double integrator,DT-FBSDE+iLQR,4,108,3.821944,4.212930
+L1 double integrator,DT-FBSDE+iLQR,4,121,4.404558,4.211597
+L1 double integrator,DT-FBSDE+iLQR,4,133,5.219228,4.205555
+L1 double integrator,DT-FBSDE+iLQR,4,139,5.938747,4.206100
+L1 double integrator,DT-FBSDE+iLQR,4,157,6.693007,4.206100
+L1 double integrator,DT-FBSDE+iLQR,4,180,7.683361,4.206100
+L1 double integrator,DT-FBSDE+iLQR,4,200,8.860889,4.205376
+L1 double integrator,DT-FBSDE+iLQR,4,228,10.160478,4.206406
+L1 double integrator,DT-FBSDE+iLQR,4,258,11.681125,4.206291
+L1 double integrator,DT-FBSDE+iLQR,4,290,13.431502,4.206291
+L1 double integrator,DT-FBSDE+iLQR,4,322,15.437104,4.203602
+L1 double integrator,DT-FBSDE+iLQR,4,371,17.763661,4.203698
+L1 double integrator,DT-FBSDE+iLQR,4,424,20.413356,4.203698
+L1 double integrator,DT-FBSDE+iLQR,4,490,23.484933,4.203698
+L1 double integrator,DT-FBSDE+iLQR,4,561,26.997407,4.198745
+L1 double integrator,DT-FBSDE+iLQR,4,652,31.040462,4.195185
+L1 double integrator,DT-FBSDE+iLQR,4,741,35.684476,4.194678
+L1 double integrator,DT-FBSDE+iLQR,4,873,41.057110,4.194294
+L1 double integrator,DT-FBSDE+iLQR,4,1024,47.221353,4.192215
+L1 double integrator,DT-FBSDE+iLQR,4,1191,54.257760,4.192215
+L1 double integrator,DT-FBSDE+iLQR,4,1337,60.000419,4.192215
+L1 inverted pendulum,DT-FBSDE,0,0,0.000000,80.687174
+L1 inverted pendulum,DT-FBSDE,0,1,0.053628,26.634583
+L1 inverted pendulum,DT-FBSDE,0,2,0.083618,26.634583
+L1 inverted pendulum,DT-FBSDE,0,3,0.112100,26.634583
+L1 inverted pendulum,DT-FBSDE,0,4,0.153694,18.516409
+L1 inverted pendulum,DT-FBSDE,0,5,0.203513,13.581472
+L1 inverted pendulum,DT-FBSDE,0,6,0.256724,9.016817
+L1 inverted pendulum,DT-FBSDE,0,7,0.319251,7.062713
+L1 inverted pendulum,DT-FBSDE,0,8,0.392665,6.590595
+L1 inverted pendulum,DT-FBSDE,0,9,0.445068,4.362335
+L1 inverted pendulum,DT-FBSDE,0,10,0.498647,4.000451
+L1 inverted pendulum,DT-FBSDE,0,11,0.572301,3.995059
+L1 inverted pendulum,DT-FBSDE,0,12,0.644307,3.851762
+L1 inverted pendulum,DT-FBSDE,0,14,0.737032,3.551436
+L1 inverted pendulum,DT-FBSDE,0,16,0.840234,3.496278
+L1 inverted pendulum,DT-FBSDE,0,17,0.957863,3.460406
+L1 inverted pendulum,DT-FBSDE,0,20,1.138483,3.231485
+L1 inverted pendulum,DT-FBSDE,0,23,1.296133,3.210098
+L1 inverted pendulum,DT-FBSDE,0,25,1.435198,3.094381
+L1 inverted pendulum,DT-FBSDE,0,29,1.680358,3.085445
+L1 inverted pendulum,DT-FBSDE,0,34,1.927043,3.085445
+L1 inverted pendulum,DT-FBSDE,0,40,2.198822,3.080478
+L1 inverted pendulum,DT-FBSDE,0,46,2.512298,3.015973
+L1 inverted pendulum,DT-FBSDE,0,55,2.924298,2.946007
+L1 inverted pendulum,DT-FBSDE,0,64,3.323173,2.946007
+L1 inverted pendulum,DT-FBSDE,0,71,3.845413,2.946007
+L1 inverted pendulum,DT-FBSDE,0,81,4.435491,2.946007
+L1 inverted pendulum,DT-FBSDE,0,95,5.064186,2.925784
+L1 inverted pendulum,DT-FBSDE,0,114,5.844122,2.925784
+L1 inverted pendulum,DT-FBSDE,0,133,6.710143,2.919503
+L1 inverted pendulum,DT-FBSDE,0,154,7.709985,2.851242
+L1 inverted pendulum,DT-FBSDE,0,181,8.974526,2.796135
+L1 inverted pendulum,DT-FBSDE,0,198,10.170193,2.783137
+L1 inverted pendulum,DT-FBSDE,0,232,11.713078,2.769484
+L1 inverted pendulum,DT-FBSDE,0,275,13.455140,2.767959
+L1 inverted pendulum,DT-FBSDE,0,325,15.434731,2.767959
+L1 inverted pendulum,DT-FBSDE,0,373,17.750953,2.767959
+L1 inverted pendulum,DT-FBSDE,0,439,20.421204,2.767959
+L1 inverted pendulum,DT-FBSDE,0,504,23.481195,2.767959
+L1 inverted pendulum,DT-FBSDE,0,579,26.986829,2.741843
+L1 inverted pendulum,DT-FBSDE,0,667,31.038689,2.740828
+L1 inverted pendulum,DT-FBSDE,0,765,35.692254,2.740828
+L1 inverted pendulum,DT-FBSDE,0,886,41.033682,2.729442
+L1 inverted pendulum,DT-FBSDE,0,1021,47.204002,2.728505
+L1 inverted pendulum,DT-FBSDE,0,1194,54.300967,2.728505
+L1 inverted pendulum,DT-FBSDE,0,1319,60.006112,2.728505
+L1 inverted pendulum,DT-FBSDE+iLQR,0,0,0.000000,80.687174
+L1 inverted pendulum,DT-FBSDE+iLQR,0,1,0.056048,16.863474
+L1 inverted pendulum,DT-FBSDE+iLQR,0,2,0.134920,5.316776
+L1 inverted pendulum,DT-FBSDE+iLQR,0,3,0.199026,3.397264
+L1 inverted pendulum,DT-FBSDE+iLQR,0,4,0.230925,3.397264
+L1 inverted pendulum,DT-FBSDE+iLQR,0,5,0.284929,3.241548
+L1 inverted pendulum,DT-FBSDE+iLQR,0,7,0.337501,3.151064
+L1 inverted pendulum,DT-FBSDE+iLQR,0,8,0.361308,3.151064
+L1 inverted pendulum,DT-FBSDE+iLQR,0,13,0.413947,3.151064
+L1 inverted pendulum,DT-FBSDE+iLQR,0,20,0.471322,3.151064
+L1 inverted pendulum,DT-FBSDE+iLQR,0,31,0.539217,3.151064
+L1 inverted pendulum,DT-FBSDE+iLQR,0,52,0.620082,3.151064
+L1 inverted pendulum,DT-FBSDE+iLQR,0,91,0.731417,3.151064
+L1 inverted pendulum,DT-FBSDE+iLQR,0,146,0.819585,3.151064
+L1 inverted pendulum,DT-FBSDE+iLQR,0,211,0.969851,3.151064
+L1 inverted pendulum,DT-FBSDE+iLQR,0,214,1.115227,2.890734
+L1 inverted pendulum,DT-FBSDE+iLQR,0,217,1.264432,2.824893
+L1 inverted pendulum,DT-FBSDE+iLQR,0,219,1.444564,2.745887
+L1 inverted pendulum,DT-FBSDE+iLQR,0,224,1.796333,2.672057
+L1 inverted pendulum,DT-FBSDE+iLQR,0,226,1.932092,2.660741
+L1 inverted pendulum,DT-FBSDE+iLQR,0,232,2.253888,2.646932
+L1 inverted pendulum,DT-FBSDE+iLQR,0,239,2.542188,2.646932
+L1 inverted pendulum,DT-FBSDE+iLQR,0,244,2.897868,2.642628
+L1 inverted pendulum,DT-FBSDE+iLQR,0,250,3.357658,2.642628
+L1 inverted pendulum,DT-FBSDE+iLQR,0,259,3.832873,2.641482
+L1 inverted pendulum,DT-FBSDE+iLQR,0,272,4.388695,2.634607
+L1 inverted pendulum,DT-FBSDE+iLQR,0,288,5.047878,2.634607
+L1 inverted pendulum,DT-FBSDE+iLQR,0,307,5.815383,2.634607
+L1 inverted pendulum,DT-FBSDE+iLQR,0,321,6.780329,2.634607
+L1 inverted pendulum,DT-FBSDE+iLQR,0,345,7.669233,2.634607
+L1 inverted pendulum,DT-FBSDE+iLQR,0,377,8.869170,2.636155
+L1 inverted pendulum,DT-FBSDE+iLQR,0,414,10.172135,2.636155
+L1 inverted pendulum,DT-FBSDE+iLQR,0,447,11.663448,2.621040
+L1 inverted pendulum,DT-FBSDE+iLQR,0,487,13.420357,2.618044
+L1 inverted pendulum,DT-FBSDE+iLQR,0,528,15.549706,2.618054
+L1 inverted pendulum,DT-FBSDE+iLQR,0,583,17.774929,2.618054
+L1 inverted pendulum,DT-FBSDE+iLQR,0,649,20.431804,2.618054
+L1 inverted pendulum,DT-FBSDE+iLQR,0,710,23.480202,2.612086
+L1 inverted pendulum,DT-FBSDE+iLQR,0,789,26.995832,2.612086
+L1 inverted pendulum,DT-FBSDE+iLQR,0,878,31.028334,2.612086
+L1 inverted pendulum,DT-FBSDE+iLQR,0,984,35.684871,2.611923
+L1 inverted pendulum,DT-FBSDE+iLQR,0,1111,41.027446,2.611923
+L1 inverted pendulum,DT-FBSDE+iLQR,0,1255,47.204060,2.611923
+L1 inverted pendulum,DT-FBSDE+iLQR,0,1417,54.301613,2.610506
+L1 inverted pendulum,DT-FBSDE+iLQR,0,1544,60.034223,2.601283
+L1 inverted pendulum,DT-FBSDE,1,0,0.000000,80.687174
+L1 inverted pendulum,DT-FBSDE,1,1,0.042657,29.960987
+L1 inverted pendulum,DT-FBSDE,1,2,0.084499,14.867631
+L1 inverted pendulum,DT-FBSDE,1,3,0.126001,14.867631
+L1 inverted pendulum,DT-FBSDE,1,4,0.173240,8.903162
+L1 inverted pendulum,DT-FBSDE,1,5,0.236482,7.988861
+L1 inverted pendulum,DT-FBSDE,1,6,0.288015,7.851378
+L1 inverted pendulum,DT-FBSDE,1,7,0.356615,7.805188
+L1 inverted pendulum,DT-FBSDE,1,9,0.448297,4.801189
+L1 inverted pendulum,DT-FBSDE,1,10,0.507026,4.284040
+L1 inverted pendulum,DT-FBSDE,1,12,0.610169,4.234578
+L1 inverted pendulum,DT-FBSDE,1,13,0.700051,3.814863
+L1 inverted pendulum,DT-FBSDE,1,14,0.750883,3.472768
+L1 inverted pendulum,DT-FBSDE,1,16,0.857113,3.166623
+L1 inverted pendulum,DT-FBSDE,1,18,1.031056,3.166623
+L1 inverted pendulum,DT-FBSDE,1,20,1.118080,3.166623
+L1 inverted pendulum,DT-FBSDE,1,23,1.296185,3.085216
+L1 inverted pendulum,DT-FBSDE,1,28,1.476501,3.085216
+L1 inverted pendulum,DT-FBSDE,1,31,1.663166,3.081108
+L1 inverted pendulum,DT-FBSDE,1,38,1.977340,2.801900
+L1 inverted pendulum,DT-FBSDE,1,42,2.201099,2.785046
+L1 inverted pendulum,DT-FBSDE,1,50,2.514814,2.771047
+L1 inverted pendulum,DT-FBSDE,1,60,2.904787,2.771047
+L1 inverted pendulum,DT-FBSDE,1,65,3.324810,2.732986
+L1 inverted pendulum,DT-FBSDE,1,73,3.825405,2.713974
+L1 inverted pendulum,DT-FBSDE,1,86,4.431881,2.713974
+L1 inverted pendulum,DT-FBSDE,1,100,5.053636,2.704575
+L1 inverted pendulum,DT-FBSDE,1,120,5.811296,2.702182
+L1 inverted pendulum,DT-FBSDE,1,141,6.674971,2.692987
+L1 inverted pendulum,DT-FBSDE,1,166,7.691847,2.703227
+L1 inverted pendulum,DT-FBSDE,1,188,8.818906,2.653656
+L1 inverted pendulum,DT-FBSDE,1,217,10.209487,2.591765
+L1 inverted pendulum,DT-FBSDE,1,252,11.672694,2.564149
+L1 inverted pendulum,DT-FBSDE,1,288,13.450933,2.548521
+L1 inverted pendulum,DT-FBSDE,1,339,15.439547,2.539382
+L1 inverted pendulum,DT-FBSDE,1,395,17.739401,2.536153
+L1 inverted pendulum,DT-FBSDE,1,452,20.413779,2.526313
+L1 inverted pendulum,DT-FBSDE,1,514,23.486871,2.479679
+L1 inverted pendulum,DT-FBSDE,1,587,26.982057,2.474982
+L1 inverted pendulum,DT-FBSDE,1,673,31.023459,2.474649
+L1 inverted pendulum,DT-FBSDE,1,785,35.696275,2.436752
+L1 inverted pendulum,DT-FBSDE,1,911,41.192276,2.437101
+L1 inverted pendulum,DT-FBSDE,1,1020,47.201050,2.422864
+L1 inverted pendulum,DT-FBSDE,1,1193,54.292365,2.421967
+L1 inverted pendulum,DT-FBSDE,1,1334,60.013326,2.418574
+L1 inverted pendulum,DT-FBSDE+iLQR,1,0,0.000000,80.687174
+L1 inverted pendulum,DT-FBSDE+iLQR,1,1,0.053167,8.089886
+L1 inverted pendulum,DT-FBSDE+iLQR,1,2,0.107486,5.225425
+L1 inverted pendulum,DT-FBSDE+iLQR,1,3,0.180705,3.770266
+L1 inverted pendulum,DT-FBSDE+iLQR,1,4,0.208970,3.770266
+L1 inverted pendulum,DT-FBSDE+iLQR,1,5,0.268416,3.209514
+L1 inverted pendulum,DT-FBSDE+iLQR,1,8,0.313029,3.209514
+L1 inverted pendulum,DT-FBSDE+iLQR,1,13,0.369638,3.209514
+L1 inverted pendulum,DT-FBSDE+iLQR,1,16,0.409206,3.209514
+L1 inverted pendulum,DT-FBSDE+iLQR,1,24,0.480796,3.209514
+L1 inverted pendulum,DT-FBSDE+iLQR,1,38,0.562613,3.209514
+L1 inverted pendulum,DT-FBSDE+iLQR,1,51,0.624413,3.209514
+L1 inverted pendulum,DT-FBSDE+iLQR,1,53,0.733470,3.039971
+L1 inverted pendulum,DT-FBSDE+iLQR,1,54,0.829056,2.995204
+L1 inverted pendulum,DT-FBSDE+iLQR,1,56,0.997326,2.883341
+L1 inverted pendulum,DT-FBSDE+iLQR,1,58,1.091235,2.883341
+L1 inverted pendulum,DT-FBSDE+iLQR,1,62,1.272385,2.871586
+L1 inverted pendulum,DT-FBSDE+iLQR,1,65,1.490880,2.862611
+L1 inverted pendulum,DT-FBSDE+iLQR,1,69,1.652622,2.831444
+L1 inverted pendulum,DT-FBSDE+iLQR,1,73,1.899380,2.751125
+L1 inverted pendulum,DT-FBSDE+iLQR,1,79,2.180537,2.727036
+L1 inverted pendulum,DT-FBSDE+iLQR,1,85,2.564332,2.718290
+L1 inverted pendulum,DT-FBSDE+iLQR,1,93,2.915200,2.666656
+L1 inverted pendulum,DT-FBSDE+iLQR,1,101,3.379212,2.577381
+L1 inverted pendulum,DT-FBSDE+iLQR,1,113,3.823053,2.568602
+L1 inverted pendulum,DT-FBSDE+iLQR,1,123,4.409521,2.506545
+L1 inverted pendulum,DT-FBSDE+iLQR,1,136,5.078066,2.506545
+L1 inverted pendulum,DT-FBSDE+iLQR,1,148,5.833485,2.486941
+L1 inverted pendulum,DT-FBSDE+iLQR,1,167,6.705587,2.479796
+L1 inverted pendulum,DT-FBSDE+iLQR,1,192,7.681200,2.477548
+L1 inverted pendulum,DT-FBSDE+iLQR,1,222,8.819182,2.477548
+L1 inverted pendulum,DT-FBSDE+iLQR,1,249,10.156195,2.475627
+L1 inverted pendulum,DT-FBSDE+iLQR,1,281,11.729041,2.460615
+L1 inverted pendulum,DT-FBSDE+iLQR,1,319,13.420207,2.460615
+L1 inverted pendulum,DT-FBSDE+iLQR,1,370,15.458904,2.431576
+L1 inverted pendulum,DT-FBSDE+iLQR,1,425,17.761894,2.424724
+L1 inverted pendulum,DT-FBSDE+iLQR,1,490,20.432683,2.424838
+L1 inverted pendulum,DT-FBSDE+iLQR,1,559,23.481767,2.440876
+L1 inverted pendulum,DT-FBSDE+iLQR,1,656,27.003669,2.440876
+L1 inverted pendulum,DT-FBSDE+iLQR,1,764,31.046028,2.440876
+L1 inverted pendulum,DT-FBSDE+iLQR,1,881,35.679015,2.440876
+L1 inverted pendulum,DT-FBSDE+iLQR,1,1023,41.044729,2.447161
+L1 inverted pendulum,DT-FBSDE+iLQR,1,1180,47.182978,2.447161
+L1 inverted pendulum,DT-FBSDE+iLQR,1,1365,54.277844,2.443328
+L1 inverted pendulum,DT-FBSDE+iLQR,1,1507,60.018997,2.414928
+L1 inverted pendulum,DT-FBSDE,2,0,0.000000,80.687174
+L1 inverted pendulum,DT-FBSDE,2,1,0.107866,32.537615
+L1 inverted pendulum,DT-FBSDE,2,2,0.161900,18.222069
+L1 inverted pendulum,DT-FBSDE,2,3,0.207884,12.429505
+L1 inverted pendulum,DT-FBSDE,2,4,0.250598,9.376640
+L1 inverted pendulum,DT-FBSDE,2,5,0.291759,5.437277
+L1 inverted pendulum,DT-FBSDE,2,6,0.364229,5.147646
+L1 inverted pendulum,DT-FBSDE,2,7,0.416856,4.735675
+L1 inverted pendulum,DT-FBSDE,2,8,0.499042,4.672620
+L1 inverted pendulum,DT-FBSDE,2,9,0.549664,4.672620
+L1 inverted pendulum,DT-FBSDE,2,11,0.650379,4.672620
+L1 inverted pendulum,DT-FBSDE,2,13,0.770573,4.283518
+L1 inverted pendulum,DT-FBSDE,2,14,0.862518,4.275801
+L1 inverted pendulum,DT-FBSDE,2,16,0.983851,3.815745
+L1 inverted pendulum,DT-FBSDE,2,18,1.109962,3.672170
+L1 inverted pendulum,DT-FBSDE,2,21,1.300115,3.412683
+L1 inverted pendulum,DT-FBSDE,2,23,1.496690,3.327719
+L1 inverted pendulum,DT-FBSDE,2,26,1.668172,3.223236
+L1 inverted pendulum,DT-FBSDE,2,31,1.914420,3.163947
+L1 inverted pendulum,DT-FBSDE,2,37,2.249108,2.984302
+L1 inverted pendulum,DT-FBSDE,2,39,2.553006,2.987758
+L1 inverted pendulum,DT-FBSDE,2,46,2.886866,2.884810
+L1 inverted pendulum,DT-FBSDE,2,54,3.324737,2.883408
+L1 inverted pendulum,DT-FBSDE,2,68,3.837897,2.883408
+L1 inverted pendulum,DT-FBSDE,2,80,4.414391,2.863317
+L1 inverted pendulum,DT-FBSDE,2,94,5.055539,2.838587
+L1 inverted pendulum,DT-FBSDE,2,108,5.893173,2.801154
+L1 inverted pendulum,DT-FBSDE,2,127,6.673189,2.770556
+L1 inverted pendulum,DT-FBSDE,2,151,7.683497,2.770495
+L1 inverted pendulum,DT-FBSDE,2,173,8.820743,2.770495
+L1 inverted pendulum,DT-FBSDE,2,206,10.290280,2.777800
+L1 inverted pendulum,DT-FBSDE,2,231,11.686205,2.741064
+L1 inverted pendulum,DT-FBSDE,2,273,13.411282,2.741064
+L1 inverted pendulum,DT-FBSDE,2,309,15.451551,2.713314
+L1 inverted pendulum,DT-FBSDE,2,352,17.762576,2.677301
+L1 inverted pendulum,DT-FBSDE,2,400,20.431894,2.660823
+L1 inverted pendulum,DT-FBSDE,2,473,23.466270,2.690241
+L1 inverted pendulum,DT-FBSDE,2,571,26.984797,2.641142
+L1 inverted pendulum,DT-FBSDE,2,663,31.035982,2.572745
+L1 inverted pendulum,DT-FBSDE,2,747,35.681018,2.534822
+L1 inverted pendulum,DT-FBSDE,2,861,41.126132,2.528324
+L1 inverted pendulum,DT-FBSDE,2,992,47.200128,2.527587
+L1 inverted pendulum,DT-FBSDE,2,1129,54.414823,2.527587
+L1 inverted pendulum,DT-FBSDE,2,1244,60.070797,2.528120
+L1 inverted pendulum,DT-FBSDE+iLQR,2,0,0.000000,80.687174
+L1 inverted pendulum,DT-FBSDE+iLQR,2,1,0.066283,8.738168
+L1 inverted pendulum,DT-FBSDE+iLQR,2,2,0.129180,5.509266
+L1 inverted pendulum,DT-FBSDE+iLQR,2,3,0.181548,4.124740
+L1 inverted pendulum,DT-FBSDE+iLQR,2,4,0.207886,4.124740
+L1 inverted pendulum,DT-FBSDE+iLQR,2,7,0.282337,3.539402
+L1 inverted pendulum,DT-FBSDE+iLQR,2,10,0.326772,3.539402
+L1 inverted pendulum,DT-FBSDE+iLQR,2,13,0.366703,3.539402
+L1 inverted pendulum,DT-FBSDE+iLQR,2,20,0.416842,3.539402
+L1 inverted pendulum,DT-FBSDE+iLQR,2,30,0.498066,3.539402
+L1 inverted pendulum,DT-FBSDE+iLQR,2,46,0.539189,3.539402
+L1 inverted pendulum,DT-FBSDE+iLQR,2,67,0.619807,3.539402
+L1 inverted pendulum,DT-FBSDE+iLQR,2,114,0.715947,3.539402
+L1 inverted pendulum,DT-FBSDE+iLQR,2,180,0.844307,3.539402
+L1 inverted pendulum,DT-FBSDE+iLQR,2,182,0.950330,3.204257
+L1 inverted pendulum,DT-FBSDE+iLQR,2,187,1.152532,2.955580
+L1 inverted pendulum,DT-FBSDE+iLQR,2,189,1.264283,2.724282
+L1 inverted pendulum,DT-FBSDE+iLQR,2,193,1.493161,2.608157
+L1 inverted pendulum,DT-FBSDE+iLQR,2,197,1.673995,2.599502
+L1 inverted pendulum,DT-FBSDE+iLQR,2,201,1.941010,2.604346
+L1 inverted pendulum,DT-FBSDE+iLQR,2,208,2.196739,2.604346
+L1 inverted pendulum,DT-FBSDE+iLQR,2,214,2.509703,2.576885
+L1 inverted pendulum,DT-FBSDE+iLQR,2,218,2.967093,2.580439
+L1 inverted pendulum,DT-FBSDE+iLQR,2,228,3.342357,2.580439
+L1 inverted pendulum,DT-FBSDE+iLQR,2,234,3.817824,2.578637
+L1 inverted pendulum,DT-FBSDE+iLQR,2,245,4.557315,2.579782
+L1 inverted pendulum,DT-FBSDE+iLQR,2,252,5.058816,2.579782
+L1 inverted pendulum,DT-FBSDE+iLQR,2,264,5.823323,2.582695
+L1 inverted pendulum,DT-FBSDE+iLQR,2,276,6.757937,2.566722
+L1 inverted pendulum,DT-FBSDE+iLQR,2,291,7.675134,2.566694
+L1 inverted pendulum,DT-FBSDE+iLQR,2,318,8.834685,2.566694
+L1 inverted pendulum,DT-FBSDE+iLQR,2,336,10.262080,2.566694
+L1 inverted pendulum,DT-FBSDE+iLQR,2,367,11.690605,2.566694
+L1 inverted pendulum,DT-FBSDE+iLQR,2,399,13.437388,2.553294
+L1 inverted pendulum,DT-FBSDE+iLQR,2,449,15.447080,2.553294
+L1 inverted pendulum,DT-FBSDE+iLQR,2,487,17.768087,2.522928
+L1 inverted pendulum,DT-FBSDE+iLQR,2,541,20.418258,2.512099
+L1 inverted pendulum,DT-FBSDE+iLQR,2,605,23.566214,2.511642
+L1 inverted pendulum,DT-FBSDE+iLQR,2,680,27.076202,2.495761
+L1 inverted pendulum,DT-FBSDE+iLQR,2,767,31.026275,2.490436
+L1 inverted pendulum,DT-FBSDE+iLQR,2,861,35.721463,2.490535
+L1 inverted pendulum,DT-FBSDE+iLQR,2,966,41.061648,2.490535
+L1 inverted pendulum,DT-FBSDE+iLQR,2,1079,47.192400,2.470166
+L1 inverted pendulum,DT-FBSDE+iLQR,2,1234,54.281800,2.478687
+L1 inverted pendulum,DT-FBSDE+iLQR,2,1338,60.003327,2.457871
+L1 inverted pendulum,DT-FBSDE,3,0,0.000000,80.687174
+L1 inverted pendulum,DT-FBSDE,3,1,0.046021,36.195884
+L1 inverted pendulum,DT-FBSDE,3,2,0.103620,31.834020
+L1 inverted pendulum,DT-FBSDE,3,3,0.151487,22.567162
+L1 inverted pendulum,DT-FBSDE,3,4,0.210820,11.373226
+L1 inverted pendulum,DT-FBSDE,3,5,0.312784,9.784419
+L1 inverted pendulum,DT-FBSDE,3,6,0.356460,9.130675
+L1 inverted pendulum,DT-FBSDE,3,8,0.449283,5.735914
+L1 inverted pendulum,DT-FBSDE,3,9,0.486271,5.735914
+L1 inverted pendulum,DT-FBSDE,3,10,0.551391,4.138499
+L1 inverted pendulum,DT-FBSDE,3,12,0.685025,3.064946
+L1 inverted pendulum,DT-FBSDE,3,13,0.738036,3.064946
+L1 inverted pendulum,DT-FBSDE,3,16,0.829346,3.064946
+L1 inverted pendulum,DT-FBSDE,3,18,0.942473,3.039524
+L1 inverted pendulum,DT-FBSDE,3,20,1.107455,3.019103
+L1 inverted pendulum,DT-FBSDE,3,22,1.259936,2.983621
+L1 inverted pendulum,DT-FBSDE,3,27,1.437815,2.983621
+L1 inverted pendulum,DT-FBSDE,3,33,1.652269,2.983621
+L1 inverted pendulum,DT-FBSDE,3,37,1.986196,2.873216
+L1 inverted pendulum,DT-FBSDE,3,41,2.183205,2.836378
+L1 inverted pendulum,DT-FBSDE,3,47,2.515855,2.817637
+L1 inverted pendulum,DT-FBSDE,3,52,2.927156,2.812690
+L1 inverted pendulum,DT-FBSDE,3,60,3.366867,2.815162
+L1 inverted pendulum,DT-FBSDE,3,72,3.862582,2.749891
+L1 inverted pendulum,DT-FBSDE,3,85,4.415487,2.750295
+L1 inverted pendulum,DT-FBSDE,3,100,5.045236,2.750295
+L1 inverted pendulum,DT-FBSDE,3,116,5.811139,2.732810
+L1 inverted pendulum,DT-FBSDE,3,138,6.686076,2.732810
+L1 inverted pendulum,DT-FBSDE,3,160,7.689018,2.685136
+L1 inverted pendulum,DT-FBSDE,3,186,8.854853,2.665335
+L1 inverted pendulum,DT-FBSDE,3,206,10.172186,2.627991
+L1 inverted pendulum,DT-FBSDE,3,237,11.669887,2.622754
+L1 inverted pendulum,DT-FBSDE,3,275,13.443769,2.612847
+L1 inverted pendulum,DT-FBSDE,3,315,15.455188,2.587819
+L1 inverted pendulum,DT-FBSDE,3,356,17.743261,2.544270
+L1 inverted pendulum,DT-FBSDE,3,419,20.433918,2.521332
+L1 inverted pendulum,DT-FBSDE,3,489,23.479749,2.517851
+L1 inverted pendulum,DT-FBSDE,3,579,26.983183,2.510354
+L1 inverted pendulum,DT-FBSDE,3,684,31.085211,2.498630
+L1 inverted pendulum,DT-FBSDE,3,803,35.723242,2.489067
+L1 inverted pendulum,DT-FBSDE,3,936,41.028621,2.487313
+L1 inverted pendulum,DT-FBSDE,3,1102,47.185117,2.487313
+L1 inverted pendulum,DT-FBSDE,3,1285,54.272873,2.474479
+L1 inverted pendulum,DT-FBSDE,3,1416,60.006984,2.465652
+L1 inverted pendulum,DT-FBSDE+iLQR,3,0,0.000000,80.687174
+L1 inverted pendulum,DT-FBSDE+iLQR,3,1,0.054223,31.369917
+L1 inverted pendulum,DT-FBSDE+iLQR,3,2,0.107797,4.863140
+L1 inverted pendulum,DT-FBSDE+iLQR,3,3,0.161502,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,4,0.184297,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,5,0.208514,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,8,0.263359,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,10,0.293792,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,13,0.319917,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,16,0.355793,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,24,0.423254,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,38,0.479626,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,59,0.559383,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,82,0.619613,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,143,0.741051,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,206,0.842138,3.186494
+L1 inverted pendulum,DT-FBSDE+iLQR,3,208,1.004057,2.726935
+L1 inverted pendulum,DT-FBSDE+iLQR,3,210,1.130218,2.717329
+L1 inverted pendulum,DT-FBSDE+iLQR,3,214,1.352637,2.717329
+L1 inverted pendulum,DT-FBSDE+iLQR,3,217,1.455247,2.717329
+L1 inverted pendulum,DT-FBSDE+iLQR,3,219,1.749260,2.689958
+L1 inverted pendulum,DT-FBSDE+iLQR,3,223,1.953602,2.669318
+L1 inverted pendulum,DT-FBSDE+iLQR,3,229,2.238148,2.620477
+L1 inverted pendulum,DT-FBSDE+iLQR,3,233,2.544949,2.618878
+L1 inverted pendulum,DT-FBSDE+iLQR,3,241,2.899431,2.618878
+L1 inverted pendulum,DT-FBSDE+iLQR,3,253,3.344657,2.618878
+L1 inverted pendulum,DT-FBSDE+iLQR,3,263,3.838642,2.616162
+L1 inverted pendulum,DT-FBSDE+iLQR,3,276,4.413539,2.616584
+L1 inverted pendulum,DT-FBSDE+iLQR,3,288,5.104103,2.617970
+L1 inverted pendulum,DT-FBSDE+iLQR,3,303,5.825356,2.617290
+L1 inverted pendulum,DT-FBSDE+iLQR,3,319,6.700323,2.618477
+L1 inverted pendulum,DT-FBSDE+iLQR,3,343,7.692074,2.618477
+L1 inverted pendulum,DT-FBSDE+iLQR,3,369,8.838372,2.618477
+L1 inverted pendulum,DT-FBSDE+iLQR,3,397,10.170196,2.618477
+L1 inverted pendulum,DT-FBSDE+iLQR,3,431,11.698716,2.615960
+L1 inverted pendulum,DT-FBSDE+iLQR,3,469,13.427942,2.615960
+L1 inverted pendulum,DT-FBSDE+iLQR,3,519,15.461598,2.616059
+L1 inverted pendulum,DT-FBSDE+iLQR,3,570,17.756208,2.609991
+L1 inverted pendulum,DT-FBSDE+iLQR,3,633,20.431422,2.609991
+L1 inverted pendulum,DT-FBSDE+iLQR,3,700,23.478935,2.580115
+L1 inverted pendulum,DT-FBSDE+iLQR,3,787,27.000399,2.562746
+L1 inverted pendulum,DT-FBSDE+iLQR,3,884,31.019906,2.548844
+L1 inverted pendulum,DT-FBSDE+iLQR,3,993,35.714440,2.548999
+L1 inverted pendulum,DT-FBSDE+iLQR,3,1122,41.033262,2.542844
+L1 inverted pendulum,DT-FBSDE+iLQR,3,1270,47.266470,2.516874
+L1 inverted pendulum,DT-FBSDE+iLQR,3,1439,54.277223,2.514633
+L1 inverted pendulum,DT-FBSDE+iLQR,3,1579,60.027355,2.506992
+L1 inverted pendulum,DT-FBSDE,4,0,0.000000,80.687174
+L1 inverted pendulum,DT-FBSDE,4,1,0.049393,27.763304
+L1 inverted pendulum,DT-FBSDE,4,2,0.099188,27.763304
+L1 inverted pendulum,DT-FBSDE,4,3,0.141722,25.417435
+L1 inverted pendulum,DT-FBSDE,4,4,0.183404,10.258536
+L1 inverted pendulum,DT-FBSDE,4,5,0.227491,6.254080
+L1 inverted pendulum,DT-FBSDE,4,6,0.263703,6.254080
+L1 inverted pendulum,DT-FBSDE,4,7,0.334471,5.959169
+L1 inverted pendulum,DT-FBSDE,4,8,0.377113,5.959169
+L1 inverted pendulum,DT-FBSDE,4,9,0.429141,4.532674
+L1 inverted pendulum,DT-FBSDE,4,11,0.535359,4.488829
+L1 inverted pendulum,DT-FBSDE,4,12,0.610921,4.446361
+L1 inverted pendulum,DT-FBSDE,4,13,0.674995,4.014529
+L1 inverted pendulum,DT-FBSDE,4,14,0.753031,3.943793
+L1 inverted pendulum,DT-FBSDE,4,15,0.820469,3.943793
+L1 inverted pendulum,DT-FBSDE,4,17,0.955370,3.334354
+L1 inverted pendulum,DT-FBSDE,4,20,1.108660,3.048320
+L1 inverted pendulum,DT-FBSDE,4,24,1.258918,3.048320
+L1 inverted pendulum,DT-FBSDE,4,28,1.478375,2.904818
+L1 inverted pendulum,DT-FBSDE,4,33,1.683273,2.849640
+L1 inverted pendulum,DT-FBSDE,4,37,1.909998,2.804459
+L1 inverted pendulum,DT-FBSDE,4,43,2.204709,2.804459
+L1 inverted pendulum,DT-FBSDE,4,52,2.534204,2.778944
+L1 inverted pendulum,DT-FBSDE,4,60,2.893381,2.778944
+L1 inverted pendulum,DT-FBSDE,4,69,3.405133,2.750683
+L1 inverted pendulum,DT-FBSDE,4,77,3.842523,2.750082
+L1 inverted pendulum,DT-FBSDE,4,89,4.434591,2.750082
+L1 inverted pendulum,DT-FBSDE,4,103,5.079289,2.733712
+L1 inverted pendulum,DT-FBSDE,4,118,5.957510,2.724847
+L1 inverted pendulum,DT-FBSDE,4,134,6.680887,2.724847
+L1 inverted pendulum,DT-FBSDE,4,155,7.677351,2.726374
+L1 inverted pendulum,DT-FBSDE,4,173,9.030943,2.700565
+L1 inverted pendulum,DT-FBSDE,4,196,10.181473,2.664562
+L1 inverted pendulum,DT-FBSDE,4,228,11.711061,2.638496
+L1 inverted pendulum,DT-FBSDE,4,268,13.410974,2.638496
+L1 inverted pendulum,DT-FBSDE,4,312,15.445418,2.616384
+L1 inverted pendulum,DT-FBSDE,4,366,17.758869,2.582923
+L1 inverted pendulum,DT-FBSDE,4,416,20.414588,2.581867
+L1 inverted pendulum,DT-FBSDE,4,493,23.494604,2.581867
+L1 inverted pendulum,DT-FBSDE,4,585,26.990420,2.581867
+L1 inverted pendulum,DT-FBSDE,4,690,31.073322,2.581867
+L1 inverted pendulum,DT-FBSDE,4,805,35.781626,2.580025
+L1 inverted pendulum,DT-FBSDE,4,903,41.054477,2.524382
+L1 inverted pendulum,DT-FBSDE,4,1052,47.193944,2.516754
+L1 inverted pendulum,DT-FBSDE,4,1225,54.255447,2.516754
+L1 inverted pendulum,DT-FBSDE,4,1358,60.045517,2.516955
+L1 inverted pendulum,DT-FBSDE+iLQR,4,0,0.000000,80.687174
+L1 inverted pendulum,DT-FBSDE+iLQR,4,1,0.054972,18.746286
+L1 inverted pendulum,DT-FBSDE+iLQR,4,2,0.111233,10.771255
+L1 inverted pendulum,DT-FBSDE+iLQR,4,3,0.165538,3.808510
+L1 inverted pendulum,DT-FBSDE+iLQR,4,4,0.188293,3.808510
+L1 inverted pendulum,DT-FBSDE+iLQR,4,5,0.240234,3.521905
+L1 inverted pendulum,DT-FBSDE+iLQR,4,7,0.293580,3.271205
+L1 inverted pendulum,DT-FBSDE+iLQR,4,8,0.316089,3.271205
+L1 inverted pendulum,DT-FBSDE+iLQR,4,13,0.386444,3.271205
+L1 inverted pendulum,DT-FBSDE+iLQR,4,16,0.412257,3.271205
+L1 inverted pendulum,DT-FBSDE+iLQR,4,24,0.474619,3.271205
+L1 inverted pendulum,DT-FBSDE+iLQR,4,47,0.554378,3.271205
+L1 inverted pendulum,DT-FBSDE+iLQR,4,73,0.620803,3.271205
+L1 inverted pendulum,DT-FBSDE+iLQR,4,114,0.715582,3.271205
+L1 inverted pendulum,DT-FBSDE+iLQR,4,178,0.833913,3.271205
+L1 inverted pendulum,DT-FBSDE+iLQR,4,209,0.977762,3.079187
+L1 inverted pendulum,DT-FBSDE+iLQR,4,211,1.103609,3.015878
+L1 inverted pendulum,DT-FBSDE+iLQR,4,214,1.250845,2.933815
+L1 inverted pendulum,DT-FBSDE+iLQR,4,218,1.434905,2.707957
+L1 inverted pendulum,DT-FBSDE+iLQR,4,224,1.926465,2.636396
+L1 inverted pendulum,DT-FBSDE+iLQR,4,231,2.199320,2.636396
+L1 inverted pendulum,DT-FBSDE+iLQR,4,237,2.565178,2.619903
+L1 inverted pendulum,DT-FBSDE+iLQR,4,241,2.920719,2.605007
+L1 inverted pendulum,DT-FBSDE+iLQR,4,249,3.365564,2.601695
+L1 inverted pendulum,DT-FBSDE+iLQR,4,254,3.835363,2.592721
+L1 inverted pendulum,DT-FBSDE+iLQR,4,266,4.451375,2.569002
+L1 inverted pendulum,DT-FBSDE+iLQR,4,280,5.055419,2.564893
+L1 inverted pendulum,DT-FBSDE+iLQR,4,302,5.825241,2.564893
+L1 inverted pendulum,DT-FBSDE+iLQR,4,319,6.697589,2.569503
+L1 inverted pendulum,DT-FBSDE+iLQR,4,342,7.698521,2.569503
+L1 inverted pendulum,DT-FBSDE+iLQR,4,364,8.832044,2.498145
+L1 inverted pendulum,DT-FBSDE+iLQR,4,395,10.159615,2.464014
+L1 inverted pendulum,DT-FBSDE+iLQR,4,428,11.785800,2.465294
+L1 inverted pendulum,DT-FBSDE+iLQR,4,461,13.444916,2.473810
+L1 inverted pendulum,DT-FBSDE+iLQR,4,510,15.422546,2.473810
+L1 inverted pendulum,DT-FBSDE+iLQR,4,570,17.738725,2.473810
+L1 inverted pendulum,DT-FBSDE+iLQR,4,628,20.414668,2.473810
+L1 inverted pendulum,DT-FBSDE+iLQR,4,707,23.477967,2.473810
+L1 inverted pendulum,DT-FBSDE+iLQR,4,777,27.064491,2.473810
+L1 inverted pendulum,DT-FBSDE+iLQR,4,866,31.062535,2.473810
+L1 inverted pendulum,DT-FBSDE+iLQR,4,974,35.683753,2.460216
+L1 inverted pendulum,DT-FBSDE+iLQR,4,1106,41.056142,2.463646
+L1 inverted pendulum,DT-FBSDE+iLQR,4,1257,47.272088,2.469164
+L1 inverted pendulum,DT-FBSDE+iLQR,4,1428,54.284401,2.433554
+L1 inverted pendulum,DT-FBSDE+iLQR,4,1555,60.005224,2.447671
+L1 double inverted pendulum,DT-FBSDE,0,0,0.000000,99.019162
+L1 double inverted pendulum,DT-FBSDE,0,1,0.670189,57.249525
+L1 double inverted pendulum,DT-FBSDE,0,2,1.353490,55.374803
+L1 double inverted pendulum,DT-FBSDE,0,3,2.092292,52.344324
+L1 double inverted pendulum,DT-FBSDE,0,4,2.708164,52.344324
+L1 double inverted pendulum,DT-FBSDE,0,5,3.346339,52.344324
+L1 double inverted pendulum,DT-FBSDE,0,6,3.988585,52.344324
+L1 double inverted pendulum,DT-FBSDE,0,7,4.744421,43.720416
+L1 double inverted pendulum,DT-FBSDE,0,8,5.448213,38.092818
+L1 double inverted pendulum,DT-FBSDE,0,9,6.193614,29.995954
+L1 double inverted pendulum,DT-FBSDE,0,10,6.868693,29.995954
+L1 double inverted pendulum,DT-FBSDE,0,12,8.225311,29.995954
+L1 double inverted pendulum,DT-FBSDE,0,13,8.849344,29.995954
+L1 double inverted pendulum,DT-FBSDE,0,15,10.271960,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,18,12.310660,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,20,13.580402,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,23,15.634125,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,27,18.291833,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,30,20.532939,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,35,24.035774,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,40,27.386452,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,46,31.359144,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,53,35.980202,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,61,41.237360,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,70,47.332694,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,81,54.468665,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,93,62.550181,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,107,71.937056,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,123,82.579255,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,142,95.173602,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,163,109.298240,21.687090
+L1 double inverted pendulum,DT-FBSDE,0,179,120.048792,21.687090
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,0,0.000000,99.019162
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,1,0.254243,26.140091
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,2,0.360882,26.140091
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,3,0.635586,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,4,0.762518,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,5,0.866437,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,7,0.972192,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,8,1.105819,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,13,1.351263,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,16,1.484802,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,23,1.653050,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,30,1.902163,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,47,2.220496,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,70,2.518329,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,91,2.892185,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,126,3.319948,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,170,3.832608,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,219,4.414680,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,278,5.162672,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,347,5.810531,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,443,6.671816,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,475,8.249008,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,476,8.939031,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,478,10.233334,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,481,12.280237,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,483,13.606387,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,486,15.643048,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,490,18.296515,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,493,20.398142,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,498,23.893460,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,503,27.254861,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,509,31.221658,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,516,35.792425,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,524,41.114277,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,533,47.481889,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,543,54.445745,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,555,62.579863,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,569,71.866957,4.724865
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,585,83.154232,4.601479
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,601,95.514562,4.601479
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,620,109.732934,4.601479
+L1 double inverted pendulum,DT-FBSDE+iLQR,0,634,120.326851,4.601479
+L1 double inverted pendulum,DT-FBSDE,1,0,0.000000,99.019162
+L1 double inverted pendulum,DT-FBSDE,1,1,0.597504,54.077346
+L1 double inverted pendulum,DT-FBSDE,1,2,1.237272,47.291626
+L1 double inverted pendulum,DT-FBSDE,1,3,1.837305,47.291626
+L1 double inverted pendulum,DT-FBSDE,1,4,2.468894,44.933169
+L1 double inverted pendulum,DT-FBSDE,1,5,3.149212,44.933169
+L1 double inverted pendulum,DT-FBSDE,1,6,3.767105,44.933169
+L1 double inverted pendulum,DT-FBSDE,1,7,4.380414,44.933169
+L1 double inverted pendulum,DT-FBSDE,1,8,4.972937,44.933169
+L1 double inverted pendulum,DT-FBSDE,1,9,5.629151,44.933169
+L1 double inverted pendulum,DT-FBSDE,1,10,6.318689,44.933169
+L1 double inverted pendulum,DT-FBSDE,1,11,6.958504,44.933169
+L1 double inverted pendulum,DT-FBSDE,1,13,8.284667,34.848637
+L1 double inverted pendulum,DT-FBSDE,1,14,8.990511,34.848637
+L1 double inverted pendulum,DT-FBSDE,1,16,10.525980,33.671411
+L1 double inverted pendulum,DT-FBSDE,1,18,11.802669,33.671411
+L1 double inverted pendulum,DT-FBSDE,1,21,13.724060,33.671411
+L1 double inverted pendulum,DT-FBSDE,1,24,15.693832,33.671411
+L1 double inverted pendulum,DT-FBSDE,1,28,18.293136,33.671411
+L1 double inverted pendulum,DT-FBSDE,1,32,20.873283,33.671411
+L1 double inverted pendulum,DT-FBSDE,1,36,23.471271,33.671411
+L1 double inverted pendulum,DT-FBSDE,1,42,27.345173,33.671411
+L1 double inverted pendulum,DT-FBSDE,1,48,31.212098,33.671411
+L1 double inverted pendulum,DT-FBSDE,1,55,35.892729,30.995094
+L1 double inverted pendulum,DT-FBSDE,1,64,41.552453,30.995094
+L1 double inverted pendulum,DT-FBSDE,1,73,47.412770,30.995094
+L1 double inverted pendulum,DT-FBSDE,1,84,54.797607,25.652435
+L1 double inverted pendulum,DT-FBSDE,1,95,62.913624,16.447272
+L1 double inverted pendulum,DT-FBSDE,1,108,71.932642,16.447272
+L1 double inverted pendulum,DT-FBSDE,1,124,82.953831,16.447272
+L1 double inverted pendulum,DT-FBSDE,1,141,94.935257,12.470561
+L1 double inverted pendulum,DT-FBSDE,1,162,109.540520,12.470561
+L1 double inverted pendulum,DT-FBSDE,1,177,120.204567,12.470561
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,0,0.000000,99.019162
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,1,0.245742,187.693857
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,2,0.529914,107.479183
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,3,0.790228,82.423202
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,4,1.043660,18.516298
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,5,1.167289,18.516298
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,7,1.290583,18.516298
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,10,1.520146,18.516298
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,15,1.649315,18.516298
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,20,1.954043,18.516298
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,30,2.232722,18.516298
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,47,2.581787,18.516298
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,73,2.976871,18.516298
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,109,3.316028,18.516298
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,148,3.824499,18.516298
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,184,4.384101,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,252,5.044507,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,321,5.802334,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,421,6.671734,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,492,8.325556,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,493,8.973557,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,495,10.329443,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,498,12.297990,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,500,13.570450,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,503,15.500100,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,507,18.116852,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,511,20.696728,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,516,24.027615,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,521,27.322814,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,526,31.335446,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,533,36.201897,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,541,41.485323,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,550,47.573709,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,560,54.275803,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,573,62.787332,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,587,72.137041,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,603,83.048560,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,621,95.193797,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,642,109.428495,6.133283
+L1 double inverted pendulum,DT-FBSDE+iLQR,1,658,120.325048,6.133283
+L1 double inverted pendulum,DT-FBSDE,2,0,0.000000,99.019162
+L1 double inverted pendulum,DT-FBSDE,2,1,0.641196,70.858188
+L1 double inverted pendulum,DT-FBSDE,2,2,1.374217,68.629276
+L1 double inverted pendulum,DT-FBSDE,2,3,2.117646,67.707944
+L1 double inverted pendulum,DT-FBSDE,2,4,2.709816,67.707944
+L1 double inverted pendulum,DT-FBSDE,2,5,3.362700,67.707944
+L1 double inverted pendulum,DT-FBSDE,2,6,4.010411,67.707944
+L1 double inverted pendulum,DT-FBSDE,2,7,4.691846,67.707944
+L1 double inverted pendulum,DT-FBSDE,2,8,5.311258,67.707944
+L1 double inverted pendulum,DT-FBSDE,2,9,6.085341,52.621587
+L1 double inverted pendulum,DT-FBSDE,2,10,6.741688,52.621587
+L1 double inverted pendulum,DT-FBSDE,2,12,8.178372,47.923519
+L1 double inverted pendulum,DT-FBSDE,2,13,9.038483,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,15,10.369511,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,17,11.666889,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,20,13.538550,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,23,15.493332,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,27,18.041720,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,31,20.840126,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,36,24.069547,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,41,27.390645,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,47,31.551887,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,54,36.213697,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,62,41.580005,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,71,47.527487,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,82,54.633214,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,94,62.668944,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,108,71.768980,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,124,82.761483,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,143,95.203936,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,164,109.242202,41.173462
+L1 double inverted pendulum,DT-FBSDE,2,180,120.201799,41.173462
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,0,0.000000,99.019162
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,1,0.248706,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,2,0.352892,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,3,0.460029,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,4,0.567993,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,5,0.674194,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,7,0.793193,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,8,0.906375,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,10,1.013255,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,13,1.131072,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,16,1.250967,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,24,1.511857,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,30,1.665774,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,42,1.930047,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,43,2.665712,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,44,3.434391,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,45,4.152073,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,46,4.965404,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,47,5.738647,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,48,6.451202,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,49,7.227522,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,50,7.937285,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,52,9.378387,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,54,10.747605,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,56,12.193611,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,58,13.681527,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,61,15.880699,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,64,18.127298,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,68,21.083349,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,72,23.931403,9.917272
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,77,27.697184,9.812313
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,82,31.468230,9.812313
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,88,36.086773,9.501600
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,95,41.272435,9.501600
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,103,47.323760,9.501600
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,113,54.802878,9.501600
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,124,63.022249,9.501600
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,136,71.909588,9.501600
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,150,82.738393,9.501600
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,167,95.167482,9.501600
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,186,109.545662,9.501600
+L1 double inverted pendulum,DT-FBSDE+iLQR,2,200,120.002729,9.501600
+L1 double inverted pendulum,DT-FBSDE,3,0,0.000000,99.019162
+L1 double inverted pendulum,DT-FBSDE,3,1,0.636176,64.825398
+L1 double inverted pendulum,DT-FBSDE,3,2,1.329317,54.545394
+L1 double inverted pendulum,DT-FBSDE,3,3,2.067240,46.211331
+L1 double inverted pendulum,DT-FBSDE,3,4,2.712952,46.211331
+L1 double inverted pendulum,DT-FBSDE,3,5,3.397413,44.751934
+L1 double inverted pendulum,DT-FBSDE,3,6,4.096467,42.020807
+L1 double inverted pendulum,DT-FBSDE,3,7,4.791182,31.090851
+L1 double inverted pendulum,DT-FBSDE,3,8,5.412869,31.090851
+L1 double inverted pendulum,DT-FBSDE,3,9,6.200149,26.834066
+L1 double inverted pendulum,DT-FBSDE,3,10,6.869492,26.834066
+L1 double inverted pendulum,DT-FBSDE,3,12,8.335570,12.283590
+L1 double inverted pendulum,DT-FBSDE,3,13,9.176653,11.778985
+L1 double inverted pendulum,DT-FBSDE,3,15,10.702602,11.778985
+L1 double inverted pendulum,DT-FBSDE,3,17,12.442337,10.273247
+L1 double inverted pendulum,DT-FBSDE,3,19,13.804262,10.273247
+L1 double inverted pendulum,DT-FBSDE,3,22,15.871786,10.273247
+L1 double inverted pendulum,DT-FBSDE,3,25,18.107239,10.273247
+L1 double inverted pendulum,DT-FBSDE,3,29,21.019722,10.273247
+L1 double inverted pendulum,DT-FBSDE,3,33,23.928533,10.273247
+L1 double inverted pendulum,DT-FBSDE,3,38,27.472731,10.273247
+L1 double inverted pendulum,DT-FBSDE,3,44,31.531875,10.273247
+L1 double inverted pendulum,DT-FBSDE,3,50,35.788663,9.637314
+L1 double inverted pendulum,DT-FBSDE,3,58,41.316634,9.637314
+L1 double inverted pendulum,DT-FBSDE,3,67,47.494537,9.637314
+L1 double inverted pendulum,DT-FBSDE,3,77,54.442366,8.818917
+L1 double inverted pendulum,DT-FBSDE,3,89,63.252029,8.736841
+L1 double inverted pendulum,DT-FBSDE,3,101,72.075127,5.121671
+L1 double inverted pendulum,DT-FBSDE,3,116,83.112818,5.121671
+L1 double inverted pendulum,DT-FBSDE,3,133,95.454081,5.121671
+L1 double inverted pendulum,DT-FBSDE,3,153,109.825486,5.121671
+L1 double inverted pendulum,DT-FBSDE,3,168,120.485356,5.121671
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,0,0.000000,99.019162
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,1,0.286644,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,2,0.394342,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,3,0.516004,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,4,0.626128,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,5,0.743517,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,7,0.865753,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,8,0.975627,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,10,1.092832,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,14,1.249521,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,20,1.522694,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,24,1.668969,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,37,1.915564,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,47,2.199652,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,73,2.605018,14.204697
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,91,2.983264,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,123,3.335593,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,163,3.835118,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,222,4.388499,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,274,5.085660,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,276,6.435356,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,277,7.094330,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,278,7.788142,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,280,9.210986,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,282,10.515039,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,284,11.916116,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,287,14.049991,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,290,15.992161,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,293,17.966179,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,297,20.937925,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,301,23.786995,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,306,27.329319,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,311,31.149394,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,318,36.066858,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,325,41.254532,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,334,47.441083,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,344,54.287753,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,356,62.765412,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,369,72.250957,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,384,82.804701,4.923195
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,402,95.555779,2.897308
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,422,109.449461,2.897308
+L1 double inverted pendulum,DT-FBSDE+iLQR,3,438,120.324867,2.897308
+L1 double inverted pendulum,DT-FBSDE,4,0,0.000000,99.019162
+L1 double inverted pendulum,DT-FBSDE,4,1,0.666018,60.956680
+L1 double inverted pendulum,DT-FBSDE,4,2,1.261838,49.867474
+L1 double inverted pendulum,DT-FBSDE,4,3,1.932552,40.865667
+L1 double inverted pendulum,DT-FBSDE,4,4,2.618648,28.266490
+L1 double inverted pendulum,DT-FBSDE,4,5,3.222816,28.266490
+L1 double inverted pendulum,DT-FBSDE,4,6,3.893575,28.266490
+L1 double inverted pendulum,DT-FBSDE,4,7,4.792712,26.250780
+L1 double inverted pendulum,DT-FBSDE,4,8,5.587912,24.940901
+L1 double inverted pendulum,DT-FBSDE,4,9,6.333498,24.940901
+L1 double inverted pendulum,DT-FBSDE,4,10,6.986150,24.940901
+L1 double inverted pendulum,DT-FBSDE,4,12,8.420452,11.368197
+L1 double inverted pendulum,DT-FBSDE,4,13,9.145637,8.253263
+L1 double inverted pendulum,DT-FBSDE,4,15,10.646417,7.055883
+L1 double inverted pendulum,DT-FBSDE,4,17,12.042270,7.055883
+L1 double inverted pendulum,DT-FBSDE,4,20,14.097749,7.055883
+L1 double inverted pendulum,DT-FBSDE,4,23,16.116218,7.055883
+L1 double inverted pendulum,DT-FBSDE,4,26,18.329876,6.154706
+L1 double inverted pendulum,DT-FBSDE,4,29,20.559176,5.576144
+L1 double inverted pendulum,DT-FBSDE,4,34,23.995572,4.903277
+L1 double inverted pendulum,DT-FBSDE,4,38,26.997780,4.903277
+L1 double inverted pendulum,DT-FBSDE,4,44,31.422212,4.462487
+L1 double inverted pendulum,DT-FBSDE,4,50,36.331558,4.308000
+L1 double inverted pendulum,DT-FBSDE,4,56,41.092264,4.307333
+L1 double inverted pendulum,DT-FBSDE,4,65,47.522106,4.208681
+L1 double inverted pendulum,DT-FBSDE,4,74,54.367301,4.208681
+L1 double inverted pendulum,DT-FBSDE,4,83,62.538557,4.120239
+L1 double inverted pendulum,DT-FBSDE,4,95,71.784440,3.926799
+L1 double inverted pendulum,DT-FBSDE,4,110,83.207116,3.926799
+L1 double inverted pendulum,DT-FBSDE,4,126,95.043932,3.926799
+L1 double inverted pendulum,DT-FBSDE,4,146,109.688895,3.845743
+L1 double inverted pendulum,DT-FBSDE,4,161,120.378475,3.845743
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,0,0.000000,99.019162
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,1,0.277316,14.044654
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,2,0.407283,14.044654
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,3,0.522312,14.044654
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,4,0.652544,14.044654
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,5,0.927026,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,7,1.050812,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,8,1.176374,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,10,1.306220,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,13,1.438573,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,20,1.729757,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,27,1.902131,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,38,2.193433,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,55,2.507214,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,73,2.931572,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,101,3.320056,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,139,3.818427,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,178,4.419856,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,239,5.047259,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,317,5.798827,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,396,6.668560,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,496,7.670846,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,582,9.499431,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,583,10.316894,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,586,12.268330,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,588,13.630274,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,591,15.627938,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,595,18.340574,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,599,20.996823,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,603,24.013780,12.584380
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,608,27.432039,10.187343
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,613,31.498572,3.917759
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,619,35.874467,3.869495
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,627,41.557966,3.869495
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,636,47.801161,3.869495
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,646,54.828861,3.869495
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,657,62.445134,3.869495
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,671,72.493770,3.869495
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,686,82.609784,3.869495
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,704,95.272713,3.869495
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,725,109.527338,3.869495
+L1 double inverted pendulum,DT-FBSDE+iLQR,4,741,120.458387,3.869495
