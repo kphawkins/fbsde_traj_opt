@@ -1,0 +1,268 @@
+{
+  "grid_optima": {
+    "L1 double integrator": 4.136748,
+    "L1 inverted pendulum": 2.297722
+  },
+  "runs": [
+    {
+      "problem": "L1 double integrator",
+      "method": "DT-FBSDE",
+      "config": "old",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 4.340043,
+        "5.0": 4.264956,
+        "15.0": 4.216101,
+        "30.0": 4.200635,
+        "final": 4.196889
+      },
+      "final_costs": [
+        4.171578,
+        4.176622,
+        4.196889,
+        4.205759,
+        4.206412
+      ],
+      "median_iterations": 1212,
+      "median_final_gap": 0.014538231480380137
+    },
+    {
+      "problem": "L1 double integrator",
+      "method": "DT-FBSDE",
+      "config": "new",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 4.248733,
+        "5.0": 4.186938,
+        "15.0": 4.169333,
+        "30.0": 4.169864,
+        "final": 4.161527
+      },
+      "final_costs": [
+        4.156492,
+        4.15854,
+        4.164836,
+        4.16538,
+        4.161527
+      ],
+      "median_iterations": 4923,
+      "median_final_gap": 0.005989970866004057
+    },
+    {
+      "problem": "L1 double integrator",
+      "method": "DT-FBSDE+iLQR",
+      "config": "old",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 4.229192,
+        "5.0": 4.211597,
+        "15.0": 4.201202,
+        "30.0": 4.198298,
+        "final": 4.186653
+      },
+      "final_costs": [
+        4.169246,
+        4.186653,
+        4.161494,
+        4.192134,
+        4.192215
+      ],
+      "median_iterations": 1325,
+      "median_final_gap": 0.012063824047295002
+    },
+    {
+      "problem": "L1 double integrator",
+      "method": "DT-FBSDE+iLQR",
+      "config": "new",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 4.214798,
+        "5.0": 4.184306,
+        "15.0": 4.176896,
+        "30.0": 4.165518,
+        "final": 4.16074
+      },
+      "final_costs": [
+        4.169823,
+        4.151773,
+        4.156475,
+        4.163245,
+        4.16074
+      ],
+      "median_iterations": 5061,
+      "median_final_gap": 0.005799724807989293
+    },
+    {
+      "problem": "L1 double inverted pendulum",
+      "method": "DT-FBSDE",
+      "config": "old",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 60.95668,
+        "5.0": 43.720416,
+        "15.0": 21.68709,
+        "30.0": 21.68709,
+        "final": 12.470561
+      },
+      "final_costs": [
+        21.68709,
+        12.470561,
+        41.173462,
+        5.121671,
+        3.845743
+      ],
+      "median_iterations": 177
+    },
+    {
+      "problem": "L1 double inverted pendulum",
+      "method": "DT-FBSDE",
+      "config": "new",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 14.05598,
+        "5.0": 11.255927,
+        "15.0": 5.497994,
+        "30.0": 5.372214,
+        "final": 4.776786
+      },
+      "final_costs": [
+        4.44498,
+        4.281447,
+        4.892161,
+        5.033621,
+        4.776786
+      ],
+      "median_iterations": 162
+    },
+    {
+      "problem": "L1 double inverted pendulum",
+      "method": "DT-FBSDE+iLQR",
+      "config": "old",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 12.58438,
+        "5.0": 6.133283,
+        "15.0": 6.133283,
+        "30.0": 6.133283,
+        "final": 4.601479
+      },
+      "final_costs": [
+        4.601479,
+        6.133283,
+        9.5016,
+        2.897308,
+        3.869495
+      ],
+      "median_iterations": 634
+    },
+    {
+      "problem": "L1 double inverted pendulum",
+      "method": "DT-FBSDE+iLQR",
+      "config": "new",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 37.529388,
+        "5.0": 10.69489,
+        "15.0": 8.150048,
+        "30.0": 5.160079,
+        "final": 3.992847
+      },
+      "final_costs": [
+        5.630796,
+        3.458025,
+        4.642026,
+        2.838681,
+        3.992847
+      ],
+      "median_iterations": 462
+    },
+    {
+      "problem": "L1 inverted pendulum",
+      "method": "DT-FBSDE",
+      "config": "old",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 3.334354,
+        "5.0": 2.750295,
+        "15.0": 2.638496,
+        "30.0": 2.581867,
+        "final": 2.516955
+      },
+      "final_costs": [
+        2.728505,
+        2.418574,
+        2.52812,
+        2.465652,
+        2.516955
+      ],
+      "median_iterations": 1334,
+      "median_final_gap": 0.09541319620041078
+    },
+    {
+      "problem": "L1 inverted pendulum",
+      "method": "DT-FBSDE",
+      "config": "new",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 2.89731,
+        "5.0": 2.560468,
+        "15.0": 2.477634,
+        "30.0": 2.43164,
+        "final": 2.383239
+      },
+      "final_costs": [
+        2.375719,
+        2.383239,
+        2.403068,
+        2.376018,
+        2.416998
+      ],
+      "median_iterations": 2540,
+      "median_final_gap": 0.03721816651448706
+    },
+    {
+      "problem": "L1 inverted pendulum",
+      "method": "DT-FBSDE+iLQR",
+      "config": "old",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 3.151064,
+        "5.0": 2.579782,
+        "15.0": 2.553294,
+        "30.0": 2.495761,
+        "final": 2.457871
+      },
+      "final_costs": [
+        2.601283,
+        2.414928,
+        2.457871,
+        2.506992,
+        2.447671
+      ],
+      "median_iterations": 1544,
+      "median_final_gap": 0.06969903234594965
+    },
+    {
+      "problem": "L1 inverted pendulum",
+      "method": "DT-FBSDE+iLQR",
+      "config": "new",
+      "seeds": 5,
+      "median_cost_at": {
+        "1.0": 2.727671,
+        "5.0": 2.52525,
+        "15.0": 2.429056,
+        "30.0": 2.408389,
+        "final": 2.396029
+      },
+      "final_costs": [
+        2.402707,
+        2.396029,
+        2.431364,
+        2.363954,
+        2.355908
+      ],
+      "median_iterations": 2693,
+      "median_final_gap": 0.04278454921874797
+    }
+  ]
+}
