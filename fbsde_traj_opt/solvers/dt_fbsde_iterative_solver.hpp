@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <concepts>
 #include <deque>
 #include <limits>
 #include <optional>
@@ -264,6 +265,32 @@ struct DtFbsdeIterativeOptions {
   // Score each candidate on the first this many evaluation rollouts first, and on all of them only
   // if it beats the current policy there. Zero scores every candidate on all of them.
   std::size_t screening_rollouts = 0;
+
+  // The blending step the line search tries first, in (0, 1]; each later candidate halves it. With
+  // `adaptive_initial_step`, an accepted step `s` makes the next line search start at min(1, 2 s)
+  // instead, and a rejected one leaves the start where it was -- a trust radius remembered across
+  // iterations. Either way only the candidates proposed change; each is accepted by the same test.
+  Scalar initial_step = Scalar{1};
+  bool adaptive_initial_step = false;
+
+  // Pool the forward batches since the last accepted update into each stage's fit, up to this many
+  // batches including the current one; zero or one fits this pass's batch alone. The Taylor
+  // noiseless target estimates the value of the current policy, which changes only on acceptance, so
+  // every batch drawn since then is a sample for the same regression. Each kept batch's targets are
+  // recomputed every pass from the stage after's fresh fit, so none is stale; the pool is emptied when
+  // an update is accepted. Needs the Taylor noiseless target and a representation fitted in closed
+  // form through its parameter gradient (PolynomialValueFunctionApprox); not with slope matching or
+  // time sharing.
+  std::size_t pool_batches_since_acceptance = 0;
+
+  // A trust region in function space: every stage's fit also pulls the fitted function toward the
+  // current one at the states the current policy visits on the first `anchor_rollouts` evaluation
+  // rollouts, with total weight `anchor_weight` times the data's. Coefficient blending shrinks the
+  // change equally everywhere, including where no sample constrains it; the anchors hold the function
+  // where the current policy acts and leave it free elsewhere. Zero disables it. The same
+  // restrictions as pooling apply.
+  Scalar anchor_weight = Scalar{0};
+  std::size_t anchor_rollouts = 32;
 
   // Adaptive diffusion inflation; see the class comment. After `stall_patience` consecutive
   // iterations whose cost fell by no more than `stall_relative_improvement` of itself, the forward
@@ -564,6 +591,20 @@ class DtFbsdeIterativeSolver {
                       (DtFbsdeNormalEquationsOf<ValueFunctionT>::kSupported && options.replay_batches <= 1),
                   "DtFbsdeIterativeSolver::Make: time sharing needs a representation that exposes its normal "
                   "equations, and no replay.");
+    RESULT_ASSERT(std::isfinite(options.initial_step) && options.initial_step > Scalar{0} &&
+                      options.initial_step <= Scalar{1},
+                  "DtFbsdeIterativeSolver::Make: the initial line search step must lie in (0, 1].");
+    RESULT_ASSERT(std::isfinite(options.anchor_weight) && options.anchor_weight >= Scalar{0},
+                  "DtFbsdeIterativeSolver::Make: the anchor weight must be finite and non-negative.");
+    RESULT_ASSERT(options.anchor_weight == Scalar{0} || options.anchor_rollouts >= 1,
+                  "DtFbsdeIterativeSolver::Make: anchoring needs at least one anchor rollout.");
+    RESULT_ASSERT(!UsesPooledFit(options) ||
+                      (kPooledFitSupported && options.backward_target == DtFbsdeBackwardTarget::kTaylorNoiseless &&
+                       options.slope_weight == Scalar{0} && !TimeSharingEnabled(options.time_sharing) &&
+                       options.normal_equation_memory == Scalar{0}),
+                  "DtFbsdeIterativeSolver::Make: pooling and anchoring need the Taylor noiseless target, a "
+                  "representation with a parameter gradient, and no slope matching, time sharing, or normal "
+                  "equation memory.");
     RESULT_ASSERT((lower_bounds.array() <= Scalar{0}).all() && (upper_bounds.array() >= Scalar{0}).all() &&
                       lower_bounds.allFinite() && upper_bounds.allFinite(),
                   "DtFbsdeIterativeSolver::Make: every control's bounds must be finite and contain zero.");
@@ -595,6 +636,8 @@ class DtFbsdeIterativeSolver {
       }
     }
     solver.current_costs_ = solver.Evaluate(solver.current_);
+    solver.start_step_ = options.initial_step;
+    solver.OnCurrentChanged();
     if (options.screening_rollouts > 0) {
       solver.current_screened_cost_ = solver.Evaluate(solver.current_, options.screening_rollouts).total;
     }
@@ -642,7 +685,7 @@ class DtFbsdeIterativeSolver {
     // The excess of the previous candidate, at twice this one's step, over the current cost -- on
     // the screening rollouts when screening, so that every excess compared is on the same rollouts.
     auto previous_excess = Scalar{0};
-    auto step = Scalar{1};
+    auto step = start_step_;
     std::optional<profiling::ScopedPhase> line_search_phase(std::in_place, profiling::Phase::kLineSearch);
     for (std::size_t halving = 0; halving <= options_.max_step_halvings; ++halving, step *= Scalar{0.5}) {
       {
@@ -676,6 +719,10 @@ class DtFbsdeIterativeSolver {
           current_costs_ = trial_costs;
           current_screened_cost_ = screened_cost;
           report.accepted_step = step;
+          if (options_.adaptive_initial_step) {
+            start_step_ = std::min(Scalar{1}, Scalar{2} * step);
+          }
+          OnCurrentChanged();
           break;
         }
       }
@@ -738,6 +785,7 @@ class DtFbsdeIterativeSolver {
     }
     forward_model_.set_scale(scale);
     current_costs_ = Evaluate(current_);
+    OnCurrentChanged();
     if (options_.screening_rollouts > 0) {
       current_screened_cost_ = Evaluate(current_, options_.screening_rollouts).total;
     }
@@ -782,6 +830,7 @@ class DtFbsdeIterativeSolver {
     stall_factor_ = Scalar{1};
     stalled_iterations_ = 0;
     current_costs_ = Evaluate(current_);
+    OnCurrentChanged();
     if (options_.screening_rollouts > 0) {
       current_screened_cost_ = Evaluate(current_, options_.screening_rollouts).total;
     }
@@ -846,6 +895,23 @@ class DtFbsdeIterativeSolver {
   static constexpr int kHalf = kSampleCount / 2;
   using HalfStates = ValueFunctionStateBatch<State, kHalf>;
   using HalfValues = ValueFunctionValueBatch<State, kHalf>;
+
+  // Whether the representation can be fitted by the pooled closed-form solve.
+  static constexpr bool kPooledFitSupported = requires(ValueFunctionT value_function, const State& state) {
+    { value_function.ParameterGradient(state) } -> std::convertible_to<typename ValueFunctionT::ParameterVector>;
+    value_function.SetParameters(typename ValueFunctionT::ParameterVector{});
+  };
+
+  // A forward batch kept for pooling at one stage: its states, the controls its paths took from them,
+  // the running cost each column had accrued, and how many leading columns are paths, not probes.
+  struct PoolBlock {
+    StateBlock states;
+    ControlBlock controls;
+    ValueBlock accrued;
+    std::size_t path_count = 0;
+  };
+
+  using AnchorBlock = Eigen::Matrix<Scalar, N, Eigen::Dynamic>;
 
   // A half-batch's states and accrued costs, kept for replay; targets are recomputed when replayed.
   struct ReplayBlock {
@@ -1388,6 +1454,10 @@ class DtFbsdeIterativeSolver {
         stats.taylor_residual += residuals.sum() / off_policy_count;
       }
       fitted_[stage] = current_[stage];
+      if (UsesPooledFit(options_)) {
+        RESULT_RETURN_IF_ERROR(FitPooledStage(stage, targets, girsanov_weights, target_policy, estimator, path_count));
+        continue;
+      }
       if (!shared_fits_.empty()) {
         RESULT_RETURN_IF_ERROR(
             FitSharedStage<kSampleCount>(fitted_,
@@ -1641,6 +1711,160 @@ class DtFbsdeIterativeSolver {
     }
   }
 
+  // The Taylor noiseless target of one kept sample, recomputed against this pass's fit of the stage
+  // after, and the sample's Girsanov weight (one unless the options ask for it); the same estimate the
+  // pass makes for its own batch. `control` is the one the forward pass took from `state`, or null
+  // for a probe, which is evaluated on-policy.
+  template <typename EstimatorT>
+  [[nodiscard]] auto PooledTarget(std::size_t stage,
+                                  const State& state,
+                                  const Control* control,
+                                  const Policy& target_policy,
+                                  const EstimatorT& estimator) const noexcept -> std::pair<Scalar, Scalar> {
+    const ValueFunctionT& next = fitted_[stage + 1];
+    const State uncontrolled = forward_model_.state_drift()(stage, state);
+    const Eigen::Matrix<Scalar, N, M> columns = forward_model_.control_drift_mat()(stage, state);
+    const Control policy_control = target_policy(stage, state);
+    const State policy_drift = uncontrolled + (columns * policy_control);
+    const State drift = control != nullptr ? State(uncontrolled + (columns * (*control))) : policy_drift;
+    const State mean_next = state + drift;
+    const State gradient = next.Gradient(mean_next);
+    const StateMat hessian = next.Hessian(mean_next);
+    const State difference = policy_drift - drift;
+    const Scalar estimate =
+        estimator.EstimateFromParts(stage, state, drift, policy_control, next(mean_next), gradient, hessian);
+    const Scalar truncated =
+        estimate -
+        (options_.taylor_correction_order < 2 ? Scalar{0.5} * difference.dot(hessian * difference) : Scalar{0}) -
+        (options_.taylor_correction_order < 1 ? gradient.dot(difference) : Scalar{0});
+    auto weight = Scalar{1};
+    if (options_.girsanov_weight > Scalar{0}) {
+      const Scalar norm = forward_model_.diffusion()(stage, state).fullPivLu().solve(difference).norm();
+      weight = std::exp(-Scalar{0.5} * options_.girsanov_weight * norm * norm);
+    }
+    return {std::max(truncated, options_.target_floor), weight};
+  }
+
+  // Fits stage `stage` of `fitted_` by weighted least squares over this pass's batch, the batches
+  // pooled since the last acceptance, and the trust region's anchors; see
+  // DtFbsdeIterativeOptions::pool_batches_since_acceptance and ::anchor_weight. `targets` and
+  // `girsanov_weights` are this pass's batch's, already computed; the batch then joins the pool.
+  template <typename EstimatorT>
+  auto FitPooledStage(std::size_t stage,
+                      const ValueBlock& targets,
+                      const ValueBlock& girsanov_weights,
+                      const Policy& target_policy,
+                      const EstimatorT& estimator,
+                      std::size_t path_count) noexcept -> Result<> {
+    if constexpr (kPooledFitSupported) {
+      using ParameterVector = typename ValueFunctionT::ParameterVector;
+      using ParameterMat = Eigen::Matrix<Scalar, ParameterVector::RowsAtCompileTime, ParameterVector::RowsAtCompileTime>;
+      const profiling::ScopedPhase fit_phase(profiling::Phase::kBackwardFit);
+      ValueFunctionT& value_function = fitted_[stage];
+      ParameterMat normal_matrix = ParameterMat::Zero();
+      ParameterVector normal_vector = ParameterVector::Zero();
+      Scalar data_weight = Scalar{0};
+      std::size_t rows = 0;
+      const auto accumulate = [&](const StateBlock& states, const ValueBlock& block_targets, const ValueBlock& weights) {
+        for (std::size_t sample = 0; sample < NumSamples; ++sample) {
+          const auto column = static_cast<Eigen::Index>(sample);
+          const ParameterVector features = value_function.ParameterGradient(State(states.col(column)));
+          normal_matrix.template selfadjointView<Eigen::Lower>().rankUpdate(features, weights[column]);
+          normal_vector += (weights[column] * block_targets[column]) * features;
+          data_weight += weights[column];
+        }
+        rows += NumSamples;
+      };
+      accumulate(states_[stage],
+                 targets,
+                 ValueBlock(SampleWeights<kSampleCount>(targets, accrued_before_[stage]).cwiseProduct(girsanov_weights)));
+
+      if (options_.pool_batches_since_acceptance > 1) {
+        std::deque<PoolBlock>& pool = pool_[stage];
+        for (const PoolBlock& block : pool) {
+          ValueBlock block_targets;
+          ValueBlock block_girsanov;
+          ParallelFor(NumSamples, [&](std::size_t sample) noexcept {
+            const auto column = static_cast<Eigen::Index>(sample);
+            const Control control = block.controls.col(column);
+            const auto [target, weight] = PooledTarget(stage,
+                                                       State(block.states.col(column)),
+                                                       sample < block.path_count ? &control : nullptr,
+                                                       target_policy,
+                                                       estimator);
+            block_targets[column] = target;
+            block_girsanov[column] = weight;
+          });
+          accumulate(block.states,
+                     block_targets,
+                     ValueBlock(SampleWeights<kSampleCount>(block_targets, block.accrued).cwiseProduct(block_girsanov)));
+        }
+        pool.push_front(PoolBlock{.states = states_[stage],
+                                  .controls = controls_[stage],
+                                  .accrued = accrued_before_[stage],
+                                  .path_count = path_count});
+        while (pool.size() + 1 > options_.pool_batches_since_acceptance) {
+          pool.pop_back();
+        }
+      }
+
+      if (options_.anchor_weight > Scalar{0} && stage < anchors_.size() && anchors_[stage].cols() > 0) {
+        const AnchorBlock& anchors = anchors_[stage];
+        const Scalar weight = options_.anchor_weight * data_weight / static_cast<Scalar>(anchors.cols());
+        for (Eigen::Index column = 0; column < anchors.cols(); ++column) {
+          const State state = anchors.col(column);
+          const ParameterVector features = value_function.ParameterGradient(state);
+          normal_matrix.template selfadjointView<Eigen::Lower>().rankUpdate(features, weight);
+          normal_vector += (weight * current_[stage](state)) * features;
+        }
+      }
+
+      // The ridge scales with the data rows, as the closed-form fit's does with its batch.
+      normal_matrix.diagonal().array() += options_.ridge * static_cast<Scalar>(rows);
+      const Eigen::LDLT<ParameterMat> factorization(normal_matrix.template selfadjointView<Eigen::Lower>());
+      RESULT_ASSERT(factorization.info() == Eigen::Success,
+                    "DtFbsdeIterativeSolver: the pooled normal equations are singular; add a ridge weight.");
+      const ParameterVector solution = factorization.solve(normal_vector);
+      RESULT_ASSERT(solution.allFinite(), "DtFbsdeIterativeSolver: the pooled fit produced non-finite coefficients.");
+      return value_function.SetParameters(solution);
+    } else {
+      (void)stage, (void)targets, (void)girsanov_weights, (void)target_policy, (void)estimator, (void)path_count;
+      return ErrorResult("DtFbsdeIterativeSolver: pooling needs a representation with a parameter gradient.");
+    }
+  }
+
+  // Called whenever the current table changes: empties the pool, whose batches estimated the old
+  // policy's value, and records the new policy's anchor states.
+  auto OnCurrentChanged() noexcept -> void {
+    for (auto& pool : pool_) {
+      pool.clear();
+    }
+    if (options_.anchor_weight <= Scalar{0}) {
+      return;
+    }
+    // The first `anchor_rollouts` evaluation rollouts, with the evaluation's own noise, as
+    // EvaluatePolicyByRollouts() draws them.
+    const std::size_t rollouts = options_.anchor_rollouts;
+    anchors_.assign(kNumControlStages, AnchorBlock(N, static_cast<Eigen::Index>(rollouts)));
+    const CounterBasedNormalSampler sampler(seed_ ^ kPolicyEvaluationStream);
+    const Policy policy = MakePolicy(current_);
+    ParallelFor(rollouts, [&](std::size_t rollout) noexcept {
+      State noise;
+      sampler.FillNoise(rollout, 0, noise);
+      State state = initial_mean_ + (initial_covariance_factor_ * noise);
+      for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
+        anchors_[stage].col(static_cast<Eigen::Index>(rollout)) = state;
+        const Control control = policy(stage, state);
+        sampler.FillNoise(rollout, stage + 1, noise);
+        state = forward_model_(stage, state, control, noise);
+      }
+    });
+  }
+
+  [[nodiscard]] static constexpr auto UsesPooledFit(const Options& options) noexcept -> bool {
+    return options.pool_batches_since_acceptance > 1 || options.anchor_weight > Scalar{0};
+  }
+
   // Writes `(1 - step) V~_current + step V~_fitted` into `trial_`, coefficient by coefficient --
   // which blends the functions themselves, since every table shares one normalization.
   auto BlendIntoTrial(Scalar step) noexcept -> Result<> {
@@ -1872,6 +2096,15 @@ class DtFbsdeIterativeSolver {
   std::vector<std::array<std::deque<ReplayBlock>, 2>> replay_ =
       options_.replay_batches > 1 ? std::vector<std::array<std::deque<ReplayBlock>, 2>>(NumStages)
                                   : std::vector<std::array<std::deque<ReplayBlock>, 2>>();
+
+  // The batches pooled since the last acceptance, newest first, per stage; empty unless pooling.
+  std::vector<std::deque<PoolBlock>> pool_ = options_.pool_batches_since_acceptance > 1
+                                                 ? std::vector<std::deque<PoolBlock>>(NumStages)
+                                                 : std::vector<std::deque<PoolBlock>>();
+  // The current policy's states on the anchor rollouts, per control stage; empty unless anchoring.
+  std::vector<AnchorBlock> anchors_;
+  // The step the next line search starts at; see DtFbsdeIterativeOptions::initial_step.
+  Scalar start_step_ = Scalar{1};
 
   // The sigma-point rule's points and weights, and the rotation the second half's points are turned by.
   SigmaPointSet<N, Scalar> sigma_points_ = MakeSigmaPoints<N, Scalar>(options_.sigma_point_rule);
