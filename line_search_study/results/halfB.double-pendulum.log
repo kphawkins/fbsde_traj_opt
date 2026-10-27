@@ -1,0 +1,12 @@
+
+=== L1 double inverted pendulum (120 s per run) ===
+L1 double inverted pendulum  DT-FBSDE           seed  0:   85.5183 ->    3.8523 (best    3.8523) in  120.66 s, 82 iterations
+L1 double inverted pendulum  DT-FBSDE           seed  1:   85.5183 ->    4.4139 (best    4.4139) in  121.08 s, 74 iterations
+L1 double inverted pendulum  DT-FBSDE           seed  2:   85.5183 ->    4.1737 (best    4.1737) in  121.44 s, 82 iterations
+L1 double inverted pendulum  DT-FBSDE           seed  3:   85.5183 ->    3.2283 (best    3.2283) in  120.95 s, 73 iterations
+L1 double inverted pendulum  DT-FBSDE           seed  4:   85.5183 ->    3.6644 (best    3.6644) in  121.00 s, 84 iterations
+L1 double inverted pendulum  DT-FBSDE           seed  5:   85.5183 ->    3.7351 (best    3.7321) in  121.25 s, 85 iterations
+L1 double inverted pendulum  DT-FBSDE           seed  6:   85.5183 ->    4.2499 (best    4.2499) in  120.33 s, 82 iterations
+L1 double inverted pendulum  DT-FBSDE           seed  7:   85.5183 ->    3.7051 (best    3.7051) in  120.05 s, 82 iterations
+
+Checkpoints in halfB.double-pendulum.ckpt.csv, MPC results in /dev/null, grid optima in halfB.double-pendulum.ref.csv

@@ -1,0 +1,9 @@
+
+=== L1 inverted pendulum (60 s per run) ===
+grid DP optimum, held out: 2.2977 (1024 rollouts), 2.3099 (first 128)
+L1 inverted pendulum         DT-FBSDE           seed  0:   80.6872 ->    2.3921 (best    2.3921) in   60.02 s, 1206 iterations
+L1 inverted pendulum         DT-FBSDE           seed  1:   80.6872 ->    2.4146 (best    2.4146) in   60.03 s, 1218 iterations
+L1 inverted pendulum         DT-FBSDE           seed  2:   80.6872 ->    2.4316 (best    2.4311) in   60.02 s, 1243 iterations
+L1 inverted pendulum         DT-FBSDE           seed  3:   80.6872 ->    2.4612 (best    2.4612) in   60.03 s, 1189 iterations
+
+Checkpoints in base.pendulum.ckpt.csv, MPC results in /dev/null, grid optima in base.pendulum.ref.csv
