@@ -184,6 +184,12 @@ struct DriverOptions {
   bool dt_adaptive_initial_step = false;
   std::size_t dt_pool_batches = 0;
   double dt_anchor_weight = 0.0;
+  // DT-FBSDE's proximal fit, the trust region inside the fit; off by default.
+  double dt_proximal_weight = 0.0;
+  double dt_proximal_memory = 0.9;
+  bool dt_proximal_line_search = false;
+  double dt_proximal_adaptation = 2.0;
+  double dt_proximal_rejection_adaptation = 2.0;
 
   // A cap on MPPI's budget below the benchmark's, for runs where its curve has long since flattened.
   double mppi_time_budget = 0.0;
@@ -859,6 +865,11 @@ auto SweepDtFbsdeOptions(const DriverOptions& options, double slope_weight) -> D
   solver.adaptive_initial_step = options.dt_adaptive_initial_step;
   solver.pool_batches_since_acceptance = options.dt_pool_batches;
   solver.anchor_weight = options.dt_anchor_weight;
+  solver.proximal_weight = options.dt_proximal_weight;
+  solver.proximal_memory = options.dt_proximal_memory;
+  solver.proximal_line_search = options.dt_proximal_line_search;
+  solver.proximal_adaptation = options.dt_proximal_adaptation;
+  solver.proximal_rejection_adaptation = options.dt_proximal_rejection_adaptation;
   return solver;
 }
 
@@ -1047,6 +1058,11 @@ auto PrintUsage() -> void {
       << "  --dt-adaptive-step on|off  start each line search at twice the last accepted step (default off)\n"
       << "  --dt-pool N              pool up to N forward batches since the last acceptance (default 0: off)\n"
       << "  --dt-anchor-weight W     function-space trust region weight (default 0: off)\n"
+      << "  --dt-proximal-weight W   initial weight of the proximal fit, the trust region in the fit (default 0: off)\n"
+      << "  --dt-proximal-memory R   per-iteration decay of the proximal fit's information (default 0.9)\n"
+      << "  --dt-proximal-search on|off  line search over the proximal weight instead of blends (default off)\n"
+      << "  --dt-proximal-adapt F    the weight's factor after an accepted update (default 2; 1: fixed)\n"
+      << "  --dt-proximal-reject F   the weight's factor after a rejected update (default 2; 1: unchanged)\n"
       << "  --mppi-time-budget S     cap on MPPI's charged seconds per run (default: the benchmark's)\n"
       << "  --seed-smoothing E       smoothing DT-FBSDE+iLQR's value expansions are taken at (default 1)\n"
       << "  --seed-ilqr-budget S     cap on DT-FBSDE+iLQR's charged seconds of iLQR (default 10)\n"
@@ -1152,6 +1168,17 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
       options.dt_pool_batches = count;
     } else if (argument == "--dt-anchor-weight") {
       options.dt_anchor_weight = number;
+    } else if (argument == "--dt-proximal-weight") {
+      options.dt_proximal_weight = number;
+    } else if (argument == "--dt-proximal-adapt") {
+      options.dt_proximal_adaptation = number;
+    } else if (argument == "--dt-proximal-reject") {
+      options.dt_proximal_rejection_adaptation = number;
+    } else if (argument == "--dt-proximal-memory") {
+      options.dt_proximal_memory = number;
+    } else if (argument == "--dt-proximal-search") {
+      RESULT_ASSERT(value == "on" || value == "off", "--dt-proximal-search is on or off.");
+      options.dt_proximal_line_search = value == "on";
     } else if (argument == "--integrator-slope-weight") {
       options.integrator_slope_weight = number;
     } else if (argument == "--pendulum-slope-weight") {

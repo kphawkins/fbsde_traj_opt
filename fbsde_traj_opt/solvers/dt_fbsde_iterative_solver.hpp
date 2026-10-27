@@ -292,6 +292,33 @@ struct DtFbsdeIterativeOptions {
   Scalar anchor_weight = Scalar{0};
   std::size_t anchor_rollouts = 32;
 
+  // A trust region inside the fit, in place of (or as well as) coefficient blending: every stage's fit
+  // adds a proximal term pulling the coefficients toward the current ones,
+  //
+  //   lambda * W * (theta - theta_current)' (G / w_G) (theta - theta_current),
+  //
+  // where W is this batch's total sample weight and G the Gram matrix of the earlier batches' samples,
+  // with total weight w_G, decayed by `proximal_memory` per iteration. Blending shrinks every
+  // coefficient equally; this holds the directions earlier data pinned down and lets the ones it never
+  // constrained move to the new batch's fit -- a Kalman-style update. At `lambda = 1` the prior counts
+  // as much as one batch. `lambda` starts at `proximal_weight` (zero disables all of this) and adapts
+  // like a Levenberg-Marquardt damping: divided by `proximal_adaptation` after an update the line
+  // search accepts at its first candidate, multiplied by it after one accepted at a later candidate,
+  // and multiplied by `proximal_rejection_adaptation` after a rejected one, within
+  // [`min_proximal_weight`, `max_proximal_weight`]. Most DT-FBSDE iterations are rejected because the
+  // proposal is noisy, not because it went too far, so a rejection factor of one -- leave the weight
+  // alone -- may suit it better than the classic doubling. With `proximal_line_search`, the line search's
+  // candidates are no longer blends: candidate h is the fit refitted at `lambda * 4^h`, from the same
+  // targets, and an accepted candidate h sets `lambda` to its own weight divided by the adaptation.
+  // Either way a candidate is accepted by the same test. The same restrictions as pooling apply.
+  Scalar proximal_weight = Scalar{0};
+  Scalar proximal_memory = Scalar{0.9};
+  Scalar proximal_adaptation = Scalar{2};
+  Scalar proximal_rejection_adaptation = Scalar{2};
+  Scalar min_proximal_weight = Scalar{1e-3};
+  Scalar max_proximal_weight = Scalar{1e3};
+  bool proximal_line_search = false;
+
   // Adaptive diffusion inflation; see the class comment. After `stall_patience` consecutive
   // iterations whose cost fell by no more than `stall_relative_improvement` of itself, the forward
   // pass's noise is multiplied by `diffusion_inflation_growth`, and again after every further such
@@ -473,6 +500,10 @@ struct DtFbsdeIterationReport {
   // How many candidate steps were rolled out before one was accepted or the halvings ran out.
   std::size_t candidates_tried = 0;
 
+  // The proximal weight the next iteration's fit uses, after this iteration's adaptation; zero when
+  // the proximal fit is off. See DtFbsdeIterativeOptions::proximal_weight.
+  Scalar proximal_weight = Scalar{0};
+
   // Wall-clock time spent in each phase, in seconds: the forward pass, the backward pass, and the
   // line search's blends and rollouts.
   double forward_seconds = 0.0;
@@ -598,6 +629,17 @@ class DtFbsdeIterativeSolver {
                   "DtFbsdeIterativeSolver::Make: the anchor weight must be finite and non-negative.");
     RESULT_ASSERT(options.anchor_weight == Scalar{0} || options.anchor_rollouts >= 1,
                   "DtFbsdeIterativeSolver::Make: anchoring needs at least one anchor rollout.");
+    RESULT_ASSERT(std::isfinite(options.proximal_weight) && options.proximal_weight >= Scalar{0} &&
+                      options.proximal_memory >= Scalar{0} && options.proximal_memory <= Scalar{1} &&
+                      std::isfinite(options.proximal_adaptation) && options.proximal_adaptation >= Scalar{1} &&
+                      std::isfinite(options.proximal_rejection_adaptation) &&
+                      options.proximal_rejection_adaptation >= Scalar{1} &&
+                      std::isfinite(options.max_proximal_weight) && options.min_proximal_weight > Scalar{0} &&
+                      options.min_proximal_weight <= options.max_proximal_weight,
+                  "DtFbsdeIterativeSolver::Make: the proximal weight must be non-negative, its memory in [0, 1], its "
+                  "adaptation at least one, and its bounds positive and ordered.");
+    RESULT_ASSERT(!options.proximal_line_search || options.proximal_weight > Scalar{0},
+                  "DtFbsdeIterativeSolver::Make: a line search over the proximal weight needs a proximal weight.");
     RESULT_ASSERT(!UsesPooledFit(options) ||
                       (kPooledFitSupported && options.backward_target == DtFbsdeBackwardTarget::kTaylorNoiseless &&
                        options.slope_weight == Scalar{0} && !TimeSharingEnabled(options.time_sharing) &&
@@ -637,6 +679,10 @@ class DtFbsdeIterativeSolver {
     }
     solver.current_costs_ = solver.Evaluate(solver.current_);
     solver.start_step_ = options.initial_step;
+    if (options.proximal_weight > Scalar{0}) {
+      solver.proximal_lambda_ =
+          std::clamp(options.proximal_weight, options.min_proximal_weight, options.max_proximal_weight);
+    }
     solver.OnCurrentChanged();
     if (options.screening_rollouts > 0) {
       solver.current_screened_cost_ = solver.Evaluate(solver.current_, options.screening_rollouts).total;
@@ -685,12 +731,20 @@ class DtFbsdeIterativeSolver {
     // The excess of the previous candidate, at twice this one's step, over the current cost -- on
     // the screening rollouts when screening, so that every excess compared is on the same rollouts.
     auto previous_excess = Scalar{0};
-    auto step = start_step_;
+    // A line search over the proximal weight needs a prior to weigh; the first pass has none, and
+    // blends instead.
+    const bool proximal_candidates =
+        options_.proximal_line_search && !proximal_.empty() && proximal_[0].prior.squaredNorm() > Scalar{0};
+    auto step = proximal_candidates ? Scalar{1} : start_step_;
+    std::optional<std::size_t> accepted_candidate;
     std::optional<profiling::ScopedPhase> line_search_phase(std::in_place, profiling::Phase::kLineSearch);
     for (std::size_t halving = 0; halving <= options_.max_step_halvings; ++halving, step *= Scalar{0.5}) {
       {
         const profiling::ScopedPhase blend_phase(profiling::Phase::kLineSearchBlend);
-        if (const Result<> blended = BlendIntoTrial(step); !blended.has_value()) {
+        const Result<> blended = proximal_candidates
+                                     ? ProximalIntoTrial(proximal_lambda_ * std::pow(Scalar{4}, static_cast<Scalar>(halving)))
+                                     : BlendIntoTrial(step);
+        if (!blended.has_value()) {
           return ErrorResult(blended.error().message, blended.error().location);
         }
       }
@@ -722,6 +776,7 @@ class DtFbsdeIterativeSolver {
           if (options_.adaptive_initial_step) {
             start_step_ = std::min(Scalar{1}, Scalar{2} * step);
           }
+          accepted_candidate = halving;
           OnCurrentChanged();
           break;
         }
@@ -733,6 +788,10 @@ class DtFbsdeIterativeSolver {
     }
     line_search_phase.reset();
     report.line_search_seconds = lap();
+    if (options_.proximal_weight > Scalar{0}) {
+      AdaptProximalWeight(accepted_candidate, proximal_candidates);
+    }
+    report.proximal_weight = proximal_lambda_;
 
     if (options_.reset_normal_equations_on_acceptance && report.accepted_step > Scalar{0}) {
       for (auto& halves : accumulated_) {
@@ -912,6 +971,19 @@ class DtFbsdeIterativeSolver {
   };
 
   using AnchorBlock = Eigen::Matrix<Scalar, N, Eigen::Dynamic>;
+  using DynamicMat = Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>;
+  using DynamicVector = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>;
+
+  // One stage's proximal fit: its latest pass's normal equations (ridge included), the prior term at
+  // unit weight that pass used, and the decayed Gram matrix of every batch so far with its total
+  // sample weight.
+  struct ProximalStage {
+    DynamicMat normal_matrix;
+    DynamicVector normal_vector;
+    DynamicMat prior;
+    DynamicMat information;
+    Scalar information_weight = Scalar{0};
+  };
 
   // A half-batch's states and accrued costs, kept for replay; targets are recomputed when replayed.
   struct ReplayBlock {
@@ -1821,6 +1893,24 @@ class DtFbsdeIterativeSolver {
 
       // The ridge scales with the data rows, as the closed-form fit's does with its batch.
       normal_matrix.diagonal().array() += options_.ridge * static_cast<Scalar>(rows);
+      if (options_.proximal_weight > Scalar{0}) {
+        // Kept for a line search over the weight, which refits from the same equations.
+        ProximalStage& kept = proximal_[stage];
+        kept.normal_matrix = normal_matrix.template selfadjointView<Eigen::Lower>();
+        kept.normal_vector = normal_vector;
+        kept.prior = kept.information_weight > Scalar{0}
+                         ? DynamicMat(data_weight * kept.information / kept.information_weight)
+                         : DynamicMat(DynamicMat::Zero(normal_matrix.rows(), normal_matrix.cols()));
+        DynamicMat data = kept.normal_matrix;
+        data.diagonal().array() -= options_.ridge * static_cast<Scalar>(rows);
+        if (kept.information.size() == 0) {
+          kept.information = DynamicMat::Zero(data.rows(), data.cols());
+        }
+        kept.information = (options_.proximal_memory * kept.information) + data;
+        kept.information_weight = (options_.proximal_memory * kept.information_weight) + data_weight;
+        RESULT_ASSIGN_OR_RETURN(const DynamicVector solution, SolveProximal(stage, proximal_lambda_));
+        return value_function.SetParameters(ParameterVector(solution));
+      }
       const Eigen::LDLT<ParameterMat> factorization(normal_matrix.template selfadjointView<Eigen::Lower>());
       RESULT_ASSERT(factorization.info() == Eigen::Success,
                     "DtFbsdeIterativeSolver: the pooled normal equations are singular; add a ridge weight.");
@@ -1831,6 +1921,51 @@ class DtFbsdeIterativeSolver {
       (void)stage, (void)targets, (void)girsanov_weights, (void)target_policy, (void)estimator, (void)path_count;
       return ErrorResult("DtFbsdeIterativeSolver: pooling needs a representation with a parameter gradient.");
     }
+  }
+
+  // Stage `stage`'s proximal fit at weight `lambda`, from the equations its backward pass kept.
+  [[nodiscard]] auto SolveProximal(std::size_t stage, Scalar lambda) const noexcept -> Result<DynamicVector> {
+    const ProximalStage& kept = proximal_[stage];
+    const DynamicVector anchor = current_[stage].Parameters();
+    const DynamicMat matrix = kept.normal_matrix + (lambda * kept.prior);
+    const DynamicVector vector = kept.normal_vector + (lambda * (kept.prior * anchor));
+    const Eigen::LDLT<DynamicMat> factorization(matrix);
+    RESULT_ASSERT(factorization.info() == Eigen::Success,
+                  "DtFbsdeIterativeSolver: the proximal normal equations are singular; add a ridge weight.");
+    const DynamicVector solution = factorization.solve(vector);
+    RESULT_ASSERT(solution.allFinite(), "DtFbsdeIterativeSolver: the proximal fit produced non-finite coefficients.");
+    return SuccessResult(solution);
+  }
+
+  // Writes the proximal fit at weight `lambda` into every control stage of `trial_`.
+  auto ProximalIntoTrial(Scalar lambda) noexcept -> Result<> {
+    if constexpr (kPooledFitSupported) {
+      for (std::size_t stage = 0; stage < kNumControlStages; ++stage) {
+        RESULT_ASSIGN_OR_RETURN(const DynamicVector solution, SolveProximal(stage, lambda));
+        RESULT_RETURN_IF_ERROR(trial_[stage].SetParameters(typename ValueFunctionT::ParameterVector(solution)));
+      }
+      return SuccessResult();
+    } else {
+      (void)lambda;
+      return ErrorResult("DtFbsdeIterativeSolver: the proximal fit needs a representation with a parameter gradient.");
+    }
+  }
+
+  // The Levenberg-Marquardt adaptation of the proximal weight after a line search that accepted
+  // candidate `accepted`, or none; `proximal_candidates` says whether its candidates were refits at
+  // growing weights rather than blends.
+  auto AdaptProximalWeight(std::optional<std::size_t> accepted, bool proximal_candidates) noexcept -> void {
+    const Scalar factor = options_.proximal_adaptation;
+    if (proximal_candidates && accepted.has_value()) {
+      proximal_lambda_ *= std::pow(Scalar{4}, static_cast<Scalar>(*accepted)) / factor;
+    } else if (accepted.has_value() && *accepted == 0) {
+      proximal_lambda_ /= factor;
+    } else if (accepted.has_value()) {
+      proximal_lambda_ *= factor;
+    } else {
+      proximal_lambda_ *= options_.proximal_rejection_adaptation;
+    }
+    proximal_lambda_ = std::clamp(proximal_lambda_, options_.min_proximal_weight, options_.max_proximal_weight);
   }
 
   // Called whenever the current table changes: empties the pool, whose batches estimated the old
@@ -1862,7 +1997,8 @@ class DtFbsdeIterativeSolver {
   }
 
   [[nodiscard]] static constexpr auto UsesPooledFit(const Options& options) noexcept -> bool {
-    return options.pool_batches_since_acceptance > 1 || options.anchor_weight > Scalar{0};
+    return options.pool_batches_since_acceptance > 1 || options.anchor_weight > Scalar{0} ||
+           options.proximal_weight > Scalar{0};
   }
 
   // Writes `(1 - step) V~_current + step V~_fitted` into `trial_`, coefficient by coefficient --
@@ -2105,6 +2241,11 @@ class DtFbsdeIterativeSolver {
   std::vector<AnchorBlock> anchors_;
   // The step the next line search starts at; see DtFbsdeIterativeOptions::initial_step.
   Scalar start_step_ = Scalar{1};
+  // The proximal fit's kept equations per stage, and its current weight; see
+  // DtFbsdeIterativeOptions::proximal_weight.
+  std::vector<ProximalStage> proximal_ =
+      options_.proximal_weight > Scalar{0} ? std::vector<ProximalStage>(NumStages) : std::vector<ProximalStage>();
+  Scalar proximal_lambda_ = Scalar{0};
 
   // The sigma-point rule's points and weights, and the rotation the second half's points are turned by.
   SigmaPointSet<N, Scalar> sigma_points_ = MakeSigmaPoints<N, Scalar>(options_.sigma_point_rule);
