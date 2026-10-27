@@ -955,5 +955,110 @@ TEST(DtFbsdeIterativeSolverNormalEquationTest, MakeRejectsMemoryForASoftMinModel
                    .has_value());
 }
 
+// The line search's start, the batch pool, and the trust region's anchors each have their own range,
+// and the pool and anchors need the Taylor noiseless target without slope matching.
+TEST(DtFbsdeIterativeSolverLineSearchTest, MakeRejectsOutOfRangeStartPoolAndAnchors) {
+  const Fixture fixture = MakeFixture();
+  const auto rejected = [&fixture](auto mutate) {
+    DtFbsdeIterativeOptions<double> options;
+    options.backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
+    mutate(options);
+    return !MakeSolver(fixture, options).has_value();
+  };
+  EXPECT_TRUE(rejected([](auto& options) { options.initial_step = 0.0; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.initial_step = 1.5; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.anchor_weight = -1.0; }));
+  EXPECT_TRUE(rejected([](auto& options) {
+    options.anchor_weight = 1.0;
+    options.anchor_rollouts = 0;
+  }));
+  EXPECT_TRUE(rejected([](auto& options) {
+    options.pool_batches_since_acceptance = 4;
+    options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+  }));
+  EXPECT_TRUE(rejected([](auto& options) {
+    options.anchor_weight = 1.0;
+    options.slope_weight = 1.0;
+  }));
+  EXPECT_FALSE(rejected([](auto& options) { options.initial_step = 0.5; }));
+  EXPECT_FALSE(rejected([](auto& options) { options.pool_batches_since_acceptance = 4; }));
+  EXPECT_FALSE(rejected([](auto& options) { options.anchor_weight = 1.0; }));
+}
+
+// A later start only changes which steps are proposed: no accepted step exceeds the start, an
+// adaptive start never exceeds twice the step last accepted, and the cost still only ever falls.
+TEST(DtFbsdeIterativeSolverLineSearchTest, AStartBelowOneOrAnAdaptiveStartOnlyChangesTheCandidates) {
+  const Fixture fixture = MakeFixture();
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  for (const bool adaptive : {false, true}) {
+    DtFbsdeIterativeOptions<double> options;
+    options.backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
+    options.target_floor = 0.0;
+    options.exploration_decay = 0.5;
+    options.initial_step = 0.5;
+    options.adaptive_initial_step = adaptive;
+    Result<Solver> solver = MakeSolver(fixture, options);
+    ASSERT_TRUE(solver.has_value()) << solver.error();
+    double previous = solver->CurrentCost();
+    double start = 0.5;
+    for (std::size_t iteration = 0; iteration < 12; ++iteration) {
+      const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+      ASSERT_TRUE(report.has_value()) << report.error();
+      EXPECT_LE(report->accepted_step, start);
+      EXPECT_LE(report->mean_cost, previous + 1e-12);
+      if (adaptive && report->accepted_step > 0.0) {
+        start = std::min(1.0, 2.0 * report->accepted_step);
+      }
+      previous = report->mean_cost;
+    }
+    EXPECT_LT(solver->CurrentCost(), 0.05 * coasting_cost) << "adaptive " << adaptive;
+  }
+}
+
+// The pooled solve with a negligible anchor weight and no pool is the plain closed-form fit.
+TEST(DtFbsdeIterativeSolverPoolTest, ANegligibleAnchorIsThePlainFit) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
+  options.target_floor = 0.0;
+  Result<Solver> plain = MakeSolver(fixture, options);
+  options.anchor_weight = 1e-14;
+  Result<Solver> anchored = MakeSolver(fixture, options);
+  ASSERT_TRUE(plain.has_value() && anchored.has_value());
+  for (std::size_t iteration = 0; iteration < 5; ++iteration) {
+    ASSERT_TRUE(plain->Iterate().has_value());
+    ASSERT_TRUE(anchored->Iterate().has_value());
+    EXPECT_NEAR(plain->CurrentCost(), anchored->CurrentCost(), 1e-9 * plain->CurrentCost());
+  }
+}
+
+// Pooling the batches since the last acceptance, anchoring the fit to the current function, and both
+// together still only ever lower the cost and converge far below coasting.
+TEST(DtFbsdeIterativeSolverPoolTest, PoolingAndAnchoringStillConverge) {
+  const Fixture fixture = MakeFixture();
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  for (const auto& [pool, anchor] : {std::pair<std::size_t, double>{4, 0.0},
+                                     std::pair<std::size_t, double>{0, 1.0},
+                                     std::pair<std::size_t, double>{4, 1.0}}) {
+    DtFbsdeIterativeOptions<double> options;
+    options.backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
+    options.target_floor = 0.0;
+    options.exploration_probability = 0.3;
+    options.initial_exploration_probability = 0.3;
+    options.pool_batches_since_acceptance = pool;
+    options.anchor_weight = anchor;
+    Result<Solver> solver = MakeSolver(fixture, options);
+    ASSERT_TRUE(solver.has_value()) << solver.error();
+    double previous = solver->CurrentCost();
+    for (std::size_t iteration = 0; iteration < 16; ++iteration) {
+      const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+      ASSERT_TRUE(report.has_value()) << report.error();
+      EXPECT_LE(report->mean_cost, previous + 1e-12);
+      previous = report->mean_cost;
+    }
+    EXPECT_LT(solver->CurrentCost(), 0.05 * coasting_cost) << "pool " << pool << ", anchor " << anchor;
+  }
+}
+
 }  // namespace
 }  // namespace fbsde_traj_opt
