@@ -20,7 +20,8 @@
 //   * DT-FBSDE: DtFbsdeIterativeSolver with the batch sweep's recipe (dt_fbsde_batch_sweep_main.cpp)
 //     on every benchmark: a degree-4 polynomial value function, the off-policy Taylor noiseless
 //     backward target, half the paths at six times the noise, and a screened, stop-uphill line
-//     search; batches of 16 on the 2-D benchmarks and 256 on the double inverted pendulum.
+//     search; batches of 16 on the 2-D benchmarks and 256 on the double inverted pendulum, where the
+//     line search starts at a half step.
 //     Charged: Iterate().
 //   * DT-FBSDE+iLQR: DT-FBSDE warm-started from iLQR. The run begins as that seed's iLQR run does,
 //     from the same random controls. At iLQR iterations spaced geometrically by --seed-growth, and at
@@ -176,8 +177,10 @@ struct DriverOptions {
   DtFbsdeBackwardTarget dt_backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
 
   // DT-FBSDE's line search start, batch pooling, and function-space trust region under the sweep
-  // recipe; see DtFbsdeIterativeOptions. The defaults leave all three off.
+  // recipe; see DtFbsdeIterativeOptions. The first step is 1 in 2-D and 1/2 on the double inverted
+  // pendulum, whose full steps overshoot (line_search_study/README.md); pooling and anchoring are off.
   double dt_initial_step = 1.0;
+  double double_pendulum_initial_step = 0.5;
   bool dt_adaptive_initial_step = false;
   std::size_t dt_pool_batches = 0;
   double dt_anchor_weight = 0.0;
@@ -968,9 +971,12 @@ auto Run(const DriverOptions& options) -> Result<> {
                                                 L1DoubleInvertedPendulum::ForwardModel,
                                                 QuadraticRegulatorSdeTerminalCostTerm<4>,
                                                 Polynomial>;
-    const DtFbsdeIterativeOptions<double> solver_options =
+    DtFbsdeIterativeOptions<double> solver_options =
         options.double_pendulum_sweep_config ? SweepDtFbsdeOptions(options, options.double_pendulum_slope_weight)
                                              : DtFbsdeOptions(options.comparison);
+    if (options.double_pendulum_sweep_config) {
+      solver_options.initial_step = options.double_pendulum_initial_step;
+    }
     const auto run_dt_fbsde = [&](std::size_t index) {
       return options.double_pendulum_sweep_config
                  ? RunDtFbsde<SweepDtFbsde, L1DoubleInvertedPendulum, kStages>(
@@ -1036,7 +1042,8 @@ auto PrintUsage() -> void {
       << "  --dip-dt-config C        DT-FBSDE on the double inverted pendulum: sweep (default) or comparison\n"
       << "  --dip-slope-weight G     its slope weight under the sweep configuration (default 0)\n"
       << "  --dt-target T            DT-FBSDE's backward target: taylor (default) or double-greedy\n"
-      << "  --dt-initial-step S      DT-FBSDE's first line search step, in (0, 1] (default 1)\n"
+      << "  --dt-initial-step S      DT-FBSDE's first line search step in 2-D, in (0, 1] (default 1)\n"
+      << "  --dip-initial-step S     its first step on the double inverted pendulum (default 0.5)\n"
       << "  --dt-adaptive-step on|off  start each line search at twice the last accepted step (default off)\n"
       << "  --dt-pool N              pool up to N forward batches since the last acceptance (default 0: off)\n"
       << "  --dt-anchor-weight W     function-space trust region weight (default 0: off)\n"
@@ -1136,6 +1143,8 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
           value == "taylor" ? DtFbsdeBackwardTarget::kTaylorNoiseless : DtFbsdeBackwardTarget::kDoubleGreedy;
     } else if (argument == "--dt-initial-step") {
       options.dt_initial_step = number;
+    } else if (argument == "--dip-initial-step") {
+      options.double_pendulum_initial_step = number;
     } else if (argument == "--dt-adaptive-step") {
       RESULT_ASSERT(value == "on" || value == "off", "--dt-adaptive-step is on or off.");
       options.dt_adaptive_initial_step = value == "on";
