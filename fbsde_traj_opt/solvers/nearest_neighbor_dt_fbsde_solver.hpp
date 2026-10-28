@@ -81,6 +81,20 @@ namespace fbsde_traj_opt {
 // How the backward pass estimates each sample's Y; see the class comment.
 enum class NearestNeighborYEstimate : std::uint8_t { kPathwise, kGreedyBackup };
 
+// How the table answers a query from its nearest samples: their mean Y, piecewise constant with no slope, or the
+// intercept of a weighted least-squares plane through them, Y ~ a + g' (X - x), which is continuous and has the
+// gradient g.
+enum class NearestNeighborReadout : std::uint8_t { kMean, kLocalLinear };
+
+// How the policy scores a candidate: by reading the table where the candidate lands (after the lookahead), or by
+// the first-order expansion about the zero-control landing x0 = x + f(x),
+//
+//   Q(x, u) = c ||u||_1 + V(x0) + g(x0)' B(x) u,
+//
+// with g the local linear fit's gradient -- the Taylor Q-function policy with the curvature dropped, whose
+// minimizer is bang-off-bang: u_j = -sign(g' B_j) where |g' B_j| exceeds c, else zero.
+enum class NearestNeighborPolicyRule : std::uint8_t { kLookup, kGradient };
+
 template <int N, typename Scalar = double>
 struct NearestNeighborDtFbsdeOptions {
   // The number of paths in the batch.
@@ -102,6 +116,14 @@ struct NearestNeighborDtFbsdeOptions {
 
   // Average the Y of this many nearest samples rather than taking the nearest one alone.
   std::size_t num_neighbors = 1;
+
+  // The readout and the policy rule; see their enums. The local linear fit uses `local_fit_neighbors` samples (at
+  // least N + 1; zero picks 4 (N + 1)) and a ridge `local_fit_ridge` on its slope, in the scaled coordinates. The
+  // gradient rule needs the local linear readout and a one-stage lookahead.
+  NearestNeighborReadout readout = NearestNeighborReadout::kMean;
+  NearestNeighborPolicyRule policy_rule = NearestNeighborPolicyRule::kLookup;
+  std::size_t local_fit_neighbors = 0;
+  Scalar local_fit_ridge = Scalar{1e-6};
 
   // The per-coordinate scale `D` divides the state difference by; ones give Euclidean distance.
   Eigen::Matrix<Scalar, N, 1> distance_scale = Eigen::Matrix<Scalar, N, 1>::Ones();
@@ -269,33 +291,71 @@ struct NearestNeighborValueTable {
     }
   }
 
-  // The nearest-neighbor value at `stage`, averaged over `num_neighbors` samples, with each coordinate of the
-  // difference multiplied by `inverse_scale` -- the scale the index was built with, if there is one.
+  using Neighbors = std::vector<std::pair<Scalar, std::size_t>>;
+
+  // The `num_neighbors` nearest samples at `stage` as (squared scaled distance, index), with each coordinate of
+  // the difference multiplied by `inverse_scale` -- the scale the index was built with, if there is one. Only the
+  // first `num_neighbors` entries of `nearest` are meaningful, in no particular order.
+  auto Nearest(std::size_t stage,
+               const Eigen::Matrix<Scalar, N, 1>& state,
+               const Eigen::Matrix<Scalar, N, 1>& inverse_scale,
+               std::size_t num_neighbors,
+               Neighbors& nearest) const noexcept -> std::size_t {
+    const StateColumns& columns = states[stage];
+    const auto count = static_cast<std::size_t>(columns.cols());
+    const std::size_t neighbors = std::min(std::max<std::size_t>(num_neighbors, 1), count);
+    if (!trees.empty()) {
+      trees[stage].Query(state.cwiseProduct(inverse_scale), neighbors, nearest);
+      return neighbors;
+    }
+    nearest.resize(count);
+    for (std::size_t sample = 0; sample < count; ++sample) {
+      nearest[sample] = {
+          (columns.col(static_cast<Eigen::Index>(sample)) - state).cwiseProduct(inverse_scale).squaredNorm(), sample};
+    }
+    std::ranges::nth_element(nearest, nearest.begin() + static_cast<std::ptrdiff_t>(neighbors - 1));
+    return neighbors;
+  }
+
+  // The nearest-neighbor value at `stage`, averaged over `num_neighbors` samples.
   [[nodiscard]] auto Value(std::size_t stage,
                            const Eigen::Matrix<Scalar, N, 1>& state,
                            const Eigen::Matrix<Scalar, N, 1>& inverse_scale,
                            std::size_t num_neighbors) const noexcept -> Scalar {
-    const StateColumns& columns = states[stage];
-    const ValueRow& row = values[stage];
-    const auto count = static_cast<std::size_t>(columns.cols());
-    const std::size_t neighbors = std::min(std::max<std::size_t>(num_neighbors, 1), count);
-    thread_local std::vector<std::pair<Scalar, std::size_t>> nearest;
-    if (!trees.empty()) {
-      trees[stage].Query(state.cwiseProduct(inverse_scale), neighbors, nearest);
-    } else {
-      nearest.resize(count);
-      for (std::size_t sample = 0; sample < count; ++sample) {
-        nearest[sample] = {
-            (columns.col(static_cast<Eigen::Index>(sample)) - state).cwiseProduct(inverse_scale).squaredNorm(),
-            sample};
-      }
-      std::ranges::nth_element(nearest, nearest.begin() + static_cast<std::ptrdiff_t>(neighbors - 1));
-    }
+    thread_local Neighbors nearest;
+    const std::size_t neighbors = Nearest(stage, state, inverse_scale, num_neighbors, nearest);
     Scalar sum = Scalar{0};
     for (std::size_t index = 0; index < neighbors; ++index) {
-      sum += row[static_cast<Eigen::Index>(nearest[index].second)];
+      sum += values[stage][static_cast<Eigen::Index>(nearest[index].second)];
     }
     return sum / static_cast<Scalar>(neighbors);
+  }
+
+  // The local linear fit at `stage` through the `num_neighbors` nearest samples: the least-squares plane
+  // Y ~ a + g' (X - x) in scaled coordinates, with `ridge` on the slope, returned as the value a and the gradient
+  // g in the original coordinates.
+  [[nodiscard]] auto LocalLinear(std::size_t stage,
+                                 const Eigen::Matrix<Scalar, N, 1>& state,
+                                 const Eigen::Matrix<Scalar, N, 1>& inverse_scale,
+                                 std::size_t num_neighbors,
+                                 Scalar ridge) const noexcept -> std::pair<Scalar, Eigen::Matrix<Scalar, N, 1>> {
+    thread_local Neighbors nearest;
+    const std::size_t neighbors = Nearest(stage, state, inverse_scale, num_neighbors, nearest);
+    using Normal = Eigen::Matrix<Scalar, N + 1, N + 1>;
+    using Row = Eigen::Matrix<Scalar, N + 1, 1>;
+    Normal normal = Normal::Zero();
+    Row right = Row::Zero();
+    for (std::size_t index = 0; index < neighbors; ++index) {
+      const auto column = static_cast<Eigen::Index>(nearest[index].second);
+      Row features;
+      features[0] = Scalar{1};
+      features.template tail<N>() = (states[stage].col(column) - state).cwiseProduct(inverse_scale);
+      normal += features * features.transpose();
+      right += features * values[stage][column];
+    }
+    normal.diagonal().template tail<N>().array() += ridge * static_cast<Scalar>(neighbors);
+    const Row solution = normal.ldlt().solve(right);
+    return {solution[0], solution.template tail<N>().cwiseProduct(inverse_scale)};
   }
 };
 
@@ -320,6 +380,10 @@ class NearestNeighborL1Policy {
                           std::size_t num_neighbors,
                           bool exact_terminal_value,
                           std::size_t lookahead_stages,
+                          NearestNeighborReadout readout,
+                          NearestNeighborPolicyRule policy_rule,
+                          std::size_t local_fit_neighbors,
+                          Scalar local_fit_ridge,
                           std::shared_ptr<const Table> table) noexcept
       : forward_model_(std::move(forward_model)),
         running_cost_(std::move(running_cost)),
@@ -330,6 +394,10 @@ class NearestNeighborL1Policy {
         num_neighbors_(num_neighbors),
         exact_terminal_value_(exact_terminal_value),
         lookahead_stages_(lookahead_stages),
+        readout_(readout),
+        policy_rule_(policy_rule),
+        local_fit_neighbors_(local_fit_neighbors == 0 ? 4 * static_cast<std::size_t>(N + 1) : local_fit_neighbors),
+        local_fit_ridge_(local_fit_ridge),
         table_(std::move(table)) {}
 
   // The value at `stage` of a state, read from the table or, at the terminal stage, optionally the
@@ -340,7 +408,29 @@ class NearestNeighborL1Policy {
     if (exact_terminal_value_ && stage + 1 == table_->states.size()) {
       return terminal_cost_(state);
     }
+    if (readout_ == NearestNeighborReadout::kLocalLinear) {
+      return table_->LocalLinear(stage, state, inverse_scale_, local_fit_neighbors_, local_fit_ridge_).first;
+    }
     return table_->Value(stage, state, inverse_scale_, num_neighbors_);
+  }
+
+  // The value and gradient at `stage` from the local linear fit, or from the terminal cost's own quadratic at the
+  // terminal stage.
+  //
+  // Precondition: the policy has a table.
+  [[nodiscard]] auto ValueAndGradient(std::size_t stage, const State& state) const noexcept -> std::pair<Scalar, State> {
+    if (exact_terminal_value_ && stage + 1 == table_->states.size()) {
+      State gradient;
+      for (std::size_t index = 0; index < static_cast<std::size_t>(N); ++index) {
+        State step = State::Zero();
+        const Scalar width = Scalar{1e-5} * (Scalar{1} + std::abs(state[static_cast<Eigen::Index>(index)]));
+        step[static_cast<Eigen::Index>(index)] = width;
+        gradient[static_cast<Eigen::Index>(index)] =
+            (terminal_cost_(State(state + step)) - terminal_cost_(State(state - step))) / (Scalar{2} * width);
+      }
+      return {terminal_cost_(state), gradient};
+    }
+    return table_->LocalLinear(stage, state, inverse_scale_, local_fit_neighbors_, local_fit_ridge_);
   }
 
   // The Q-value of holding `control` from `state` for the lookahead's stages (fewer near the horizon): their
@@ -366,6 +456,23 @@ class NearestNeighborL1Policy {
   auto operator()(std::size_t stage, const State& state) const noexcept -> Control {
     Control control = Control::Zero();
     if (table_ == nullptr) {
+      return control;
+    }
+    if (policy_rule_ == NearestNeighborPolicyRule::kGradient) {
+      // The expansion is linear in u, so each coordinate's minimizer is a bound or zero, independently.
+      const State uncontrolled = state + forward_model_.state_drift()(stage, state);
+      const Eigen::Matrix<Scalar, N, M> control_matrix = forward_model_.control_drift_mat()(stage, state);
+      const State gradient = ValueAndGradient(stage + 1, uncontrolled).second;
+      const Scalar weight = running_cost_.L1Weight();
+      for (std::size_t coordinate = 0; coordinate < kControlDim; ++coordinate) {
+        const auto index = static_cast<Eigen::Index>(coordinate);
+        const Scalar slope = gradient.dot(control_matrix.col(index));
+        if (slope > weight) {
+          control[index] = lower_bounds_[index];
+        } else if (slope < -weight) {
+          control[index] = upper_bounds_[index];
+        }
+      }
       return control;
     }
     Scalar best = QValue(stage, state, control);
@@ -404,6 +511,10 @@ class NearestNeighborL1Policy {
   std::size_t num_neighbors_;
   bool exact_terminal_value_;
   std::size_t lookahead_stages_;
+  NearestNeighborReadout readout_;
+  NearestNeighborPolicyRule policy_rule_;
+  std::size_t local_fit_neighbors_;
+  Scalar local_fit_ridge_;
   std::shared_ptr<const Table> table_;
 };
 
@@ -444,6 +555,14 @@ class NearestNeighborDtFbsdeSolver {
     RESULT_ASSERT(options.num_samples >= 1, "NearestNeighborDtFbsdeSolver::Make: a batch needs at least one path.");
     RESULT_ASSERT(options.num_neighbors >= 1, "NearestNeighborDtFbsdeSolver::Make: at least one neighbor is read.");
     RESULT_ASSERT(options.lookahead_stages >= 1, "NearestNeighborDtFbsdeSolver::Make: the lookahead is at least one stage.");
+    RESULT_ASSERT(options.local_fit_neighbors == 0 || options.local_fit_neighbors >= static_cast<std::size_t>(N + 1),
+                  "NearestNeighborDtFbsdeSolver::Make: a local linear fit needs at least N + 1 samples.");
+    RESULT_ASSERT(std::isfinite(options.local_fit_ridge) && options.local_fit_ridge >= Scalar{0},
+                  "NearestNeighborDtFbsdeSolver::Make: the local fit's ridge must be finite and non-negative.");
+    RESULT_ASSERT(options.policy_rule != NearestNeighborPolicyRule::kGradient ||
+                      (options.readout == NearestNeighborReadout::kLocalLinear && options.lookahead_stages == 1),
+                  "NearestNeighborDtFbsdeSolver::Make: the gradient rule needs the local linear readout and a "
+                  "one-stage lookahead.");
     RESULT_ASSERT(options.memory_batches >= 1, "NearestNeighborDtFbsdeSolver::Make: the table holds at least one batch.");
     RESULT_ASSERT(options.exploration_probability >= Scalar{0} && options.exploration_probability <= Scalar{1} &&
                       options.initial_exploration_probability >= Scalar{0} &&
@@ -559,6 +678,10 @@ class NearestNeighborDtFbsdeSolver {
                   options_.num_neighbors,
                   options_.exact_terminal_value,
                   options_.lookahead_stages,
+                  options_.readout,
+                  options_.policy_rule,
+                  options_.local_fit_neighbors,
+                  options_.local_fit_ridge,
                   std::move(table));
   }
 
@@ -652,6 +775,10 @@ class NearestNeighborDtFbsdeSolver {
                         options_.num_neighbors,
                         options_.exact_terminal_value,
                         options_.lookahead_stages,
+                        options_.readout,
+                        options_.policy_rule,
+                        options_.local_fit_neighbors,
+                        options_.local_fit_ridge,
                         std::shared_ptr<const Table>(std::shared_ptr<const Table>{}, table.get()));
     for (std::size_t stage = terminal; stage-- > 0;) {
       ParallelFor(samples, [&](std::size_t sample) noexcept {

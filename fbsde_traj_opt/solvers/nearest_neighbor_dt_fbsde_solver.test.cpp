@@ -125,6 +125,18 @@ TEST(NearestNeighborValueTableTest, TheIndexAgreesWithBruteForce) {
   }
 }
 
+TEST(NearestNeighborValueTableTest, TheLocalLinearFitRecoversAPlane) {
+  NearestNeighborValueTable<2> table;
+  table.states.emplace_back(Eigen::Matrix<double, 2, Eigen::Dynamic>::Random(2, 200));
+  const Eigen::Vector2d slope(3.0, -2.0);
+  table.values.emplace_back((1.5 + (slope.transpose() * table.states[0]).array()).matrix());
+  table.BuildIndex(Eigen::Vector2d(1.0, 4.0));
+  const Eigen::Vector2d query(0.2, -0.3);
+  const auto [value, gradient] = table.LocalLinear(0, query, Eigen::Vector2d(1.0, 4.0), 12, 0.0);
+  EXPECT_NEAR(value, 1.5 + slope.dot(query), 1e-9);
+  EXPECT_NEAR((gradient - slope).norm(), 0.0, 1e-9);
+}
+
 TEST(NearestNeighborDtFbsdeSolverTest, RejectsInvalidOptions) {
   const Fixture fixture = MakeFixture();
   Solver::Options options;
@@ -138,6 +150,13 @@ TEST(NearestNeighborDtFbsdeSolverTest, RejectsInvalidOptions) {
   EXPECT_FALSE(MakeSolver(fixture, options).has_value());
   options = Solver::Options{};
   options.num_neighbors = 0;
+  EXPECT_FALSE(MakeSolver(fixture, options).has_value());
+  options = Solver::Options{};
+  options.policy_rule = NearestNeighborPolicyRule::kGradient;
+  EXPECT_FALSE(MakeSolver(fixture, options).has_value());
+  options.readout = NearestNeighborReadout::kLocalLinear;
+  EXPECT_TRUE(MakeSolver(fixture, options).has_value());
+  options.local_fit_neighbors = 2;
   EXPECT_FALSE(MakeSolver(fixture, options).has_value());
 }
 
@@ -209,6 +228,22 @@ TEST(NearestNeighborDtFbsdeSolverTest, ReportsAFixedPointOnceTheBatchRepeats) {
   const auto repeat = solver->Iterate();
   EXPECT_TRUE(repeat.fixed_point);
   EXPECT_EQ(repeat.changed_control_fraction, 0.0);
+}
+
+TEST(NearestNeighborDtFbsdeSolverTest, TheGradientRuleImprovesFarOnDoingNothing) {
+  const Fixture fixture = MakeFixture();
+  Solver::Options options;
+  options.num_samples = 256;
+  options.readout = NearestNeighborReadout::kLocalLinear;
+  options.policy_rule = NearestNeighborPolicyRule::kGradient;
+  Result<Solver> solver = MakeSolver(fixture, options);
+  ASSERT_TRUE(solver.has_value()) << solver.error();
+  const double coasting_cost = CostOnNoise(fixture, solver->CurrentPolicy(), 99);
+  for (std::size_t iteration = 0; iteration < 20; ++iteration) {
+    (void)solver->Iterate();
+  }
+  // A weaker bound than the lookup rule's: the local fits' gradients are noisy.
+  EXPECT_LT(CostOnNoise(fixture, solver->CurrentPolicy(), 99), 0.3 * coasting_cost);
 }
 
 INSTANTIATE_TEST_SUITE_P(Estimates,

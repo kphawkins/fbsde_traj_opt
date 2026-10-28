@@ -134,6 +134,11 @@ struct DriverOptions {
   std::size_t nn_lookahead = 1;
   std::size_t double_pendulum_nn_lookahead = 1;
   std::size_t nn_memory = 1;
+  // DT-NN's readout (local linear instead of the neighbors' mean), its gradient policy rule, and the local fit's
+  // sample count (0: the solver's default).
+  bool nn_local_linear = false;
+  bool nn_gradient_policy = false;
+  std::size_t nn_fit_neighbors = 0;
   NearestNeighborYEstimate nn_y_estimate = NearestNeighborYEstimate::kPathwise;
   double nn_exploration = 0.0;
   double nn_exploring_path_fraction = 1.0;
@@ -445,6 +450,10 @@ auto RunNearestNeighbor(const BenchmarkT& benchmark,
   solver_options.num_neighbors = options.nn_neighbors;
   solver_options.lookahead_stages = kN == 4 ? options.double_pendulum_nn_lookahead : options.nn_lookahead;
   solver_options.memory_batches = options.nn_memory;
+  solver_options.readout = options.nn_local_linear ? NearestNeighborReadout::kLocalLinear : NearestNeighborReadout::kMean;
+  solver_options.policy_rule =
+      options.nn_gradient_policy ? NearestNeighborPolicyRule::kGradient : NearestNeighborPolicyRule::kLookup;
+  solver_options.local_fit_neighbors = options.nn_fit_neighbors;
   solver_options.y_estimate = options.nn_y_estimate;
   solver_options.exploration_probability = options.nn_exploration;
   solver_options.exploring_path_fraction = options.nn_exploring_path_fraction;
@@ -1173,6 +1182,9 @@ auto PrintUsage() -> void {
       << "  --nn-lookahead H         stages DT-NN holds a candidate control in 2-D (default 1)\n"
       << "  --dip-nn-lookahead H     the same on the double inverted pendulum (default 1)\n"
       << "  --nn-memory B            batches DT-NN's table keeps (default 1)\n"
+      << "  --nn-readout R           DT-NN's table readout: mean (default) or linear (local linear fit)\n"
+      << "  --nn-policy P            DT-NN's policy rule: lookup (default) or gradient (needs linear, lookahead 1)\n"
+      << "  --nn-fit-neighbors K     samples in DT-NN's local linear fit (default 0: 4 (N + 1))\n"
       << "  --nn-target T            DT-NN's Y: pathwise (default) or greedy\n"
       << "  --nn-explore P           DT-NN exploration probability after the first iteration (default 0)\n"
       << "  --nn-exploring-fraction F  share of DT-NN paths that may explore (default 1)\n"
@@ -1314,6 +1326,14 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
       options.double_pendulum_nn_lookahead = count;
     } else if (argument == "--nn-memory") {
       options.nn_memory = count;
+    } else if (argument == "--nn-readout") {
+      RESULT_ASSERT(value == "mean" || value == "linear", "--nn-readout is mean or linear.");
+      options.nn_local_linear = value == "linear";
+    } else if (argument == "--nn-policy") {
+      RESULT_ASSERT(value == "lookup" || value == "gradient", "--nn-policy is lookup or gradient.");
+      options.nn_gradient_policy = value == "gradient";
+    } else if (argument == "--nn-fit-neighbors") {
+      options.nn_fit_neighbors = count;
     } else if (argument == "--nn-target") {
       RESULT_ASSERT(value == "pathwise" || value == "greedy", "--nn-target is pathwise or greedy.");
       options.nn_y_estimate =
