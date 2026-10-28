@@ -1406,6 +1406,7 @@ class DtFbsdeIterativeSolver {
                                                             Accumulator(stage, 0)));
         continue;
       }
+      const profiling::ScopedPhase fit_phase(profiling::Phase::kBackwardFit);
       if (const Result<> fitted = FitStage<kSampleCount>(fitted_[stage],
                                                          states,
                                                          targets,
@@ -1543,6 +1544,7 @@ class DtFbsdeIterativeSolver {
                                          options_.girsanov_weight > Scalar{0} ? &girsanov_weights : nullptr));
         continue;
       }
+      const profiling::ScopedPhase fit_phase(profiling::Phase::kBackwardFit);
       if (const Result<> fitted = FitStage<kSampleCount>(fitted_[stage],
                                                          states,
                                                          targets,
