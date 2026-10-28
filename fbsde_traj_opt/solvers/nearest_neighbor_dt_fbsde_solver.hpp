@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -105,6 +106,19 @@ struct NearestNeighborDtFbsdeOptions {
   // The per-coordinate scale `D` divides the state difference by; ones give Euclidean distance.
   Eigen::Matrix<Scalar, N, 1> distance_scale = Eigen::Matrix<Scalar, N, 1>::Ones();
 
+  // How many stages the policy holds a candidate control for before it reads the table, noise-free; one is the
+  // one-step Q-value. A piecewise-constant table cannot tell apart landing points closer together than its samples
+  // are, and one step's control moves the state much less than that; holding it for several steps spreads the
+  // candidates' landing points apart. The greedy backup scores its alternatives the same way, with the sample's own
+  // noise on the first step.
+  std::size_t lookahead_stages = 1;
+
+  // How many batches the table holds: the latest alone (one, the default), or it and the batches before it. With
+  // more than one, every kept sample is a parameter of the table, and the greedy backup re-scores the older
+  // samples' Y against the newer ones every iteration -- value iteration over the whole archive, each sample
+  // backed up with its own noise. A pathwise Y never changes once computed.
+  std::size_t memory_batches = 1;
+
   // An ablation: draw fresh noise every iteration instead of the same noise, so the batch is no
   // longer a deterministic function of the policy.
   bool fresh_noise_each_iteration = false;
@@ -120,8 +134,118 @@ struct NearestNeighborDtFbsdeIterationReport {
   Scalar best_batch_cost = Scalar{0};
   // The fraction of (path, stage) controls that differ from the previous batch's.
   Scalar changed_control_fraction = Scalar{1};
-  // Whether this batch repeats the previous one, so every later iteration would too.
+  // Whether this batch repeats the previous one, so every later iteration would too. Only reported with a memory
+  // of one batch.
   bool fixed_point = false;
+};
+
+// A static k-d tree over one stage's samples, in coordinates already multiplied by the inverse distance scale, for
+// exact k-nearest-neighbor queries. Leaves hold up to kLeafSize samples.
+template <int N, typename Scalar = double>
+class NearestNeighborKdTree {
+ public:
+  using StateColumns = Eigen::Matrix<Scalar, N, Eigen::Dynamic>;
+  using Point = Eigen::Matrix<Scalar, N, 1>;
+  using Neighbor = std::pair<Scalar, std::size_t>;
+
+  static constexpr std::size_t kLeafSize = 8;
+  static constexpr std::size_t kNoChild = std::numeric_limits<std::size_t>::max();
+
+  NearestNeighborKdTree() noexcept = default;
+
+  explicit NearestNeighborKdTree(StateColumns points) noexcept : points_(std::move(points)) {
+    const auto count = static_cast<std::size_t>(points_.cols());
+    order_.resize(count);
+    for (std::size_t index = 0; index < count; ++index) {
+      order_[index] = index;
+    }
+    if (count > 0) {
+      nodes_.reserve((2 * count / kLeafSize) + 1);
+      (void)Build(0, count);
+    }
+  }
+
+  // The `neighbors` nearest samples to `query`, nearest first, as (squared distance, sample index).
+  auto Query(const Point& query, std::size_t neighbors, std::vector<Neighbor>& out) const noexcept -> void {
+    out.clear();
+    if (nodes_.empty()) {
+      return;
+    }
+    Search(0, query, std::min(neighbors, order_.size()), out);
+  }
+
+ private:
+  struct Node {
+    std::size_t begin = 0;
+    std::size_t end = 0;
+    std::size_t dimension = 0;
+    Scalar split = Scalar{0};
+    std::size_t left = kNoChild;
+    std::size_t right = kNoChild;
+  };
+
+  auto Build(std::size_t begin, std::size_t end) noexcept -> std::size_t {
+    const std::size_t node = nodes_.size();
+    nodes_.push_back(Node{.begin = begin, .end = end});
+    if (end - begin <= kLeafSize) {
+      return node;
+    }
+    Point lower = Point::Constant(std::numeric_limits<Scalar>::infinity());
+    Point upper = Point::Constant(-std::numeric_limits<Scalar>::infinity());
+    for (std::size_t index = begin; index < end; ++index) {
+      const auto column = points_.col(static_cast<Eigen::Index>(order_[index]));
+      lower = lower.cwiseMin(column);
+      upper = upper.cwiseMax(column);
+    }
+    Eigen::Index widest = 0;
+    (upper - lower).maxCoeff(&widest);
+    const std::size_t middle = begin + ((end - begin) / 2);
+    const auto begin_it = order_.begin() + static_cast<std::ptrdiff_t>(begin);
+    std::nth_element(begin_it,
+                     order_.begin() + static_cast<std::ptrdiff_t>(middle),
+                     order_.begin() + static_cast<std::ptrdiff_t>(end),
+                     [&](std::size_t first, std::size_t second) noexcept {
+                       return points_(widest, static_cast<Eigen::Index>(first)) <
+                              points_(widest, static_cast<Eigen::Index>(second));
+                     });
+    nodes_[node].dimension = static_cast<std::size_t>(widest);
+    nodes_[node].split = points_(widest, static_cast<Eigen::Index>(order_[middle]));
+    const std::size_t left = Build(begin, middle);
+    const std::size_t right = Build(middle, end);
+    nodes_[node].left = left;
+    nodes_[node].right = right;
+    return node;
+  }
+
+  auto Search(std::size_t node_index, const Point& query, std::size_t neighbors, std::vector<Neighbor>& out)
+      const noexcept -> void {
+    const Node& node = nodes_[node_index];
+    if (node.left == kNoChild) {
+      for (std::size_t index = node.begin; index < node.end; ++index) {
+        const std::size_t sample = order_[index];
+        const Scalar distance = (points_.col(static_cast<Eigen::Index>(sample)) - query).squaredNorm();
+        if (out.size() < neighbors || distance < out.back().first) {
+          const auto position = std::ranges::upper_bound(out, distance, {}, &Neighbor::first);
+          out.insert(position, Neighbor{distance, sample});
+          if (out.size() > neighbors) {
+            out.pop_back();
+          }
+        }
+      }
+      return;
+    }
+    const Scalar offset = query[static_cast<Eigen::Index>(node.dimension)] - node.split;
+    const std::size_t near = offset < Scalar{0} ? node.left : node.right;
+    const std::size_t far = offset < Scalar{0} ? node.right : node.left;
+    Search(near, query, neighbors, out);
+    if (out.size() < neighbors || offset * offset < out.back().first) {
+      Search(far, query, neighbors, out);
+    }
+  }
+
+  StateColumns points_{};
+  std::vector<std::size_t> order_{};
+  std::vector<Node> nodes_{};
 };
 
 // The nearest-neighbor tables of one batch: every stage's sample states and Y.
@@ -129,12 +253,24 @@ template <int N, typename Scalar = double>
 struct NearestNeighborValueTable {
   using StateColumns = Eigen::Matrix<Scalar, N, Eigen::Dynamic>;
   using ValueRow = Eigen::Matrix<Scalar, 1, Eigen::Dynamic>;
+  using Tree = NearestNeighborKdTree<N, Scalar>;
 
   std::vector<StateColumns> states{};
   std::vector<ValueRow> values{};
+  // One k-d tree per stage once BuildIndex() has run, for the scale it was built with; brute force without.
+  std::vector<Tree> trees{};
 
-  // The nearest-neighbor value at `stage`, averaged over `num_neighbors` samples, with distances
-  // measured after dividing by `inverse_scale`'s reciprocal, i.e. multiplying by `inverse_scale`.
+  // Indexes every stage's states for queries scaled by `inverse_scale`.
+  auto BuildIndex(const Eigen::Matrix<Scalar, N, 1>& inverse_scale) noexcept -> void {
+    trees.clear();
+    trees.reserve(states.size());
+    for (const StateColumns& columns : states) {
+      trees.emplace_back(StateColumns(inverse_scale.asDiagonal() * columns));
+    }
+  }
+
+  // The nearest-neighbor value at `stage`, averaged over `num_neighbors` samples, with each coordinate of the
+  // difference multiplied by `inverse_scale` -- the scale the index was built with, if there is one.
   [[nodiscard]] auto Value(std::size_t stage,
                            const Eigen::Matrix<Scalar, N, 1>& state,
                            const Eigen::Matrix<Scalar, N, 1>& inverse_scale,
@@ -142,29 +278,22 @@ struct NearestNeighborValueTable {
     const StateColumns& columns = states[stage];
     const ValueRow& row = values[stage];
     const auto count = static_cast<std::size_t>(columns.cols());
-    if (num_neighbors <= 1) {
-      Scalar best = std::numeric_limits<Scalar>::infinity();
-      std::size_t best_index = 0;
+    const std::size_t neighbors = std::min(std::max<std::size_t>(num_neighbors, 1), count);
+    thread_local std::vector<std::pair<Scalar, std::size_t>> nearest;
+    if (!trees.empty()) {
+      trees[stage].Query(state.cwiseProduct(inverse_scale), neighbors, nearest);
+    } else {
+      nearest.resize(count);
       for (std::size_t sample = 0; sample < count; ++sample) {
-        const Scalar distance =
-            (columns.col(static_cast<Eigen::Index>(sample)) - state).cwiseProduct(inverse_scale).squaredNorm();
-        if (distance < best) {
-          best = distance;
-          best_index = sample;
-        }
+        nearest[sample] = {
+            (columns.col(static_cast<Eigen::Index>(sample)) - state).cwiseProduct(inverse_scale).squaredNorm(),
+            sample};
       }
-      return row[static_cast<Eigen::Index>(best_index)];
+      std::ranges::nth_element(nearest, nearest.begin() + static_cast<std::ptrdiff_t>(neighbors - 1));
     }
-    const std::size_t neighbors = std::min(num_neighbors, count);
-    std::vector<std::pair<Scalar, std::size_t>> distances(count);
-    for (std::size_t sample = 0; sample < count; ++sample) {
-      distances[sample] = {
-          (columns.col(static_cast<Eigen::Index>(sample)) - state).cwiseProduct(inverse_scale).squaredNorm(), sample};
-    }
-    std::ranges::nth_element(distances, distances.begin() + static_cast<std::ptrdiff_t>(neighbors - 1));
     Scalar sum = Scalar{0};
     for (std::size_t index = 0; index < neighbors; ++index) {
-      sum += row[static_cast<Eigen::Index>(distances[index].second)];
+      sum += row[static_cast<Eigen::Index>(nearest[index].second)];
     }
     return sum / static_cast<Scalar>(neighbors);
   }
@@ -190,6 +319,7 @@ class NearestNeighborL1Policy {
                           State inverse_scale,
                           std::size_t num_neighbors,
                           bool exact_terminal_value,
+                          std::size_t lookahead_stages,
                           std::shared_ptr<const Table> table) noexcept
       : forward_model_(std::move(forward_model)),
         running_cost_(std::move(running_cost)),
@@ -199,6 +329,7 @@ class NearestNeighborL1Policy {
         inverse_scale_(std::move(inverse_scale)),
         num_neighbors_(num_neighbors),
         exact_terminal_value_(exact_terminal_value),
+        lookahead_stages_(lookahead_stages),
         table_(std::move(table)) {}
 
   // The value at `stage` of a state, read from the table or, at the terminal stage, optionally the
@@ -212,11 +343,24 @@ class NearestNeighborL1Policy {
     return table_->Value(stage, state, inverse_scale_, num_neighbors_);
   }
 
-  // The Q-value of `control` at `state`, read at the noise-free landing point.
-  [[nodiscard]] auto QValue(std::size_t stage, const State& state, const Control& control) const noexcept -> Scalar {
-    const State landing = state + forward_model_.state_drift()(stage, state) +
-                          (forward_model_.control_drift_mat()(stage, state) * control);
-    return running_cost_(stage, state, control) + Value(stage + 1, landing);
+  // The Q-value of holding `control` from `state` for the lookahead's stages (fewer near the horizon): their
+  // running costs plus the table's value where the hold lands. Every step is noise-free except the first, which
+  // takes `first_noise` when given.
+  //
+  // Precondition: the policy has a table.
+  [[nodiscard]] auto QValue(std::size_t stage,
+                            const State& state,
+                            const Control& control,
+                            const State* first_noise = nullptr) const noexcept -> Scalar {
+    const std::size_t steps = std::min(lookahead_stages_, table_->states.size() - 1 - stage);
+    State landing = state;
+    Scalar cost = Scalar{0};
+    for (std::size_t step = 0; step < steps; ++step) {
+      cost += running_cost_(stage + step, landing, control);
+      const State noise = step == 0 && first_noise != nullptr ? *first_noise : State::Zero();
+      landing = forward_model_(stage + step, landing, control, noise);
+    }
+    return cost + Value(stage + steps, landing);
   }
 
   auto operator()(std::size_t stage, const State& state) const noexcept -> Control {
@@ -224,12 +368,7 @@ class NearestNeighborL1Policy {
     if (table_ == nullptr) {
       return control;
     }
-    const State uncontrolled = state + forward_model_.state_drift()(stage, state);
-    const Eigen::Matrix<Scalar, N, M> control_matrix = forward_model_.control_drift_mat()(stage, state);
-    const auto q_value = [&](const Control& candidate) noexcept {
-      return running_cost_(stage, state, candidate) + Value(stage + 1, uncontrolled + (control_matrix * candidate));
-    };
-    Scalar best = q_value(control);
+    Scalar best = QValue(stage, state, control);
     const std::size_t sweeps = kControlDim == 1 ? 1 : kCoordinateSweeps;
     for (std::size_t sweep = 0; sweep < sweeps; ++sweep) {
       for (std::size_t coordinate = 0; coordinate < kControlDim; ++coordinate) {
@@ -241,7 +380,7 @@ class NearestNeighborL1Policy {
             continue;
           }
           control[index] = candidate;
-          const Scalar value = q_value(control);
+          const Scalar value = QValue(stage, state, control);
           if (value < best) {
             best = value;
             chosen = candidate;
@@ -264,6 +403,7 @@ class NearestNeighborL1Policy {
   State inverse_scale_;
   std::size_t num_neighbors_;
   bool exact_terminal_value_;
+  std::size_t lookahead_stages_;
   std::shared_ptr<const Table> table_;
 };
 
@@ -303,6 +443,8 @@ class NearestNeighborDtFbsdeSolver {
     RESULT_ASSERT(num_stages >= 2, "NearestNeighborDtFbsdeSolver::Make: a problem needs at least two stages.");
     RESULT_ASSERT(options.num_samples >= 1, "NearestNeighborDtFbsdeSolver::Make: a batch needs at least one path.");
     RESULT_ASSERT(options.num_neighbors >= 1, "NearestNeighborDtFbsdeSolver::Make: at least one neighbor is read.");
+    RESULT_ASSERT(options.lookahead_stages >= 1, "NearestNeighborDtFbsdeSolver::Make: the lookahead is at least one stage.");
+    RESULT_ASSERT(options.memory_batches >= 1, "NearestNeighborDtFbsdeSolver::Make: the table holds at least one batch.");
     RESULT_ASSERT(options.exploration_probability >= Scalar{0} && options.exploration_probability <= Scalar{1} &&
                       options.initial_exploration_probability >= Scalar{0} &&
                       options.initial_exploration_probability <= Scalar{1} &&
@@ -338,22 +480,23 @@ class NearestNeighborDtFbsdeSolver {
     const Policy policy = MakePolicy(latest_);
     const std::uint64_t noise_seed =
         options_.fresh_noise_each_iteration ? seed_ ^ (kFreshNoiseStream * (iteration_ + 1)) : seed_;
-    auto batch = std::make_shared<Table>();
-    const Scalar cost = SampleBatch(policy, exploration, first, noise_seed, *batch);
+    Batch batch{.noise_seed = noise_seed};
+    const Scalar cost = SampleBatch(policy, exploration, first, batch);
     report.batch_cost = cost;
 
-    // Compare with the previous batch's controls before they are replaced.
+    // Compare with the previous batch's controls before it is archived.
     std::size_t changed = 0;
-    if (!previous_controls_.empty()) {
-      for (std::size_t stage = 0; stage < controls_.size(); ++stage) {
+    if (!archive_.empty()) {
+      const auto& previous = archive_.front().controls;
+      for (std::size_t stage = 0; stage < batch.controls.size(); ++stage) {
         changed += static_cast<std::size_t>(
-            ((controls_[stage] - previous_controls_[stage]).array() != Scalar{0}).colwise().any().count());
+            ((batch.controls[stage] - previous[stage]).array() != Scalar{0}).colwise().any().count());
       }
       report.changed_control_fraction =
-          static_cast<Scalar>(changed) / static_cast<Scalar>(options_.num_samples * controls_.size());
+          static_cast<Scalar>(changed) / static_cast<Scalar>(options_.num_samples * batch.controls.size());
     }
-    report.fixed_point = !first && !previous_controls_.empty() && changed == 0 && !options_.fresh_noise_each_iteration;
-    previous_controls_ = controls_;
+    report.fixed_point = !first && !archive_.empty() && changed == 0 && !options_.fresh_noise_each_iteration &&
+                         options_.memory_batches == 1;
 
     // The batch's cost is the cost of the policy that drew it, so that policy is the one to keep.
     if (!first && cost < best_cost_) {
@@ -362,8 +505,11 @@ class NearestNeighborDtFbsdeSolver {
     }
     report.best_batch_cost = best_cost_;
 
-    BackwardPass(noise_seed, *batch);
-    latest_ = std::move(batch);
+    archive_.push_front(std::move(batch));
+    while (archive_.size() > options_.memory_batches) {
+      archive_.pop_back();
+    }
+    latest_ = BackwardPass();
     ++iteration_;
     return report;
   }
@@ -376,7 +522,8 @@ class NearestNeighborDtFbsdeSolver {
 
   [[nodiscard]] auto BestBatchCost() const noexcept -> Scalar { return best_cost_; }
 
-  // The latest batch's table; null before the first iteration.
+  // The table the next iteration's policy reads: the latest batch's samples first, then the older ones the memory
+  // keeps. Null before the first iteration.
   [[nodiscard]] auto LatestTable() const noexcept -> const std::shared_ptr<const Table>& { return latest_; }
 
  private:
@@ -411,6 +558,7 @@ class NearestNeighborDtFbsdeSolver {
                   inverse_scale_,
                   options_.num_neighbors,
                   options_.exact_terminal_value,
+                  options_.lookahead_stages,
                   std::move(table));
   }
 
@@ -423,17 +571,22 @@ class NearestNeighborDtFbsdeSolver {
     return sample >= steady;
   }
 
-  // Samples the batch's states into `batch` and its controls into `controls_`, and returns the mean
-  // cost over the paths that never explore, or over all of them if every path may explore.
-  auto SampleBatch(const Policy& policy, Scalar exploration, bool first, std::uint64_t noise_seed, Table& batch) noexcept
-      -> Scalar {
+  // One forward pass: every stage's states and controls, and the noise seed they were drawn with.
+  struct Batch {
+    std::vector<typename Table::StateColumns> states{};
+    std::vector<Eigen::Matrix<Scalar, M, Eigen::Dynamic>> controls{};
+    std::uint64_t noise_seed = 0;
+  };
+
+  // Samples `batch`'s states and controls, and returns the mean cost over the paths that never explore, or over
+  // all of them if every path may explore.
+  auto SampleBatch(const Policy& policy, Scalar exploration, bool first, Batch& batch) noexcept -> Scalar {
     const std::size_t samples = options_.num_samples;
     const auto columns = static_cast<Eigen::Index>(samples);
     batch.states.assign(num_stages_, typename Table::StateColumns(N, columns));
-    batch.values.assign(num_stages_, typename Table::ValueRow(1, columns));
-    controls_.assign(num_stages_ - 1, Eigen::Matrix<Scalar, M, Eigen::Dynamic>(M, columns));
+    batch.controls.assign(num_stages_ - 1, Eigen::Matrix<Scalar, M, Eigen::Dynamic>(M, columns));
     costs_.assign(samples, Scalar{0});
-    const CounterBasedNormalSampler noise_sampler(noise_seed);
+    const CounterBasedNormalSampler noise_sampler(batch.noise_seed);
     const CounterBasedNormalSampler exploration_sampler(seed_ ^ kExplorationStream);
     ParallelFor(samples, [&](std::size_t sample) noexcept {
       const auto column = static_cast<Eigen::Index>(sample);
@@ -450,7 +603,7 @@ class NearestNeighborDtFbsdeSolver {
         const Control control =
             explore ? ExploratoryL1Control<M, Scalar>(exploration_sampler, sample, stage, 1, lower_bounds_, upper_bounds_)
                     : policy(stage, state);
-        controls_[stage].col(column) = control;
+        batch.controls[stage].col(column) = control;
         running += running_cost_(stage, state, control);
         noise_sampler.FillNoise(sample, stage + 1, noise);
         state = forward_model_(stage, state, control, noise);
@@ -469,16 +622,27 @@ class NearestNeighborDtFbsdeSolver {
     return total / static_cast<Scalar>(counted);
   }
 
-  // Fills `batch.values` with every sample's Y, from the terminal stage back.
-  auto BackwardPass(std::uint64_t noise_seed, Table& batch) const noexcept -> void {
-    const std::size_t samples = options_.num_samples;
+  // Builds the table over every archived batch and fills every sample's Y, from the terminal stage back.
+  [[nodiscard]] auto BackwardPass() const noexcept -> std::shared_ptr<const Table> {
+    const std::size_t per_batch = options_.num_samples;
+    const std::size_t samples = per_batch * archive_.size();
+    const auto columns = static_cast<Eigen::Index>(samples);
     const std::size_t terminal = num_stages_ - 1;
+    auto table = std::make_shared<Table>();
+    table->states.assign(num_stages_, typename Table::StateColumns(N, columns));
+    table->values.assign(num_stages_, typename Table::ValueRow(1, columns));
+    for (std::size_t stage = 0; stage < num_stages_; ++stage) {
+      for (std::size_t index = 0; index < archive_.size(); ++index) {
+        table->states[stage].middleCols(static_cast<Eigen::Index>(index * per_batch),
+                                        static_cast<Eigen::Index>(per_batch)) = archive_[index].states[stage];
+      }
+    }
+    table->BuildIndex(inverse_scale_);
     for (std::size_t sample = 0; sample < samples; ++sample) {
       const auto column = static_cast<Eigen::Index>(sample);
-      batch.values[terminal][column] = terminal_cost_(State(batch.states[terminal].col(column)));
+      table->values[terminal][column] = terminal_cost_(State(table->states[terminal].col(column)));
     }
-    const CounterBasedNormalSampler noise_sampler(noise_seed);
-    // The greedy backup reads this batch's own later stages through a policy over it.
+    // The greedy backup reads the table's own later stages through a policy over it.
     const Policy backup(forward_model_,
                         running_cost_,
                         terminal_cost_,
@@ -487,19 +651,23 @@ class NearestNeighborDtFbsdeSolver {
                         inverse_scale_,
                         options_.num_neighbors,
                         options_.exact_terminal_value,
-                        std::shared_ptr<const Table>(std::shared_ptr<const Table>{}, &batch));
+                        options_.lookahead_stages,
+                        std::shared_ptr<const Table>(std::shared_ptr<const Table>{}, table.get()));
     for (std::size_t stage = terminal; stage-- > 0;) {
       ParallelFor(samples, [&](std::size_t sample) noexcept {
+        const Batch& batch = archive_[sample / per_batch];
+        const std::size_t path = sample % per_batch;
         const auto column = static_cast<Eigen::Index>(sample);
-        const State state = batch.states[stage].col(column);
-        const Control taken = controls_[stage].col(column);
-        const Scalar pathwise = running_cost_(stage, state, taken) + batch.values[stage + 1][column];
+        const State state = table->states[stage].col(column);
+        const Control taken = batch.controls[stage].col(static_cast<Eigen::Index>(path));
+        const Scalar pathwise = running_cost_(stage, state, taken) + table->values[stage + 1][column];
         if (options_.y_estimate == NearestNeighborYEstimate::kPathwise) {
-          batch.values[stage][column] = pathwise;
+          table->values[stage][column] = pathwise;
           return;
         }
+        const CounterBasedNormalSampler noise_sampler(batch.noise_seed);
         State noise;
-        noise_sampler.FillNoise(sample, stage + 1, noise);
+        noise_sampler.FillNoise(path, stage + 1, noise);
         Scalar best = pathwise;
         for (std::size_t coordinate = 0; coordinate < static_cast<std::size_t>(M); ++coordinate) {
           const auto index = static_cast<Eigen::Index>(coordinate);
@@ -509,13 +677,13 @@ class NearestNeighborDtFbsdeSolver {
             if (control == taken) {
               continue;
             }
-            const State landing = forward_model_(stage, state, control, noise);
-            best = std::min(best, running_cost_(stage, state, control) + backup.Value(stage + 1, landing));
+            best = std::min(best, backup.QValue(stage, state, control, &noise));
           }
         }
-        batch.values[stage][column] = best;
+        table->values[stage][column] = best;
       });
     }
+    return table;
   }
 
   ForwardModelT forward_model_;
@@ -534,8 +702,7 @@ class NearestNeighborDtFbsdeSolver {
   std::shared_ptr<const Table> latest_{};
   std::shared_ptr<const Table> best_{};
   Scalar best_cost_ = std::numeric_limits<Scalar>::infinity();
-  std::vector<Eigen::Matrix<Scalar, M, Eigen::Dynamic>> controls_{};
-  std::vector<Eigen::Matrix<Scalar, M, Eigen::Dynamic>> previous_controls_{};
+  std::deque<Batch> archive_{};
   std::vector<Scalar> costs_{};
 };
 

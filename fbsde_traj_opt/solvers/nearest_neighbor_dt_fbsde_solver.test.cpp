@@ -3,6 +3,7 @@
 
 #include "fbsde_traj_opt/solvers/nearest_neighbor_dt_fbsde_solver.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 
@@ -107,6 +108,23 @@ TEST(NearestNeighborValueTableTest, ReadsTheNearestSampleOrTheMeanOfTheNearest) 
   EXPECT_EQ(tall.Value(0, Eigen::Vector2d(4.0, 0.5), Eigen::Vector2d(1e-3, 1.0), 1), 30.0);
 }
 
+TEST(NearestNeighborValueTableTest, TheIndexAgreesWithBruteForce) {
+  NearestNeighborValueTable<2> table;
+  table.states.emplace_back(Eigen::Matrix<double, 2, Eigen::Dynamic>::Random(2, 500));
+  table.values.emplace_back(Eigen::Matrix<double, 1, Eigen::Dynamic>::Random(1, 500));
+  const Eigen::Vector2d inverse_scale(1.0, 3.0);
+  NearestNeighborValueTable<2> indexed = table;
+  indexed.BuildIndex(inverse_scale);
+  const Eigen::Matrix<double, 2, Eigen::Dynamic> queries = 1.5 * Eigen::Matrix<double, 2, Eigen::Dynamic>::Random(2, 200);
+  for (Eigen::Index query = 0; query < queries.cols(); ++query) {
+    for (const std::size_t neighbors : {std::size_t{1}, std::size_t{5}}) {
+      EXPECT_NEAR(indexed.Value(0, queries.col(query), inverse_scale, neighbors),
+                  table.Value(0, queries.col(query), inverse_scale, neighbors),
+                  1e-12);
+    }
+  }
+}
+
 TEST(NearestNeighborDtFbsdeSolverTest, RejectsInvalidOptions) {
   const Fixture fixture = MakeFixture();
   Solver::Options options;
@@ -208,6 +226,23 @@ TEST(NearestNeighborDtFbsdeSolverTest, RepeatsExactlyForTheSameSeed) {
   ASSERT_TRUE(first.has_value() && second.has_value());
   for (std::size_t iteration = 0; iteration < 5; ++iteration) {
     EXPECT_EQ(first->Iterate().batch_cost, second->Iterate().batch_cost);
+  }
+}
+
+TEST(NearestNeighborDtFbsdeSolverTest, MemoryKeepsEveryArchivedSampleInTheTable) {
+  const Fixture fixture = MakeFixture();
+  Solver::Options options;
+  options.num_samples = 32;
+  options.memory_batches = 3;
+  options.y_estimate = NearestNeighborYEstimate::kGreedyBackup;
+  Result<Solver> solver = MakeSolver(fixture, options);
+  ASSERT_TRUE(solver.has_value());
+  for (std::size_t iteration = 0; iteration < 5; ++iteration) {
+    const auto report = solver->Iterate();
+    EXPECT_FALSE(report.fixed_point);
+    const Eigen::Index kept = static_cast<Eigen::Index>(32 * std::min<std::size_t>(iteration + 1, 3));
+    EXPECT_EQ(solver->LatestTable()->states[0].cols(), kept);
+    EXPECT_TRUE(solver->LatestTable()->values[0].allFinite());
   }
 }
 

@@ -434,6 +434,7 @@ cc_binary(
         "//fbsde_traj_opt/solvers:box_ilqr_solver",
         "//fbsde_traj_opt/solvers:dt_fbsde_iterative_solver",
         "//fbsde_traj_opt/solvers:mppi_solver",
+        "//fbsde_traj_opt/solvers:nearest_neighbor_dt_fbsde_solver",
         "//fbsde_traj_opt/solvers:policy_rollout_evaluation",
         "//fbsde_traj_opt/utils:parallel_for",
         "//fbsde_traj_opt/utils:phase_profiler",

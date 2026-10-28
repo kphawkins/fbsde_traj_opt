@@ -35,6 +35,10 @@
 //     building and scoring every candidate, and Iterate(). Its iteration count is iLQR's iterations
 //     followed by DT-FBSDE's.
 //   * FBRRT: FbrrtSolver as the FBRRT comparison configures it. Charged: Iterate().
+//   * DT-NN (opt-in, `--methods dt-nn`): NearestNeighborDtFbsdeSolver, the nonparametric variant with one Y per
+//     sample, the same noise every iteration, and a nearest-neighbor value function; the --nn-* flags configure
+//     it. Charged: Iterate(). A run stops early at a fixed point. Its per-iteration batch costs -- the policy's
+//     cost on the fixed training noise -- go to --nn-csv, so they can be set against the held-out cost.
 //   * iLQR: BoxIlqrSolver from random initial controls, one draw per seed, plus one run from zero
 //     controls; scored as the closed-loop policy that tracks its nominal trajectory with its gains.
 //     Charged: Iterate(). A run stops when the solver reports convergence.
@@ -75,6 +79,7 @@
 #include "fbsde_traj_opt/solvers/box_ilqr_solver.hpp"
 #include "fbsde_traj_opt/solvers/dt_fbsde_iterative_solver.hpp"
 #include "fbsde_traj_opt/solvers/mppi_solver.hpp"
+#include "fbsde_traj_opt/solvers/nearest_neighbor_dt_fbsde_solver.hpp"
 #include "fbsde_traj_opt/solvers/policy_rollout_evaluation.hpp"
 #include "fbsde_traj_opt/utils/parallel_for.hpp"
 #include "fbsde_traj_opt/utils/phase_profiler.hpp"
@@ -116,6 +121,22 @@ struct DriverOptions {
   bool run_fbrrt = true;
   bool run_ilqr = true;
   bool run_mppi = true;
+  // Opt-in: not part of the default method set.
+  bool run_dt_nn = false;
+
+  // DT-NN: the batch width, neighbors averaged, Y estimate, exploration after the first iteration and the share
+  // of paths that may explore, the fresh-noise ablation, the exact terminal value, distances scaled by the
+  // benchmark's normalization box rather than Euclidean, and the label its traces carry.
+  std::size_t nn_samples = 256;
+  std::size_t nn_neighbors = 1;
+  NearestNeighborYEstimate nn_y_estimate = NearestNeighborYEstimate::kPathwise;
+  double nn_exploration = 0.0;
+  double nn_exploring_path_fraction = 1.0;
+  bool nn_fresh_noise = false;
+  bool nn_exact_terminal = true;
+  bool nn_scaled_distance = false;
+  std::string nn_label = "DT-NN";
+  std::string nn_csv_path = "method_comparison_nn.csv";
 
   // iLQR: the spread of the random initial controls, the smoothing floor, and the smoothing the
   // tracking gains are computed at (0: the solver's own).
@@ -223,6 +244,7 @@ struct Outputs {
   std::ofstream mpc_csv;
   std::ofstream reference_csv;
   std::ofstream profile_csv;
+  std::ofstream nn_csv;
 };
 
 template <typename BenchmarkT>
@@ -398,6 +420,70 @@ auto RunFbrrt(const BenchmarkT& benchmark,
         trace.held_out.push_back(
             HeldOutCost(benchmark, solver->CurrentPolicy(), NumStages, options.held_out_rollouts));
       }));
+  return SuccessResult(std::move(trace));
+}
+
+// DT-NN; see the file comment. Every iteration's batch report goes to the DT-NN CSV.
+template <std::size_t NumStages, typename BenchmarkT>
+auto RunNearestNeighbor(const BenchmarkT& benchmark,
+                        const DriverOptions& options,
+                        double budget,
+                        std::size_t seed_index,
+                        std::ofstream& nn_csv) -> Result<Trace> {
+  constexpr int kN = BenchmarkT::State::RowsAtCompileTime;
+  using Solver = NearestNeighborDtFbsdeSolver<kN,
+                                              1,
+                                              typename BenchmarkT::ForwardModel,
+                                              QuadraticRegulatorSdeTerminalCostTerm<kN>>;
+  typename Solver::Options solver_options;
+  solver_options.num_samples = options.nn_samples;
+  solver_options.num_neighbors = options.nn_neighbors;
+  solver_options.y_estimate = options.nn_y_estimate;
+  solver_options.exploration_probability = options.nn_exploration;
+  solver_options.exploring_path_fraction = options.nn_exploring_path_fraction;
+  solver_options.fresh_noise_each_iteration = options.nn_fresh_noise;
+  solver_options.exact_terminal_value = options.nn_exact_terminal;
+  if (options.nn_scaled_distance) {
+    solver_options.distance_scale = benchmark.normalization_scale;
+  }
+  const std::uint64_t seed = options.seed + (1000U * static_cast<std::uint64_t>(seed_index));
+  RESULT_ASSIGN_OR_RETURN(Solver solver,
+                          Solver::Make(benchmark.forward_model,
+                                       benchmark.running_cost,
+                                       benchmark.terminal_cost,
+                                       benchmark.initial_distribution,
+                                       Control(-1.0),
+                                       Control(1.0),
+                                       NumStages,
+                                       solver_options,
+                                       seed));
+  Trace trace{.method = options.nn_label, .seed_index = seed_index};
+  double charged = 0.0;
+  RESULT_RETURN_IF_ERROR(RunTimed(
+      options,
+      budget,
+      [&]() -> Result<bool> {
+        const Clock::time_point start = Clock::now();
+        const auto report = solver.Iterate();
+        charged += std::chrono::duration<double>(Clock::now() - start).count();
+        nn_csv << std::format("{},{},{},{},{:.6f},{:.6f},{:.6f},{:.6f},{}\n",
+                              benchmark.name,
+                              trace.method,
+                              seed_index,
+                              report.iteration + 1,
+                              charged,
+                              report.batch_cost,
+                              report.best_batch_cost,
+                              report.changed_control_fraction,
+                              report.fixed_point ? 1 : 0);
+        return SuccessResult(report.fixed_point);
+      },
+      [&](std::size_t iteration, double seconds) {
+        trace.iterations.push_back(iteration);
+        trace.seconds.push_back(seconds);
+        trace.held_out.push_back(HeldOutCost(benchmark, solver.CurrentPolicy(), NumStages, options.held_out_rollouts));
+      }));
+  nn_csv.flush();
   return SuccessResult(std::move(trace));
 }
 
@@ -846,6 +932,12 @@ auto CompareOn(const BenchmarkT& benchmark,
       Report(problem, trace);
       WriteTrace(outputs.csv, problem, trace);
     }
+    if (options.run_dt_nn) {
+      RESULT_ASSIGN_OR_RETURN(const Trace trace,
+                              (RunNearestNeighbor<NumStages>(benchmark, options, budget, index, outputs.nn_csv)));
+      Report(problem, trace);
+      WriteTrace(outputs.csv, problem, trace);
+    }
   }
   return SuccessResult();
 }
@@ -933,12 +1025,18 @@ auto Run(const DriverOptions& options) -> Result<> {
   Outputs outputs{.csv = std::ofstream(options.csv_path),
                   .mpc_csv = std::ofstream(options.mpc_csv_path),
                   .reference_csv = std::ofstream(options.reference_csv_path),
-                  .profile_csv = std::ofstream()};
+                  .profile_csv = std::ofstream(),
+                  .nn_csv = std::ofstream()};
   RESULT_ASSERT(outputs.csv.good() && outputs.mpc_csv.good() && outputs.reference_csv.good(),
                 "could not open the output files for writing.");
   outputs.csv << "problem,method,seed,iteration,seconds,held_out_cost\n";
   outputs.mpc_csv << "problem,method,seed,rollouts,cost,seconds_per_step\n";
   outputs.reference_csv << "problem,grid_optimum,grid_optimum_mpc_subset\n";
+  if (options.run_dt_nn) {
+    outputs.nn_csv.open(options.nn_csv_path);
+    RESULT_ASSERT(outputs.nn_csv.good(), "could not open the DT-NN file for writing.");
+    outputs.nn_csv << "problem,method,seed,iteration,seconds,batch_cost,best_batch_cost,changed_fraction,fixed_point\n";
+  }
   if (!options.profile_csv_path.empty()) {
     outputs.profile_csv.open(options.profile_csv_path);
     RESULT_ASSERT(outputs.profile_csv.good(), "could not open the profile file for writing.");
@@ -1031,7 +1129,7 @@ auto PrintUsage() -> void {
       << "  --dip-time-budget S      charged seconds per run on the double inverted pendulum (default 120)\n"
       << "  --held-out N             held-out rollouts per checkpoint (default 1024)\n"
       << "  --only P[,P...]          integrator, pendulum, double-pendulum\n"
-      << "  --methods M[,M...]       dt-fbsde, dt-fbsde-ilqr, fbrrt, ilqr, mppi (default all)\n"
+      << "  --methods M[,M...]       dt-fbsde, dt-fbsde-ilqr, fbrrt, ilqr, mppi (default all), dt-nn (opt-in)\n"
       << "  --ilqr-spread S          std. dev. of iLQR's random initial controls (default 0.5)\n"
       << "  --ilqr-min-smoothing E   iLQR's final pseudo-Huber smoothing (default 1e-3)\n"
       << "  --ilqr-gain-smoothing E  smoothing iLQR's tracking gains are computed at (default 1; 0: its own)\n"
@@ -1063,6 +1161,16 @@ auto PrintUsage() -> void {
       << "  --dt-proximal-search on|off  line search over the proximal weight instead of blends (default off)\n"
       << "  --dt-proximal-adapt F    the weight's factor after an accepted update (default 2; 1: fixed)\n"
       << "  --dt-proximal-reject F   the weight's factor after a rejected update (default 2; 1: unchanged)\n"
+      << "  --nn-samples N           DT-NN paths per batch (default 256)\n"
+      << "  --nn-neighbors K         DT-NN neighbors averaged (default 1)\n"
+      << "  --nn-target T            DT-NN's Y: pathwise (default) or greedy\n"
+      << "  --nn-explore P           DT-NN exploration probability after the first iteration (default 0)\n"
+      << "  --nn-exploring-fraction F  share of DT-NN paths that may explore (default 1)\n"
+      << "  --nn-fresh-noise on|off  draw fresh noise every iteration, an ablation (default off)\n"
+      << "  --nn-exact-terminal on|off  read the terminal cost itself at the last stage (default on)\n"
+      << "  --nn-scaled on|off       scale distances by the benchmark's normalization box (default off: Euclidean)\n"
+      << "  --nn-label L             method name on DT-NN's traces (default DT-NN)\n"
+      << "  --nn-csv PATH            DT-NN's per-iteration batch reports (default method_comparison_nn.csv)\n"
       << "  --mppi-time-budget S     cap on MPPI's charged seconds per run (default: the benchmark's)\n"
       << "  --seed-smoothing E       smoothing DT-FBSDE+iLQR's value expansions are taken at (default 1)\n"
       << "  --seed-ilqr-budget S     cap on DT-FBSDE+iLQR's charged seconds of iLQR (default 10)\n"
@@ -1117,6 +1225,7 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
       options.run_fbrrt = Contains(value, "fbrrt");
       options.run_ilqr = Contains(value, "ilqr");
       options.run_mppi = Contains(value, "mppi");
+      options.run_dt_nn = Contains(value, "dt-nn");
     } else if (argument == "--ilqr-spread") {
       options.ilqr_initial_spread = number;
     } else if (argument == "--ilqr-min-smoothing") {
@@ -1185,6 +1294,31 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
       options.pendulum_slope_weight = number;
     } else if (argument == "--dip-slope-weight") {
       options.double_pendulum_slope_weight = number;
+    } else if (argument == "--nn-samples") {
+      options.nn_samples = count;
+    } else if (argument == "--nn-neighbors") {
+      options.nn_neighbors = count;
+    } else if (argument == "--nn-target") {
+      RESULT_ASSERT(value == "pathwise" || value == "greedy", "--nn-target is pathwise or greedy.");
+      options.nn_y_estimate =
+          value == "pathwise" ? NearestNeighborYEstimate::kPathwise : NearestNeighborYEstimate::kGreedyBackup;
+    } else if (argument == "--nn-explore") {
+      options.nn_exploration = number;
+    } else if (argument == "--nn-exploring-fraction") {
+      options.nn_exploring_path_fraction = number;
+    } else if (argument == "--nn-fresh-noise") {
+      RESULT_ASSERT(value == "on" || value == "off", "--nn-fresh-noise is on or off.");
+      options.nn_fresh_noise = value == "on";
+    } else if (argument == "--nn-exact-terminal") {
+      RESULT_ASSERT(value == "on" || value == "off", "--nn-exact-terminal is on or off.");
+      options.nn_exact_terminal = value == "on";
+    } else if (argument == "--nn-scaled") {
+      RESULT_ASSERT(value == "on" || value == "off", "--nn-scaled is on or off.");
+      options.nn_scaled_distance = value == "on";
+    } else if (argument == "--nn-label") {
+      options.nn_label = value;
+    } else if (argument == "--nn-csv") {
+      options.nn_csv_path = value;
     } else if (argument == "--mppi-time-budget") {
       options.mppi_time_budget = number;
     } else if (argument == "--seed-smoothing") {
