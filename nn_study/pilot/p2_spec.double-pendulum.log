@@ -1,0 +1,5 @@
+
+=== L1 double inverted pendulum (40 s per run) ===
+L1 double inverted pendulum  spec               seed  0:   98.8717 ->   67.2170 (best   67.2170) in   40.05 s, 705 iterations
+
+Checkpoints in p2_spec.double-pendulum.csv, MPC results in /dev/null, grid optima in p2_spec.double-pendulum.ref.csv

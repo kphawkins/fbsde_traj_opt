@@ -1,0 +1,6 @@
+
+=== L1 double integrator (20 s per run) ===
+grid DP optimum, held out: 4.1367 (1024 rollouts), 4.1734 (first 128)
+L1 double integrator         spec               seed  0:  724.1576 ->  235.5112 (best  235.5112) in   20.00 s, 2217 iterations
+
+Checkpoints in p2_spec.integrator.csv, MPC results in /dev/null, grid optima in p2_spec.integrator.ref.csv

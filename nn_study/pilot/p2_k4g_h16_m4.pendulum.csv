@@ -1,0 +1,26 @@
+problem,method,seed,iteration,seconds,held_out_cost
+L1 inverted pendulum,k4g_h16_m4,0,0,0.000000,98.978083
+L1 inverted pendulum,k4g_h16_m4,0,1,0.070297,98.978083
+L1 inverted pendulum,k4g_h16_m4,0,2,0.284429,4.980465
+L1 inverted pendulum,k4g_h16_m4,0,3,0.571525,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,4,0.918016,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,5,1.284118,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,6,1.638817,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,7,2.013869,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,8,2.372219,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,9,2.730683,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,10,3.094890,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,11,3.452773,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,13,4.141379,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,14,4.494646,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,16,5.176301,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,18,5.868848,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,21,6.902304,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,24,7.954752,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,27,9.003652,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,31,10.505433,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,35,11.923856,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,40,13.656776,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,46,15.694242,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,52,17.825359,3.409868
+L1 inverted pendulum,k4g_h16_m4,0,59,20.355801,3.409868
