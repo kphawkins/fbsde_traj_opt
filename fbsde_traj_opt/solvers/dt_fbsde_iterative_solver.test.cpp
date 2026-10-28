@@ -1060,5 +1060,78 @@ TEST(DtFbsdeIterativeSolverPoolTest, PoolingAndAnchoringStillConverge) {
   }
 }
 
+// The proximal fit's options have their ranges, and a line search over its weight needs a weight.
+TEST(DtFbsdeIterativeSolverProximalTest, MakeRejectsOutOfRangeProximalOptions) {
+  const Fixture fixture = MakeFixture();
+  const auto rejected = [&fixture](auto mutate) {
+    DtFbsdeIterativeOptions<double> options;
+    options.backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
+    mutate(options);
+    return !MakeSolver(fixture, options).has_value();
+  };
+  EXPECT_TRUE(rejected([](auto& options) { options.proximal_weight = -1.0; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.proximal_memory = 1.5; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.proximal_adaptation = 0.5; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.min_proximal_weight = 0.0; }));
+  EXPECT_TRUE(rejected([](auto& options) { options.proximal_line_search = true; }));
+  EXPECT_TRUE(rejected([](auto& options) {
+    options.proximal_weight = 1.0;
+    options.backward_target = DtFbsdeBackwardTarget::kDoubleGreedy;
+  }));
+  EXPECT_FALSE(rejected([](auto& options) { options.proximal_weight = 1.0; }));
+  EXPECT_FALSE(rejected([](auto& options) {
+    options.proximal_weight = 1.0;
+    options.proximal_line_search = true;
+  }));
+}
+
+// The proximal fit, with blends or with a line search over its weight, still only ever lowers the cost
+// and converges far below coasting, and its weight stays within its bounds.
+TEST(DtFbsdeIterativeSolverProximalTest, TheProximalFitStillConverges) {
+  const Fixture fixture = MakeFixture();
+  const double coasting_cost = (5.0 * 6.5 * 6.5) + (2.0 * 0.25);
+  for (const bool search : {false, true}) {
+    DtFbsdeIterativeOptions<double> options;
+    options.backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
+    options.target_floor = 0.0;
+    options.exploration_probability = 0.3;
+    options.initial_exploration_probability = 0.3;
+    options.proximal_weight = 1.0;
+    options.proximal_line_search = search;
+    Result<Solver> solver = MakeSolver(fixture, options);
+    ASSERT_TRUE(solver.has_value()) << solver.error();
+    double previous = solver->CurrentCost();
+    for (std::size_t iteration = 0; iteration < 16; ++iteration) {
+      const Result<DtFbsdeIterationReport<double>> report = solver->Iterate();
+      ASSERT_TRUE(report.has_value()) << report.error();
+      EXPECT_LE(report->mean_cost, previous + 1e-12);
+      EXPECT_GE(report->proximal_weight, options.min_proximal_weight);
+      EXPECT_LE(report->proximal_weight, options.max_proximal_weight);
+      previous = report->mean_cost;
+    }
+    EXPECT_LT(solver->CurrentCost(), 0.05 * coasting_cost) << "search " << search;
+  }
+}
+
+// With no earlier information the prior is empty, so the first proximal fit is the plain fit.
+TEST(DtFbsdeIterativeSolverProximalTest, TheFirstProximalFitIsThePlainFit) {
+  const Fixture fixture = MakeFixture();
+  DtFbsdeIterativeOptions<double> options;
+  options.backward_target = DtFbsdeBackwardTarget::kTaylorNoiseless;
+  options.target_floor = 0.0;
+  Result<Solver> plain = MakeSolver(fixture, options);
+  options.proximal_weight = 1.0;
+  Result<Solver> proximal = MakeSolver(fixture, options);
+  ASSERT_TRUE(plain.has_value() && proximal.has_value());
+  ASSERT_TRUE(plain->Iterate().has_value());
+  ASSERT_TRUE(proximal->Iterate().has_value());
+  for (std::size_t stage = 0; stage + 1 < kStages; ++stage) {
+    EXPECT_LT((plain->FittedValueFunctions()[stage].Parameters() - proximal->FittedValueFunctions()[stage].Parameters())
+                  .norm(),
+              1e-9 * (1.0 + plain->FittedValueFunctions()[stage].Parameters().norm()))
+        << "stage " << stage;
+  }
+}
+
 }  // namespace
 }  // namespace fbsde_traj_opt
