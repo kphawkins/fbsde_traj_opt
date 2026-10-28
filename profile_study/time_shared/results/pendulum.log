@@ -1,0 +1,11 @@
+
+=== L1 inverted pendulum: grid optimum 2.2977 ===
+poly6                                    seed 0: final gap   +12.48% after 30.0 s
+poly6                                    seed 1: final gap    +9.03% after 30.1 s
+poly6                                    seed 2: final gap   +11.78% after 30.0 s
+poly6:time=linear,knots=16               seed 0: final gap   +10.97% after 30.0 s
+poly6:time=linear,knots=16               seed 1: final gap   +10.44% after 30.0 s
+poly6:time=linear,knots=16               seed 2: final gap    +8.34% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2 seed 0: final gap   +10.24% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2 seed 1: final gap   +10.29% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2 seed 2: final gap    +6.56% after 30.0 s

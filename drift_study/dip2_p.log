@@ -1,0 +1,14 @@
+
+=== L1 double inverted pendulum ===
+poly4:batch=128,target=greedy            seed 0: final cost    3.1316 after 240.5 s
+poly4:batch=128,target=greedy            seed 1: final cost    4.0065 after 241.4 s
+poly4:batch=128,target=greedy            seed 2: final cost    3.4494 after 240.8 s
+poly4:batch=128,target=greedy            seed 3: final cost    4.3053 after 240.5 s
+poly4:batch=128,target=taylor,explore=0.1 seed 0: final cost    4.0081 after 240.1 s
+poly4:batch=128,target=taylor,explore=0.1 seed 1: final cost    4.0207 after 240.7 s
+poly4:batch=128,target=taylor,explore=0.1 seed 2: final cost    6.1128 after 241.8 s
+poly4:batch=128,target=taylor,explore=0.1 seed 3: final cost    4.3260 after 240.7 s
+poly4:batch=128,target=taylor,order=0    seed 0: final cost    4.4848 after 240.8 s
+poly4:batch=128,target=taylor,order=0    seed 1: final cost    4.0720 after 240.8 s
+poly4:batch=128,target=taylor,order=0    seed 2: final cost    4.2646 after 240.7 s
+poly4:batch=128,target=taylor,order=0    seed 3: final cost    3.3689 after 240.2 s

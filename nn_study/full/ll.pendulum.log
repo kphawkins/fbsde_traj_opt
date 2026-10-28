@@ -1,0 +1,9 @@
+
+=== L1 inverted pendulum (60 s per run) ===
+grid DP optimum, held out: 2.2977 (1024 rollouts), 2.3099 (first 128)
+L1 inverted pendulum         ll                 seed  0:   98.9781 ->    3.8261 (best    3.8261) in   60.01 s, 906 iterations
+L1 inverted pendulum         ll                 seed  1:   98.9781 ->    3.0940 (best    3.0940) in   60.03 s, 925 iterations
+L1 inverted pendulum         ll                 seed  2:   98.9781 ->    3.9590 (best    3.9007) in   60.00 s, 928 iterations
+L1 inverted pendulum         ll                 seed  3:   98.9781 ->    3.3111 (best    3.3111) in   60.05 s, 929 iterations
+
+Checkpoints in ll.pendulum.csv, MPC results in /dev/null, grid optima in ll.pendulum.ref.csv

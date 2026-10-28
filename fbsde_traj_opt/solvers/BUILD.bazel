@@ -1,0 +1,333 @@
+"""Trajectory optimization solvers: the discrete-time FBSDE iterative solver, its backward-step
+estimator, and the finite-horizon LQR baseline.
+
+Follows the layout convention described in the README: headers, sources, and unit tests live
+together, and a test for `foo.cpp` is named `foo.test.cpp`.
+"""
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//bazel:copts.bzl", "FBSDE_COPTS", "FBSDE_TEST_COPTS")
+
+package(
+    default_visibility = ["//visibility:public"],
+    # Compile every header standalone to catch missing includes.
+    features = ["parse_headers"],
+)
+
+cc_library(
+    name = "finite_horizon_lqr",
+    hdrs = ["finite_horizon_lqr.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/policies:stage_varying_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt/utils:eigen_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "finite_horizon_lqr_test",
+    size = "small",
+    srcs = ["finite_horizon_lqr.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":finite_horizon_lqr",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sde:composed_cost_sde_model",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "taylor_noiseless_backward_step_estimator",
+    hdrs = ["taylor_noiseless_backward_step_estimator.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:value_function_approx_concepts",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "taylor_noiseless_backward_step_estimator_test",
+    size = "small",
+    srcs = ["taylor_noiseless_backward_step_estimator.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":finite_horizon_lqr",
+        ":taylor_noiseless_backward_step_estimator",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/policies:const_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt/policies:stage_varying_linear_feedback_sde_control_policy_term",
+        "//fbsde_traj_opt/sde:composed_cost_sde_model",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "//fbsde_traj_opt/value_function:value_function_approx_concepts",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "policy_rollout_evaluation",
+    hdrs = ["policy_rollout_evaluation.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:phase_profiler",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "policy_rollout_evaluation_test",
+    size = "small",
+    srcs = ["policy_rollout_evaluation.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":policy_rollout_evaluation",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "dt_fbsde_iterative_solver",
+    hdrs = ["dt_fbsde_iterative_solver.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":taylor_noiseless_backward_step_estimator",
+        ":policy_rollout_evaluation",
+        ":taylor_gradient_target",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/policies:taylor_q_function_l1_policy",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:l1_exploratory_control",
+        "//fbsde_traj_opt/sampling:normal_distribution_concepts",
+        "//fbsde_traj_opt/sampling:sigma_point_rules",
+        "//fbsde_traj_opt/sde:diffusion_scaled_forward_sde_model",
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:phase_profiler",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:time_shared_linear_fit",
+        "//fbsde_traj_opt/value_function:value_function_approx_concepts",
+        "//fbsde_traj_opt/value_function:value_function_gauss_newton_fitter",
+        "//fbsde_traj_opt/value_function:value_function_sgd_fitter",
+        "//fbsde_traj_opt/value_function:value_function_slope_targets",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "dt_fbsde_iterative_solver_test",
+    size = "medium",
+    srcs = ["dt_fbsde_iterative_solver.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        "//fbsde_traj_opt/value_function:linear_basis_value_function_approx",
+        ":dt_fbsde_iterative_solver",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sampling:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "//fbsde_traj_opt/value_function:soft_min_quadratic_value_function_approx",
+        "//fbsde_traj_opt/value_function:time_shared_linear_fit",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "fbrrt_solver",
+    hdrs = ["fbrrt_solver.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        ":policy_rollout_evaluation",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/fbrrt:brute_force_nearest_neighbor",
+        "//fbsde_traj_opt/fbrrt:epsilon_greedy_l1_control_sampler",
+        "//fbsde_traj_opt/fbrrt:fbrrt_particle_set",
+        "//fbsde_traj_opt/fbrrt:forward_expansion",
+        "//fbsde_traj_opt/fbrrt:path_integral_erode",
+        "//fbsde_traj_opt/fbrrt:rrt_expansion_selector",
+        "//fbsde_traj_opt/fbrrt:taylor_backward_pass",
+        "//fbsde_traj_opt/policies:taylor_q_function_l1_policy",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:normal_distribution_concepts",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "fbrrt_solver_test",
+    size = "medium",
+    srcs = ["fbrrt_solver.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":fbrrt_solver",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sampling:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/utils:result",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "taylor_gradient_target",
+    hdrs = ["taylor_gradient_target.hpp"],
+    copts = FBSDE_COPTS,
+    deps = ["@eigen"],
+)
+
+cc_test(
+    name = "taylor_gradient_target_test",
+    size = "small",
+    srcs = ["taylor_gradient_target.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":taylor_gradient_target",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/policies:taylor_q_function_l1_policy",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/value_function:polynomial_value_function_approx",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "box_ilqr_solver",
+    hdrs = ["box_ilqr_solver.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "box_ilqr_solver_test",
+    size = "small",
+    srcs = ["box_ilqr_solver.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":box_ilqr_solver",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "mppi_solver",
+    hdrs = ["mppi_solver.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "mppi_solver_test",
+    size = "small",
+    srcs = ["mppi_solver.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":mppi_solver",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "nearest_neighbor_dt_fbsde_solver",
+    hdrs = ["nearest_neighbor_dt_fbsde_solver.hpp"],
+    copts = FBSDE_COPTS,
+    deps = [
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/sampling:counter_based_normal_sampler",
+        "//fbsde_traj_opt/sampling:l1_exploratory_control",
+        "//fbsde_traj_opt/sampling:normal_distribution_concepts",
+        "//fbsde_traj_opt/sde:sde_term_concepts",
+        "//fbsde_traj_opt/utils:parallel_for",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+    ],
+)
+
+cc_test(
+    name = "nearest_neighbor_dt_fbsde_solver_test",
+    size = "small",
+    srcs = ["nearest_neighbor_dt_fbsde_solver.test.cpp"],
+    copts = FBSDE_TEST_COPTS,
+    deps = [
+        ":nearest_neighbor_dt_fbsde_solver",
+        ":policy_rollout_evaluation",
+        "//fbsde_traj_opt/costs:l1_control_sde_running_cost_term",
+        "//fbsde_traj_opt/costs:quadratic_regulator_sde_terminal_cost_term",
+        "//fbsde_traj_opt/dynamics:const_diagonal_sde_diffusion_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_control_drift_mat_term",
+        "//fbsde_traj_opt/dynamics:const_linear_sde_state_drift_term",
+        "//fbsde_traj_opt/sampling:diagonal_covariance_normal_distribution",
+        "//fbsde_traj_opt/sde:composed_forward_sde_model",
+        "//fbsde_traj_opt/utils:result",
+        "@eigen",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

@@ -1,0 +1,68 @@
+
+=== L1 double integrator: grid optimum 4.1367 ===
+grid V                                       grid's own policy (reference)      cost   4.1367  gap    +0.00%
+grid V                                       exact expectation, 41 controls     cost   4.1367  gap    +0.00%
+grid V                                       exact expectation, controls {-1,0,1} cost   4.1458  gap    +0.22%
+grid V, differences over 1 cells             Taylor Q-function                  cost   4.1408  gap    +0.10%
+grid V, differences over 2 cells             Taylor Q-function                  cost   4.1401  gap    +0.08%
+grid V, differences over 2 cells             Taylor Q-function, no curvature term cost   4.1437  gap    +0.17%
+grid V, differences over 4 cells             Taylor Q-function                  cost   4.1380  gap    +0.03%
+grid V, differences over 8 cells             Taylor Q-function                  cost   4.1441  gap    +0.18%
+poly4 fitted to grid V (oracle)              Taylor Q-function                  cost   4.6601  gap   +12.65%
+poly4 fitted to grid V (oracle)              exact expectation, 41 controls     cost   4.6602  gap   +12.65%
+poly4 fitted to grid V (oracle)              exact expectation, controls {-1,0,1} cost   4.6651  gap   +12.77%
+poly4 from DT-FBSDE, seed 0, 30 s            Taylor Q-function                  cost   4.1480  gap    +0.27%
+poly4 from DT-FBSDE, seed 0, 30 s            exact expectation, 41 controls     cost   4.1482  gap    +0.28%
+poly4 from DT-FBSDE, seed 0, 30 s            exact expectation, controls {-1,0,1} cost   4.1541  gap    +0.42%
+poly4 from DT-FBSDE, seed 1, 30 s            Taylor Q-function                  cost   4.1504  gap    +0.33%
+poly4 from DT-FBSDE, seed 1, 30 s            exact expectation, 41 controls     cost   4.1506  gap    +0.34%
+poly4 from DT-FBSDE, seed 1, 30 s            exact expectation, controls {-1,0,1} cost   4.1577  gap    +0.51%
+poly4 from DT-FBSDE, seed 2, 30 s            Taylor Q-function                  cost   4.1460  gap    +0.22%
+poly4 from DT-FBSDE, seed 2, 30 s            exact expectation, 41 controls     cost   4.1460  gap    +0.22%
+poly4 from DT-FBSDE, seed 2, 30 s            exact expectation, controls {-1,0,1} cost   4.1550  gap    +0.44%
+poly6 fitted to grid V (oracle)              Taylor Q-function                  cost   4.5283  gap    +9.47%
+poly6 fitted to grid V (oracle)              exact expectation, 41 controls     cost   4.5295  gap    +9.49%
+poly6 fitted to grid V (oracle)              exact expectation, controls {-1,0,1} cost   4.5312  gap    +9.54%
+poly6 from DT-FBSDE, seed 0, 30 s            Taylor Q-function                  cost   4.1535  gap    +0.40%
+poly6 from DT-FBSDE, seed 0, 30 s            exact expectation, 41 controls     cost   4.1538  gap    +0.41%
+poly6 from DT-FBSDE, seed 0, 30 s            exact expectation, controls {-1,0,1} cost   4.1596  gap    +0.55%
+poly6 from DT-FBSDE, seed 1, 30 s            Taylor Q-function                  cost   4.1458  gap    +0.22%
+poly6 from DT-FBSDE, seed 1, 30 s            exact expectation, 41 controls     cost   4.1460  gap    +0.22%
+poly6 from DT-FBSDE, seed 1, 30 s            exact expectation, controls {-1,0,1} cost   4.1544  gap    +0.43%
+poly6 from DT-FBSDE, seed 2, 30 s            Taylor Q-function                  cost   4.1468  gap    +0.24%
+poly6 from DT-FBSDE, seed 2, 30 s            exact expectation, 41 controls     cost   4.1469  gap    +0.25%
+poly6 from DT-FBSDE, seed 2, 30 s            exact expectation, controls {-1,0,1} cost   4.1514  gap    +0.35%
+
+=== L1 inverted pendulum: grid optimum 2.2977 ===
+grid V                                       grid's own policy (reference)      cost   2.2977  gap    +0.00%
+grid V                                       exact expectation, 41 controls     cost   2.2977  gap    +0.00%
+grid V                                       exact expectation, controls {-1,0,1} cost   2.3193  gap    +0.94%
+grid V, differences over 1 cells             Taylor Q-function                  cost   2.3158  gap    +0.79%
+grid V, differences over 2 cells             Taylor Q-function                  cost   2.3142  gap    +0.72%
+grid V, differences over 2 cells             Taylor Q-function, no curvature term cost   2.3199  gap    +0.96%
+grid V, differences over 4 cells             Taylor Q-function                  cost   2.3036  gap    +0.26%
+grid V, differences over 8 cells             Taylor Q-function                  cost   2.3077  gap    +0.44%
+poly4 fitted to grid V (oracle)              Taylor Q-function                  cost   4.1599  gap   +81.04%
+poly4 fitted to grid V (oracle)              exact expectation, 41 controls     cost   4.1546  gap   +80.81%
+poly4 fitted to grid V (oracle)              exact expectation, controls {-1,0,1} cost   4.3504  gap   +89.34%
+poly4 from DT-FBSDE, seed 0, 30 s            Taylor Q-function                  cost   2.3667  gap    +3.00%
+poly4 from DT-FBSDE, seed 0, 30 s            exact expectation, 41 controls     cost   2.3664  gap    +2.99%
+poly4 from DT-FBSDE, seed 0, 30 s            exact expectation, controls {-1,0,1} cost   2.3927  gap    +4.13%
+poly4 from DT-FBSDE, seed 1, 30 s            Taylor Q-function                  cost   2.3758  gap    +3.40%
+poly4 from DT-FBSDE, seed 1, 30 s            exact expectation, 41 controls     cost   2.3763  gap    +3.42%
+poly4 from DT-FBSDE, seed 1, 30 s            exact expectation, controls {-1,0,1} cost   2.3973  gap    +4.33%
+poly4 from DT-FBSDE, seed 2, 30 s            Taylor Q-function                  cost   2.4167  gap    +5.18%
+poly4 from DT-FBSDE, seed 2, 30 s            exact expectation, 41 controls     cost   2.4166  gap    +5.17%
+poly4 from DT-FBSDE, seed 2, 30 s            exact expectation, controls {-1,0,1} cost   2.4310  gap    +5.80%
+poly6 fitted to grid V (oracle)              Taylor Q-function                  cost   2.7133  gap   +18.09%
+poly6 fitted to grid V (oracle)              exact expectation, 41 controls     cost   2.7128  gap   +18.06%
+poly6 fitted to grid V (oracle)              exact expectation, controls {-1,0,1} cost   2.7385  gap   +19.18%
+poly6 from DT-FBSDE, seed 0, 30 s            Taylor Q-function                  cost   2.4216  gap    +5.39%
+poly6 from DT-FBSDE, seed 0, 30 s            exact expectation, 41 controls     cost   2.4211  gap    +5.37%
+poly6 from DT-FBSDE, seed 0, 30 s            exact expectation, controls {-1,0,1} cost   2.4360  gap    +6.02%
+poly6 from DT-FBSDE, seed 1, 30 s            Taylor Q-function                  cost   2.3676  gap    +3.04%
+poly6 from DT-FBSDE, seed 1, 30 s            exact expectation, 41 controls     cost   2.3677  gap    +3.04%
+poly6 from DT-FBSDE, seed 1, 30 s            exact expectation, controls {-1,0,1} cost   2.3869  gap    +3.88%
+poly6 from DT-FBSDE, seed 2, 30 s            Taylor Q-function                  cost   2.4213  gap    +5.38%
+poly6 from DT-FBSDE, seed 2, 30 s            exact expectation, 41 controls     cost   2.4211  gap    +5.37%
+poly6 from DT-FBSDE, seed 2, 30 s            exact expectation, controls {-1,0,1} cost   2.4357  gap    +6.01%

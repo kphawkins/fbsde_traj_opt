@@ -1,0 +1,40 @@
+
+=== L1 double integrator: grid optimum 4.1367 ===
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=3 seed 0: final gap    +1.22% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=3 seed 1: final gap    +2.28% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=3 seed 2: final gap    +2.12% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=6 seed 0: final gap    +3.63% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=6 seed 1: final gap    +4.98% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=6 seed 2: final gap    +6.50% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=3   seed 0: final gap    +0.70% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=3   seed 1: final gap    +0.72% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=3   seed 2: final gap    +0.90% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=6   seed 0: final gap    +1.86% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=6   seed 1: final gap    +2.14% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=6   seed 2: final gap    +1.09% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.2,hold=3 seed 0: final gap   +10.62% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.2,hold=3 seed 1: final gap    +9.30% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.2,hold=3 seed 2: final gap   +11.67% after 30.0 s
+poly4:target=greedy,explore=0.2,hold=3   seed 0: final gap    +4.77% after 30.0 s
+poly4:target=greedy,explore=0.2,hold=3   seed 1: final gap    +2.55% after 30.0 s
+poly4:target=greedy,explore=0.2,hold=3   seed 2: final gap    +3.39% after 30.0 s
+
+=== L1 inverted pendulum: grid optimum 2.2977 ===
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=3 seed 0: final gap   +14.55% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=3 seed 1: final gap   +15.73% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=3 seed 2: final gap   +18.64% after 30.1 s
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=6 seed 0: final gap   +15.91% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=6 seed 1: final gap   +16.52% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.1,hold=6 seed 2: final gap   +17.79% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=3   seed 0: final gap   +11.47% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=3   seed 1: final gap    +8.25% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=3   seed 2: final gap   +12.15% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=6   seed 0: final gap   +13.94% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=6   seed 1: final gap   +16.47% after 30.0 s
+poly4:target=greedy,explore=0.1,hold=6   seed 2: final gap   +16.02% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.2,hold=3 seed 0: final gap   +20.70% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.2,hold=3 seed 1: final gap   +20.87% after 30.0 s
+poly4:target=taylor,tpolicy=greedy,explore=0.2,hold=3 seed 2: final gap   +18.52% after 30.0 s
+poly4:target=greedy,explore=0.2,hold=3   seed 0: final gap   +18.62% after 30.0 s
+poly4:target=greedy,explore=0.2,hold=3   seed 1: final gap   +14.88% after 30.0 s
+poly4:target=greedy,explore=0.2,hold=3   seed 2: final gap   +16.32% after 30.0 s

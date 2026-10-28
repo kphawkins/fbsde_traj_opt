@@ -1,0 +1,10 @@
+problem,model,seed,iterations,accepted,failures,seconds,final_cost,mean_girsanov_drift,mean_first_order_correction,mean_target_magnitude,mean_signed_first_order_correction,mean_second_order_correction,off_policy_fraction,mean_off_policy_correction,mean_taylor_residual
+L1 double integrator,"poly6",0,728,46,0,30.098862,4.168286,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double integrator,"poly6",1,712,36,0,30.038920,4.204614,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double integrator,"poly6",2,661,36,0,30.006523,4.183044,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double integrator,"poly6:time=linear,knots=16",0,574,49,0,30.020668,4.179167,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double integrator,"poly6:time=linear,knots=16",1,558,46,0,30.027400,4.186348,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double integrator,"poly6:time=linear,knots=16",2,559,30,0,30.017454,4.188888,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double integrator,"poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2",0,569,40,0,30.011805,4.174951,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double integrator,"poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2",1,489,39,0,30.001386,4.213906,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000
+L1 double integrator,"poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2",2,507,42,0,30.022343,4.165435,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000

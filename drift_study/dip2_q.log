@@ -1,0 +1,10 @@
+
+=== L1 double inverted pendulum ===
+poly4:batch=128,target=taylor            seed 0: final cost    3.9706 after 241.5 s
+poly4:batch=128,target=taylor            seed 1: final cost    3.4272 after 240.1 s
+poly4:batch=128,target=taylor            seed 2: final cost    3.8966 after 240.7 s
+poly4:batch=128,target=taylor            seed 3: final cost    4.8196 after 241.0 s
+poly4:batch=128,target=current           seed 0: final cost    4.0866 after 240.9 s
+poly4:batch=128,target=current           seed 1: final cost    5.7033 after 241.8 s
+poly4:batch=128,target=current           seed 2: final cost    3.5092 after 240.6 s
+poly4:batch=128,target=current           seed 3: final cost    3.5526 after 241.8 s

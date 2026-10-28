@@ -1,0 +1,355 @@
+<main class="page">
+  <header class="stack prose">
+    <div class="eyebrow">DT-FBSDE · value-function models and sigma-point sampling</div>
+    <h1>Which value model, and do sigma points help?</h1>
+    <p class="lede"><!--LEDE--></p>
+    <p class="meta"><!--META--></p>
+  </header>
+
+  <div class="verdict">
+    <div class="eyebrow">Short answers</div>
+    <!--VERDICT-->
+  </div>
+
+  <section class="stack">
+    <div class="prose stack">
+      <div class="eyebrow">Part 1 · Value-function models</div>
+      <h2>What the literature offers, and what fits DT-FBSDE</h2>
+      <!--LIT_MODELS-->
+    </div>
+    <div class="table-wrap"><table id="lit-table"></table></div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Capacity: fitting the true value function</h2>
+      <!--ORACLE-->
+    </div>
+    <div class="table-wrap"><table id="oracle-table"></table></div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Inside DT-FBSDE: the 2-D problems</h2>
+      <!--SCREEN-->
+    </div>
+    <div class="legend" id="family-legend"></div>
+    <div class="grid2" id="screen-strips"></div>
+    <div class="grid2" id="screen-curves"></div>
+    <details><summary>Every configuration screened (3 seeds, 30 s each)</summary><div class="table-wrap"><table id="screen-table"></table></div></details>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Why the basis matters: the ridge is the prior</h2>
+      <!--PRIOR-->
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Inside DT-FBSDE: the double inverted pendulum</h2>
+      <!--DIP-->
+    </div>
+    <div class="grid2" id="dip-charts"></div>
+  </section>
+
+  <section class="stack" id="confirm-section">
+    <div class="prose stack">
+      <h2>Confirmation: the finalists at 8 seeds and 60 s</h2>
+      <!--CONFIRM-->
+    </div>
+    <div class="grid2" id="confirm-strips"></div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <div class="eyebrow">Part 2 · Sigma-point sampling</div>
+      <h2>An unscented forward pass for DT-FBSDE</h2>
+      <!--SIGMA_DESIGN-->
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Results on the 2-D problems</h2>
+      <!--SIGMA_RESULTS-->
+    </div>
+    <div class="legend" id="sampler-legend"></div>
+    <div class="grid2" id="sigma-strips"></div>
+    <div class="table-wrap"><table id="sigma-table"></table></div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Your four questions about sigma points</h2>
+      <!--SIGMA_ANSWERS-->
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Sigma points on the double inverted pendulum</h2>
+      <!--SIGMA_DIP-->
+    </div>
+    <div class="table-wrap"><table id="sigma-dip-table"></table></div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Recommendations</h2>
+      <!--RECOMMEND-->
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Method notes and caveats</h2>
+      <!--CAVEATS-->
+    </div>
+  </section>
+</main>
+
+<script>
+const DATA = /*DATA*/null;
+const LIT = /*LIT*/[];
+const NS = "http://www.w3.org/2000/svg";
+const FAMILIES = [
+  ["Monomial polynomial", "var(--s1)"],
+  ["Soft-min quadratics", "var(--s2)"],
+  ["Gaussian RBF", "var(--s3)"],
+  ["Cubic B-spline", "var(--s4)"],
+  ["Legendre polynomial", "var(--s5)"],
+  ["Tanh network", "var(--s6)"],
+];
+const FAMILY_COLOR = Object.fromEntries(FAMILIES);
+const SAMPLERS = [
+  ["Random paths (current)", "var(--s1)"],
+  ["Deterministic sigma points", "var(--s2)"],
+  ["Randomly rotated sigma points", "var(--s3)"],
+];
+function samplerOf(label) {
+  if (label.startsWith("random")) return SAMPLERS[0];
+  if (label.includes("rotate=random")) return SAMPLERS[2];
+  return SAMPLERS[1];
+}
+function el(tag, attrs = {}, parent) {
+  const node = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (parent) parent.appendChild(node);
+  return node;
+}
+function h(tag, attrs = {}, text) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function pct(g, digits = 1) {
+  if (g === null || g === undefined || !isFinite(g)) return "breakdown";
+  const p = 100 * g;
+  return (p >= 0 ? "+" : "") + (Math.abs(p) >= 100 ? p.toFixed(0) : p.toFixed(digits)) + "%";
+}
+function secs(t) {
+  if (t === null || t === undefined || !isFinite(t)) return "never";
+  if (t < 1) return (t * 1000).toFixed(0) + " ms";
+  return t < 10 ? t.toFixed(1) + " s" : t.toFixed(0) + " s";
+}
+function legend(container, items, dots = true) {
+  for (const [name, color] of items) {
+    const span = h("span");
+    const key = h("i", dots ? { class: "dot" } : {});
+    key.style.background = color;
+    span.append(key, document.createTextNode(name));
+    container.appendChild(span);
+  }
+}
+
+// One row per configuration, one dot per seed, on a log axis of gap (or cost); runs that broke
+// down are crosses in a column of their own at the right.
+function stripChart(container, title, entries, opts) {
+  const card = h("div", { class: "chart-card" });
+  card.appendChild(h("div", { class: "chart-title" }, title));
+  const rowH = 22, m = { l: 150, r: 56, t: 6, b: 34 };
+  const W = 520, H = m.t + m.b + rowH * entries.length;
+  const floor = opts.floor, top = opts.top;
+  const x = v => m.l + (Math.log10(Math.max(v, floor)) - Math.log10(floor)) / (Math.log10(top) - Math.log10(floor)) * (W - m.l - m.r);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": title }, card);
+  for (const t of opts.ticks) {
+    el("line", { x1: x(t), x2: x(t), y1: m.t, y2: H - m.b, stroke: "var(--grid)" }, svg);
+    const lab = el("text", { x: x(t), y: H - m.b + 14, "text-anchor": "middle" }, svg);
+    lab.textContent = opts.tickLabel(t);
+  }
+  if (opts.refLine) {
+    el("line", { x1: x(opts.refLine), x2: x(opts.refLine), y1: m.t, y2: H - m.b, stroke: "var(--ink-3)", "stroke-dasharray": "3 4" }, svg);
+  }
+  const failX = W - m.r + 26;
+  const fl = el("text", { x: failX, y: H - m.b + 14, "text-anchor": "middle" }, svg);
+  fl.textContent = "broke";
+  const xl = el("text", { x: (m.l + W - m.r) / 2, y: H - 4, "text-anchor": "middle" }, svg);
+  xl.textContent = opts.xLabel;
+  entries.forEach((e, i) => {
+    const cy = m.t + rowH * i + rowH / 2;
+    const lab = el("text", { x: m.l - 8, y: cy + 4, "text-anchor": "end", class: "label" }, svg);
+    lab.textContent = e.label.length > 22 ? e.label.slice(0, 21) + "…" : e.label;
+    const t = el("title", {}, lab); t.textContent = e.label;
+    const color = opts.color(e);
+    e.values.forEach((v, j) => {
+      const dy = ((j % 3) - 1) * 3;
+      if (v === null) {
+        const cx = failX + ((j % 3) - 1) * 6;
+        el("line", { x1: cx - 3.5, x2: cx + 3.5, y1: cy + dy - 3.5, y2: cy + dy + 3.5, class: "fail-mark" }, svg);
+        el("line", { x1: cx - 3.5, x2: cx + 3.5, y1: cy + dy + 3.5, y2: cy + dy - 3.5, class: "fail-mark" }, svg);
+        return;
+      }
+      const c = el("circle", { cx: x(v), cy: cy + dy, r: 4, fill: color, stroke: "var(--surface)", "stroke-width": 1.5 }, svg);
+      const tt = el("title", {}, c); tt.textContent = `${e.label}, seed ${j}: ${opts.valueLabel(v)}`;
+    });
+  });
+  container.appendChild(card);
+}
+
+function curveChart(container, title, data, labelOf, colorOf, opts) {
+  const card = h("div", { class: "chart-card" });
+  card.appendChild(h("div", { class: "chart-title" }, title));
+  const W = 520, H = 280, m = { l: 48, r: 112, t: 10, b: 38 };
+  const times = data.times, tMin = times[0], tMax = data.budget;
+  const floor = opts.floor, top = opts.top;
+  const x = t => m.l + (Math.log10(t) - Math.log10(tMin)) / (Math.log10(tMax) - Math.log10(tMin)) * (W - m.l - m.r);
+  const y = v => m.t + (Math.log10(top) - Math.log10(Math.min(Math.max(v, floor), top))) / (Math.log10(top) - Math.log10(floor)) * (H - m.t - m.b);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": title }, card);
+  for (const g of opts.yTicks) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(g), y2: y(g), stroke: "var(--grid)" }, svg);
+    const t = el("text", { x: m.l - 6, y: y(g) + 4, "text-anchor": "end" }, svg); t.textContent = opts.yLabel(g);
+  }
+  for (const t of [0.01, 0.1, 1, 10, 100].filter(t => t >= tMin && t <= tMax)) {
+    el("line", { x1: x(t), x2: x(t), y1: m.t, y2: H - m.b, stroke: "var(--grid)" }, svg);
+    const lab = el("text", { x: x(t), y: H - m.b + 14, "text-anchor": "middle" }, svg); lab.textContent = secs(t);
+  }
+  const xl = el("text", { x: (m.l + W - m.r) / 2, y: H - 4, "text-anchor": "middle" }, svg); xl.textContent = "charged solver time (log)";
+  const ends = [];
+  for (const s of data.series) {
+    let d = "";
+    times.forEach((t, i) => { const v = s.curve[i][1]; if (v !== null) d += (d ? "L" : "M") + x(t).toFixed(1) + "," + y(opts.transform(v)).toFixed(1); });
+    el("path", { d, fill: "none", stroke: colorOf(s.label), "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+    const last = s.curve[s.curve.length - 1][1];
+    if (last !== null) ends.push({ label: labelOf(s.label), y: y(opts.transform(last)) });
+  }
+  ends.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 13) ends[i].y = ends[i - 1].y + 13;
+  for (const e of ends) { const t = el("text", { x: W - m.r + 6, y: e.y + 4, class: "label" }, svg); t.textContent = e.label; }
+  container.appendChild(card);
+}
+
+function table(id, headers, rows) {
+  const t = document.getElementById(id);
+  const head = h("tr");
+  headers.forEach(c => head.appendChild(h("th", {}, c)));
+  t.appendChild(head);
+  for (const r of rows) {
+    const tr = h("tr");
+    r.forEach((c, i) => {
+      if (c instanceof Node) { const td = h("td"); td.appendChild(c); tr.appendChild(td); }
+      else tr.appendChild(h("td", i > 0 ? { class: "num" } : {}, c));
+    });
+    t.appendChild(tr);
+  }
+}
+function keyed(label, color) {
+  const span = h("span"); span.style.display = "inline-flex"; span.style.alignItems = "center"; span.style.gap = "8px";
+  const i = h("i"); i.style.cssText = `width:9px;height:9px;border-radius:50%;display:inline-block;background:${color}`;
+  span.append(i, document.createTextNode(label));
+  return span;
+}
+
+const GAP_STRIP = {
+  floor: 0.001, top: 100, ticks: [0.001, 0.01, 0.1, 1, 10, 100],
+  tickLabel: t => t === 0.001 ? "≤0.1%" : (100 * t >= 1 ? (100 * t).toFixed(0) : (100 * t).toFixed(1)) + "%",
+  refLine: 0.05, xLabel: "final gap to the grid optimum, one dot per seed (log; dashed: 5%)",
+  valueLabel: v => pct(v),
+};
+
+function render() {
+  // Literature table.
+  table("lit-table", ["Family", "Literature", "Fits DT-FBSDE?", "Tested here"], LIT.map(r => [r[0], r[1], r[2], r[3]]));
+
+  // Oracle table.
+  const oracle = DATA.oracle;
+  const models = [...new Set(oracle.map(o => o.model))];
+  table("oracle-table", ["Model", "Coefficients", "Policy gap, double integrator", "Policy gap, pendulum", "Value RMSE, pendulum", "Policy evaluation"],
+    models.map(name => {
+      const di = oracle.find(o => o.model === name && o.problem === "L1 double integrator");
+      const pe = oracle.find(o => o.model === name && o.problem === "L1 inverted pendulum");
+      return [keyed(name, FAMILY_COLOR[di.family]), String(di.params), pct(di.gap), pct(pe.gap), pe.value_rmse.toFixed(3), pe.policy_us.toFixed(1) + " µs"];
+    }));
+
+  legend(document.getElementById("family-legend"), FAMILIES);
+  const strips = document.getElementById("screen-strips");
+  const curves = document.getElementById("screen-curves");
+  for (const [problem, short] of [["L1 double integrator", "Double integrator"], ["L1 inverted pendulum", "Pendulum"]]) {
+    stripChart(strips, `${short}: final gap after 30 s, every configuration`, DATA.screen[problem], { ...GAP_STRIP, color: e => FAMILY_COLOR[e.family] });
+    if (DATA.screen_curves[problem]) {
+      curveChart(curves, `${short}: median gap over time, selected models`, DATA.screen_curves[problem], l => l.replace(":rough=1e-6", "+rough"),
+        l => FAMILY_COLOR[DATA.screen[problem].find(e => e.label === l).family],
+        { floor: 0.001, top: 100, transform: v => v, yTicks: [0.001, 0.01, 0.1, 1, 10, 100], yLabel: g => g === 0.001 ? "≤0.1%" : (100 * g >= 1 ? (100 * g).toFixed(0) : (100 * g).toFixed(1)) + "%" });
+    }
+  }
+  const screenRows = [];
+  for (const [problem, short] of [["L1 double integrator", "Double integrator"], ["L1 inverted pendulum", "Pendulum"]]) {
+    for (const e of DATA.screen[problem]) {
+      screenRows.push([short, keyed(e.label, FAMILY_COLOR[e.family]), pct(e.median), `${e.failures}/${e.runs}`, `${e.reach["0.05"].at_end}/${e.runs}`, secs(e.reach["0.05"].median_seconds), e.ms_per_iteration.toFixed(1) + " ms"]);
+    }
+  }
+  table("screen-table", ["Problem", "Model", "Final gap, median", "Broke down", "Within 5% at end", "Median time to 5%", "Per iteration"], screenRows);
+
+  // Double inverted pendulum.
+  const dipCharts = document.getElementById("dip-charts");
+  const ref = DATA.dip_reference;
+  stripChart(dipCharts, "Final held-out cost after 180 s (dashed: best known, 2.49)", DATA.dip.map(e => ({ ...e, values: e.values.map(g => g === null ? null : ref * (1 + g)) })), {
+    floor: 2, top: 100, ticks: [2, 5, 10, 20, 50, 100], tickLabel: t => String(t), refLine: ref,
+    xLabel: "held-out cost, one dot per seed (log)", valueLabel: v => v.toFixed(2), color: e => FAMILY_COLOR[e.family],
+  });
+  if (DATA.dip_curves) {
+    curveChart(dipCharts, "Median held-out cost over time", DATA.dip_curves, l => l,
+      l => FAMILY_COLOR[DATA.dip.find(e => e.label === l).family],
+      { floor: 2, top: 100, transform: g => ref * (1 + g), yTicks: [2, 5, 10, 20, 50, 100], yLabel: v => String(v) });
+  }
+
+  // Confirmations.
+  const confirm = document.getElementById("confirm-strips");
+  if (DATA.confirm && DATA.confirm["L1 inverted pendulum"] && DATA.confirm["L1 inverted pendulum"].length) {
+    for (const [problem, short] of [["L1 double integrator", "Double integrator"], ["L1 inverted pendulum", "Pendulum"]]) {
+      stripChart(confirm, `${short}: final gap after 60 s, 8 seeds`, DATA.confirm[problem], { ...GAP_STRIP, color: e => FAMILY_COLOR[e.family] });
+    }
+  } else {
+    confirm.appendChild(h("div", { class: "pending" }, "These runs are queued and still to come. This page will be updated when they finish."));
+  }
+
+  // Sigma points.
+  legend(document.getElementById("sampler-legend"), SAMPLERS);
+  const sigmaStrips = document.getElementById("sigma-strips");
+  for (const [problem, short] of [["L1 double integrator", "Double integrator"], ["L1 inverted pendulum", "Pendulum"]]) {
+    stripChart(sigmaStrips, `${short}: final gap after 30 s, 5 seeds`, DATA.sigma[problem], { ...GAP_STRIP, color: e => samplerOf(e.label)[1] });
+  }
+  const rows = DATA.sigma_table.slice().sort((a, b) => a.problem.localeCompare(b.problem) || a.gap_median - b.gap_median);
+  table("sigma-table", ["Problem", "Sampler", "Batch", "Gap, median", "Spread over seeds", "V₀(x₀) error", "Updates accepted", "Per iteration", "Forward / backward / line search"],
+    rows.map(r => [r.problem.replace("L1 ", ""), keyed(r.config, samplerOf(r.config)[1]), String(r.batch), pct(r.gap_median), (100 * r.gap_spread).toFixed(1) + " pts",
+      (100 * r.v0_error).toFixed(0) + "%", (100 * r.accepted).toFixed(1) + "%", r.ms_per_iteration.toFixed(1) + " ms",
+      `${(100 * r.forward).toFixed(0)} / ${(100 * r.backward).toFixed(0)} / ${(100 * r.line_search).toFixed(0)}%`]));
+
+  const dipRuns = DATA.sigma_dip_runs;
+  if (dipRuns.length) {
+    const byConfig = {};
+    for (const r of dipRuns) (byConfig[r.config] ||= []).push(r);
+    table("sigma-dip-table", ["Sampler", "Batch", "Final cost per seed", "Median", "Updates accepted"],
+      Object.entries(byConfig).map(([config, rs]) => {
+        const costs = rs.map(r => +r.final_cost).sort((a, b) => a - b);
+        const acc = rs.map(r => +r.accepted / Math.max(+r.iterations, 1)).sort((a, b) => a - b);
+        return [keyed(config, samplerOf(config)[1]), rs[0].batch, costs.map(c => c.toFixed(2)).join(", "), costs[Math.floor(costs.length / 2)].toFixed(2), (100 * acc[Math.floor(acc.length / 2)]).toFixed(1) + "%"];
+      }));
+  } else {
+    document.getElementById("sigma-dip-table").replaceWith(h("div", { class: "pending" }, "These runs are queued and still to come. This page will be updated when they finish."));
+  }
+}
+render();
+</script>

@@ -1,0 +1,25 @@
+problem,model,seed,iterations,accepted,failures,seconds,final_cost,mean_girsanov_drift,mean_first_order_correction,mean_target_magnitude
+L1 double integrator,"poly4:target=greedy,explore=0.03",0,2419,46,0,30.002522,4.148614,0.000000,0.000000,0.000000
+L1 double integrator,"poly4:target=greedy,explore=0.03",1,2626,46,0,30.007931,4.150272,0.000000,0.000000,0.000000
+L1 double integrator,"poly4:target=greedy,explore=0.03",2,2575,60,0,30.012022,4.147596,0.000000,0.000000,0.000000
+L1 double integrator,"poly4:target=current,explore=0.03",0,2358,32,0,30.020768,4.196312,0.000000,0.000000,0.000000
+L1 double integrator,"poly4:target=current,explore=0.03",1,2348,39,0,30.010058,4.154744,0.000000,0.000000,0.000000
+L1 double integrator,"poly4:target=current,explore=0.03",2,2163,43,0,30.010814,4.153711,0.000000,0.000000,0.000000
+L1 double integrator,"poly4:target=taylor,explore=0.03",0,2399,30,0,30.020366,4.149849,0.060038,0.040464,15.448670
+L1 double integrator,"poly4:target=taylor,explore=0.03",1,2343,35,0,30.015588,4.151638,0.060552,0.046608,19.673831
+L1 double integrator,"poly4:target=taylor,explore=0.03",2,2200,33,0,30.011943,4.204827,0.061087,0.046907,19.498333
+L1 double integrator,"poly4:target=taylor,tpolicy=greedy,explore=0.03",0,2203,32,0,30.007013,4.149571,0.274215,0.050800,14.720738
+L1 double integrator,"poly4:target=taylor,tpolicy=greedy,explore=0.03",1,2146,37,0,30.007731,4.148258,0.285080,0.089282,15.758669
+L1 double integrator,"poly4:target=taylor,tpolicy=greedy,explore=0.03",2,2163,45,0,30.001329,4.144577,0.272963,0.049264,14.110181
+L1 inverted pendulum,"poly4:target=greedy,explore=0.03",0,807,43,0,30.029682,2.356687,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly4:target=greedy,explore=0.03",1,706,65,0,30.001677,2.382118,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly4:target=greedy,explore=0.03",2,758,40,0,30.045622,2.427174,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly4:target=current,explore=0.03",0,860,43,0,30.028727,2.403665,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly4:target=current,explore=0.03",1,885,47,0,30.020980,2.390817,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly4:target=current,explore=0.03",2,773,34,0,30.475230,2.381437,0.000000,0.000000,0.000000
+L1 inverted pendulum,"poly4:target=taylor,explore=0.03",0,682,41,0,30.057952,2.440361,0.066052,0.065536,23.392197
+L1 inverted pendulum,"poly4:target=taylor,explore=0.03",1,829,56,0,30.013609,2.409013,0.062822,0.050072,13.048622
+L1 inverted pendulum,"poly4:target=taylor,explore=0.03",2,894,34,0,30.036881,2.380504,0.062004,0.062214,21.001413
+L1 inverted pendulum,"poly4:target=taylor,tpolicy=greedy,explore=0.03",0,782,29,0,30.046390,2.400869,0.674935,0.776706,27.453550
+L1 inverted pendulum,"poly4:target=taylor,tpolicy=greedy,explore=0.03",1,893,34,0,30.010113,2.410105,0.630238,0.859558,28.473368
+L1 inverted pendulum,"poly4:target=taylor,tpolicy=greedy,explore=0.03",2,956,35,0,30.004931,2.387378,0.691314,0.610074,27.024810

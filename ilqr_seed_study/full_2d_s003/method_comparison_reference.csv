@@ -1,0 +1,3 @@
+problem,grid_optimum,grid_optimum_mpc_subset
+L1 double integrator,4.136748,4.173415
+L1 inverted pendulum,2.297722,2.309900

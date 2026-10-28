@@ -1,0 +1,130 @@
+
+=== L1 double integrator: grid optimum 4.1367 ===
+poly2                                    seed 0: final gap    +0.44% after 30.0 s
+poly2                                    seed 1: final gap    +0.37% after 30.0 s
+poly2                                    seed 2: final gap    +0.37% after 30.0 s
+poly4:ridge=1e-8                         seed 0: final gap    +0.14% after 30.0 s
+poly4:ridge=1e-8                         seed 1: final gap    +0.17% after 30.0 s
+poly4:ridge=1e-8                         seed 2: final gap    +0.27% after 30.0 s
+poly4:ridge=1e-4                         seed 0: final gap    +1.77% after 30.0 s
+poly4:ridge=1e-4                         seed 1: final gap    +1.42% after 30.0 s
+poly4:ridge=1e-4                         seed 2: final gap    +0.96% after 30.0 s
+poly4:ridge=1e-2                         seed 0: final gap   +21.66% after 30.0 s
+poly4:ridge=1e-2                         seed 1: final gap   +59.22% after 30.0 s
+poly4:ridge=1e-2                         seed 2: final gap   +13.74% after 30.0 s
+poly6:ridge=1e-4                         seed 0: final gap    +3.08% after 30.0 s
+poly6:ridge=1e-4                         seed 1: final gap    +1.73% after 30.0 s
+poly6:ridge=1e-4                         seed 2: final gap    +1.27% after 30.0 s
+poly6:ridge=1e-2                         seed 0: final gap   +24.44% after 30.0 s
+poly6:ridge=1e-2                         seed 1: final gap   +30.31% after 30.0 s
+poly6:ridge=1e-2                         seed 2: final gap   +16.38% after 30.0 s
+poly8:ridge=1e-4                         seed 0: final gap    +3.15% after 30.0 s
+poly8:ridge=1e-4                         seed 1: final gap    +2.61% after 30.0 s
+poly8:ridge=1e-4                         seed 2: final gap    +1.58% after 30.1 s
+poly6:rough=1e-3                         seed 0: final gap    +0.40% after 30.0 s
+poly6:rough=1e-3                         seed 1: final gap    +0.22% after 30.0 s
+poly6:rough=1e-3                         seed 2: final gap    +0.26% after 30.0 s
+leg6:rough=1e-3                          seed 0: final gap    +0.33% after 30.0 s
+leg6:rough=1e-3                          seed 1: final gap    +0.88% after 30.0 s
+leg6:rough=1e-3                          seed 2: final gap    +0.36% after 30.0 s
+leg8:rough=1e-4                          seed 0: DT-FBSDE failed at iteration 255: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-4                          seed 0: final gap     +nan% after 6.8 s
+leg8:rough=1e-4                          seed 1: final gap    +9.69% after 30.0 s
+leg8:rough=1e-4                          seed 2: final gap   +34.80% after 30.0 s
+leg8:rough=1e-3                          seed 0: DT-FBSDE failed at iteration 255: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-3                          seed 0: final gap     +nan% after 6.8 s
+leg8:rough=1e-3                          seed 1: final gap    +9.69% after 30.0 s
+leg8:rough=1e-3                          seed 2: final gap   +34.30% after 30.0 s
+leg8:rough=1e-2                          seed 0: DT-FBSDE failed at iteration 255: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-2                          seed 0: final gap     +nan% after 6.8 s
+leg8:rough=1e-2                          seed 1: final gap    +9.69% after 30.0 s
+leg8:rough=1e-2                          seed 2: final gap   +34.80% after 30.0 s
+leg10:rough=1e-3                         seed 0: DT-FBSDE failed at iteration 17: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg10:rough=1e-3                         seed 0: final gap     +nan% after 0.8 s
+leg10:rough=1e-3                         seed 1: DT-FBSDE failed at iteration 367: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg10:rough=1e-3                         seed 1: final gap     +nan% after 19.4 s
+leg10:rough=1e-3                         seed 2: DT-FBSDE failed at iteration 15: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg10:rough=1e-3                         seed 2: final gap     +nan% after 0.7 s
+spline7:rough=1e-3                       seed 0: final gap    +0.43% after 30.0 s
+spline7:rough=1e-3                       seed 1: final gap    +0.40% after 30.0 s
+spline7:rough=1e-3                       seed 2: final gap    +0.51% after 30.1 s
+rbf9:rough=1e-3                          seed 0: final gap    +3.58% after 30.0 s
+rbf9:rough=1e-3                          seed 1: final gap    +1.80% after 30.1 s
+rbf9:rough=1e-3                          seed 2: final gap    +0.74% after 30.2 s
+softmin4:lr=0.02,epochs=100              seed 0: final gap    +1.19% after 30.0 s
+softmin4:lr=0.02,epochs=100              seed 1: final gap    +0.99% after 30.0 s
+softmin4:lr=0.02,epochs=100              seed 2: final gap    +0.55% after 30.0 s
+softmin4:lr=0.1                          seed 0: final gap    +2.55% after 30.0 s
+softmin4:lr=0.1                          seed 1: final gap    +0.50% after 30.0 s
+softmin4:lr=0.1                          seed 2: final gap    +2.20% after 30.0 s
+tanh32:lr=0.01,epochs=100                seed 0: final gap    +8.86% after 30.1 s
+tanh32:lr=0.01,epochs=100                seed 1: final gap    +5.92% after 30.0 s
+tanh32:lr=0.01,epochs=100                seed 2: final gap    +8.59% after 30.1 s
+
+=== L1 inverted pendulum: grid optimum 2.2977 ===
+poly2                                    seed 0: final gap   +10.11% after 30.0 s
+poly2                                    seed 1: final gap    +4.64% after 30.0 s
+poly2                                    seed 2: final gap    +5.63% after 30.0 s
+poly4:ridge=1e-8                         seed 0: final gap   +18.81% after 30.0 s
+poly4:ridge=1e-8                         seed 1: final gap   +16.79% after 30.0 s
+poly4:ridge=1e-8                         seed 2: final gap   +18.55% after 30.0 s
+poly4:ridge=1e-4                         seed 0: final gap   +38.85% after 30.0 s
+poly4:ridge=1e-4                         seed 1: final gap   +29.81% after 30.0 s
+poly4:ridge=1e-4                         seed 2: final gap   +22.82% after 30.0 s
+poly4:ridge=1e-2                         seed 0: final gap  +535.44% after 30.0 s
+poly4:ridge=1e-2                         seed 1: final gap +1161.28% after 30.0 s
+poly4:ridge=1e-2                         seed 2: final gap +1003.02% after 30.0 s
+poly6:ridge=1e-4                         seed 0: final gap   +50.17% after 30.0 s
+poly6:ridge=1e-4                         seed 1: final gap   +26.43% after 30.0 s
+poly6:ridge=1e-4                         seed 2: final gap   +16.93% after 30.0 s
+poly6:ridge=1e-2                         seed 0: final gap +1079.99% after 30.0 s
+poly6:ridge=1e-2                         seed 1: final gap +1052.35% after 30.0 s
+poly6:ridge=1e-2                         seed 2: final gap +1118.58% after 30.0 s
+poly8:ridge=1e-4                         seed 0: final gap   +40.44% after 30.0 s
+poly8:ridge=1e-4                         seed 1: final gap   +29.62% after 30.0 s
+poly8:ridge=1e-4                         seed 2: final gap   +53.19% after 30.0 s
+poly6:rough=1e-3                         seed 0: final gap    +5.37% after 30.0 s
+poly6:rough=1e-3                         seed 1: final gap    +3.04% after 30.0 s
+poly6:rough=1e-3                         seed 2: final gap    +5.38% after 30.0 s
+leg6:rough=1e-3                          seed 0: final gap   +47.59% after 30.0 s
+leg6:rough=1e-3                          seed 1: final gap   +59.53% after 30.0 s
+leg6:rough=1e-3                          seed 2: final gap   +42.26% after 30.0 s
+leg8:rough=1e-4                          seed 0: DT-FBSDE failed at iteration 25: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-4                          seed 0: final gap     +nan% after 1.2 s
+leg8:rough=1e-4                          seed 1: DT-FBSDE failed at iteration 51: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-4                          seed 1: final gap     +nan% after 2.2 s
+leg8:rough=1e-4                          seed 2: DT-FBSDE failed at iteration 285: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-4                          seed 2: final gap     +nan% after 11.0 s
+leg8:rough=1e-3                          seed 0: DT-FBSDE failed at iteration 25: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-3                          seed 0: final gap     +nan% after 1.1 s
+leg8:rough=1e-3                          seed 1: DT-FBSDE failed at iteration 51: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-3                          seed 1: final gap     +nan% after 2.1 s
+leg8:rough=1e-3                          seed 2: DT-FBSDE failed at iteration 285: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-3                          seed 2: final gap     +nan% after 11.1 s
+leg8:rough=1e-2                          seed 0: DT-FBSDE failed at iteration 25: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-2                          seed 0: final gap     +nan% after 1.1 s
+leg8:rough=1e-2                          seed 1: DT-FBSDE failed at iteration 51: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-2                          seed 1: final gap     +nan% after 2.1 s
+leg8:rough=1e-2                          seed 2: DT-FBSDE failed at iteration 285: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg8:rough=1e-2                          seed 2: final gap     +nan% after 11.0 s
+leg10:rough=1e-3                         seed 0: DT-FBSDE failed at iteration 3: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg10:rough=1e-3                         seed 0: final gap     +nan% after 0.1 s
+leg10:rough=1e-3                         seed 1: DT-FBSDE failed at iteration 12: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg10:rough=1e-3                         seed 1: final gap     +nan% after 0.8 s
+leg10:rough=1e-3                         seed 2: DT-FBSDE failed at iteration 3: LinearBasisValueFunctionApprox::FitWeightedLeastSquares: the normal equations are singular; add a ridge weight or more varied samples.
+leg10:rough=1e-3                         seed 2: final gap     +nan% after 0.1 s
+spline7:rough=1e-3                       seed 0: final gap   +13.90% after 30.0 s
+spline7:rough=1e-3                       seed 1: final gap    +9.24% after 30.1 s
+spline7:rough=1e-3                       seed 2: final gap   +15.05% after 30.0 s
+rbf9:rough=1e-3                          seed 0: final gap   +28.60% after 30.1 s
+rbf9:rough=1e-3                          seed 1: final gap   +45.51% after 30.2 s
+rbf9:rough=1e-3                          seed 2: final gap   +36.71% after 30.0 s
+softmin4:lr=0.02,epochs=100              seed 0: final gap   +47.69% after 30.0 s
+softmin4:lr=0.02,epochs=100              seed 1: final gap +1810.66% after 30.0 s
+softmin4:lr=0.02,epochs=100              seed 2: final gap   +59.27% after 30.0 s
+softmin4:lr=0.1                          seed 0: final gap   +41.08% after 30.0 s
+softmin4:lr=0.1                          seed 1: final gap   +69.21% after 30.0 s
+softmin4:lr=0.1                          seed 2: final gap   +22.85% after 30.0 s
+tanh32:lr=0.01,epochs=100                seed 0: final gap +3413.42% after 30.2 s
+tanh32:lr=0.01,epochs=100                seed 1: final gap +3412.48% after 30.2 s
+tanh32:lr=0.01,epochs=100                seed 2: final gap +3418.19% after 30.0 s

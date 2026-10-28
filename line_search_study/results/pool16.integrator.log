@@ -1,0 +1,9 @@
+
+=== L1 double integrator (60 s per run) ===
+grid DP optimum, held out: 4.1367 (1024 rollouts), 4.1734 (first 128)
+L1 double integrator         DT-FBSDE           seed  0:   89.1632 ->    5.1540 (best    5.1540) in   60.12 s, 457 iterations
+L1 double integrator         DT-FBSDE           seed  1:   89.1632 ->    5.2202 (best    5.2202) in   60.02 s, 460 iterations
+L1 double integrator         DT-FBSDE           seed  2:   89.1632 ->    5.4976 (best    5.4976) in   60.05 s, 468 iterations
+L1 double integrator         DT-FBSDE           seed  3:   89.1632 ->    4.4274 (best    4.4274) in   60.06 s, 448 iterations
+
+Checkpoints in pool16.integrator.ckpt.csv, MPC results in /dev/null, grid optima in pool16.integrator.ref.csv

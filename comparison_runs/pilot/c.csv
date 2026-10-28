@@ -1,0 +1,113 @@
+problem,method,seed,iteration,seconds,held_out_cost
+L1 inverted pendulum,FBRRT,0,0,0.000000,98.894824
+L1 inverted pendulum,FBRRT,0,1,0.568220,33.996760
+L1 inverted pendulum,FBRRT,0,2,1.101030,8.905867
+L1 inverted pendulum,FBRRT,0,3,1.646840,6.010318
+L1 inverted pendulum,FBRRT,0,4,2.219958,5.897296
+L1 inverted pendulum,FBRRT,0,5,2.770511,5.713914
+L1 inverted pendulum,FBRRT,0,6,3.376978,5.711006
+L1 inverted pendulum,FBRRT,0,7,3.984115,5.711006
+L1 inverted pendulum,FBRRT,0,8,4.568289,5.549525
+L1 inverted pendulum,FBRRT,0,9,5.186545,5.549525
+L1 inverted pendulum,FBRRT,0,11,6.348688,5.509327
+L1 inverted pendulum,FBRRT,0,12,6.910926,5.436683
+L1 inverted pendulum,FBRRT,0,14,8.189474,5.443077
+L1 inverted pendulum,FBRRT,0,16,9.386376,5.407838
+L1 inverted pendulum,FBRRT,0,18,10.632897,5.432791
+L1 inverted pendulum,FBRRT,0,20,11.879069,5.378909
+L1 inverted pendulum,FBRRT,0,23,13.641947,5.324190
+L1 inverted pendulum,FBRRT,0,26,15.436585,5.068764
+L1 inverted pendulum,FBRRT,0,30,17.850035,4.975563
+L1 inverted pendulum,FBRRT,0,35,20.894503,4.935435
+L1 inverted pendulum,FBRRT,0,40,23.865777,4.768876
+L1 inverted pendulum,FBRRT,0,46,27.554033,4.770439
+L1 inverted pendulum,FBRRT,0,52,31.245936,4.761813
+L1 inverted pendulum,FBRRT,0,60,36.088149,4.717995
+L1 inverted pendulum,FBRRT,0,68,41.210992,4.716660
+L1 inverted pendulum,FBRRT,0,78,47.352490,4.676193
+L1 inverted pendulum,FBRRT,0,90,54.689796,4.642509
+L1 inverted pendulum,FBRRT,0,99,60.174793,4.627295
+L1 inverted pendulum,DT-FBSDE,0,0,0.000000,80.687174
+L1 inverted pendulum,DT-FBSDE,0,1,0.024511,21.573824
+L1 inverted pendulum,DT-FBSDE,0,2,0.046132,21.573824
+L1 inverted pendulum,DT-FBSDE,0,3,0.074356,14.657378
+L1 inverted pendulum,DT-FBSDE,0,4,0.112799,14.297101
+L1 inverted pendulum,DT-FBSDE,0,5,0.139194,8.201593
+L1 inverted pendulum,DT-FBSDE,0,6,0.165435,6.745348
+L1 inverted pendulum,DT-FBSDE,0,7,0.198033,6.630543
+L1 inverted pendulum,DT-FBSDE,0,8,0.224621,4.847345
+L1 inverted pendulum,DT-FBSDE,0,9,0.266488,4.390323
+L1 inverted pendulum,DT-FBSDE,0,10,0.303220,3.085550
+L1 inverted pendulum,DT-FBSDE,0,11,0.377451,3.085604
+L1 inverted pendulum,DT-FBSDE,0,12,0.421341,3.085604
+L1 inverted pendulum,DT-FBSDE,0,14,0.510202,3.085604
+L1 inverted pendulum,DT-FBSDE,0,15,0.547816,3.085604
+L1 inverted pendulum,DT-FBSDE,0,18,0.630711,3.085604
+L1 inverted pendulum,DT-FBSDE,0,22,0.735201,3.085604
+L1 inverted pendulum,DT-FBSDE,0,25,0.842666,3.044956
+L1 inverted pendulum,DT-FBSDE,0,28,0.975021,3.019164
+L1 inverted pendulum,DT-FBSDE,0,31,1.105206,2.908659
+L1 inverted pendulum,DT-FBSDE,0,33,1.296410,2.857232
+L1 inverted pendulum,DT-FBSDE,0,36,1.488418,2.842915
+L1 inverted pendulum,DT-FBSDE,0,40,1.658512,2.842915
+L1 inverted pendulum,DT-FBSDE,0,49,1.938621,2.840228
+L1 inverted pendulum,DT-FBSDE,0,58,2.204889,2.840228
+L1 inverted pendulum,DT-FBSDE,0,69,2.532437,2.831570
+L1 inverted pendulum,DT-FBSDE,0,81,2.903063,2.831570
+L1 inverted pendulum,DT-FBSDE,0,96,3.320057,2.831570
+L1 inverted pendulum,DT-FBSDE,0,112,3.858595,2.667785
+L1 inverted pendulum,DT-FBSDE,0,129,4.440216,2.653572
+L1 inverted pendulum,DT-FBSDE,0,151,5.055449,2.653572
+L1 inverted pendulum,DT-FBSDE,0,180,5.822643,2.653572
+L1 inverted pendulum,DT-FBSDE,0,211,6.688560,2.610026
+L1 inverted pendulum,DT-FBSDE,0,239,7.679661,2.602200
+L1 inverted pendulum,DT-FBSDE,0,281,8.837538,2.537523
+L1 inverted pendulum,DT-FBSDE,0,328,10.164542,2.507364
+L1 inverted pendulum,DT-FBSDE,0,382,11.671542,2.472814
+L1 inverted pendulum,DT-FBSDE,0,445,13.419864,2.461452
+L1 inverted pendulum,DT-FBSDE,0,513,15.428445,2.443067
+L1 inverted pendulum,DT-FBSDE,0,602,17.737228,2.407064
+L1 inverted pendulum,DT-FBSDE,0,696,20.405890,2.397838
+L1 inverted pendulum,DT-FBSDE,0,812,23.462499,2.392113
+L1 inverted pendulum,DT-FBSDE,0,940,26.990354,2.368185
+L1 inverted pendulum,DT-FBSDE,0,1099,31.052899,2.368185
+L1 inverted pendulum,DT-FBSDE,0,1280,35.681281,2.368302
+L1 inverted pendulum,DT-FBSDE,0,1488,41.034512,2.368302
+L1 inverted pendulum,DT-FBSDE,0,1723,47.187119,2.368302
+L1 inverted pendulum,DT-FBSDE,0,1995,54.275194,2.368302
+L1 inverted pendulum,DT-FBSDE,0,2218,60.009186,2.368302
+L1 double inverted pendulum,FBRRT,0,0,0.000000,99.019162
+L1 double inverted pendulum,FBRRT,0,1,6.640838,94.333497
+L1 double inverted pendulum,FBRRT,0,2,12.804780,59.858662
+L1 double inverted pendulum,FBRRT,0,3,19.361439,59.661588
+L1 double inverted pendulum,FBRRT,0,4,25.711714,59.075830
+L1 double inverted pendulum,FBRRT,0,5,32.100182,59.075830
+L1 double inverted pendulum,FBRRT,0,6,38.412612,52.667070
+L1 double inverted pendulum,FBRRT,0,7,44.457915,38.580272
+L1 double inverted pendulum,FBRRT,0,8,50.647695,38.580272
+L1 double inverted pendulum,FBRRT,0,9,56.886841,38.446569
+L1 double inverted pendulum,FBRRT,0,10,62.956335,30.181246
+L1 double inverted pendulum,FBRRT,0,12,75.382411,30.032877
+L1 double inverted pendulum,FBRRT,0,14,87.788082,30.046481
+L1 double inverted pendulum,FBRRT,0,16,100.114525,30.046481
+L1 double inverted pendulum,FBRRT,0,18,112.540367,30.046481
+L1 double inverted pendulum,FBRRT,0,20,124.934978,30.046481
+L1 double inverted pendulum,DT-FBSDE,0,0,0.000000,99.019162
+L1 double inverted pendulum,DT-FBSDE,0,1,3.364962,67.619193
+L1 double inverted pendulum,DT-FBSDE,0,2,6.865578,46.140128
+L1 double inverted pendulum,DT-FBSDE,0,3,10.670719,35.748757
+L1 double inverted pendulum,DT-FBSDE,0,4,14.689258,32.402571
+L1 double inverted pendulum,DT-FBSDE,0,5,18.862219,27.325297
+L1 double inverted pendulum,DT-FBSDE,0,6,22.838159,23.367352
+L1 double inverted pendulum,DT-FBSDE,0,7,27.223707,23.367352
+L1 double inverted pendulum,DT-FBSDE,0,8,31.665003,23.367352
+L1 double inverted pendulum,DT-FBSDE,0,9,35.952316,21.869071
+L1 double inverted pendulum,DT-FBSDE,0,11,44.679385,21.387278
+L1 double inverted pendulum,DT-FBSDE,0,12,48.735902,20.194793
+L1 double inverted pendulum,DT-FBSDE,0,14,57.009068,18.483137
+L1 double inverted pendulum,DT-FBSDE,0,16,65.444719,15.293939
+L1 double inverted pendulum,DT-FBSDE,0,18,74.739305,14.053384
+L1 double inverted pendulum,DT-FBSDE,0,20,83.436107,12.064453
+L1 double inverted pendulum,DT-FBSDE,0,23,96.924001,10.738428
+L1 double inverted pendulum,DT-FBSDE,0,26,111.083910,10.706998
+L1 double inverted pendulum,DT-FBSDE,0,28,120.034741,10.479906

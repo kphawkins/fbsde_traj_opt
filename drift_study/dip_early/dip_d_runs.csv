@@ -1,0 +1,7 @@
+problem,model,seed,iterations,accepted,failures,seconds,final_cost,mean_girsanov_drift,mean_first_order_correction,mean_target_magnitude,mean_signed_first_order_correction,mean_second_order_correction,off_policy_fraction,mean_off_policy_correction,mean_taylor_residual
+L1 double inverted pendulum,"poly4:batch=128,target=taylor,explore=0.03",0,60,28,0,183.810816,5.489807,4.458535,0.153083,9.747049,-0.065506,0.043651,0.060660,0.950595,0.000000
+L1 double inverted pendulum,"poly4:batch=128,target=taylor,explore=0.03",1,39,14,0,181.114624,5.306805,6.357097,0.191975,10.659755,-0.092084,0.054927,0.082169,0.919031,0.000000
+L1 double inverted pendulum,"poly4:batch=128,target=taylor,explore=0.03",2,43,23,0,184.349878,4.044870,5.792473,0.195669,12.496053,-0.107795,0.059234,0.081386,1.474629,0.000000
+L1 double inverted pendulum,"poly4:batch=128,target=taylor,explore=0.2",0,42,17,0,182.799793,5.568481,11.420728,0.350167,14.251612,-0.224723,0.087131,0.159846,1.925475,0.000000
+L1 double inverted pendulum,"poly4:batch=128,target=taylor,explore=0.2",1,37,6,0,183.433087,6.721933,13.236780,0.393117,17.508310,-0.236277,0.108827,0.167384,2.237170,0.000000
+L1 double inverted pendulum,"poly4:batch=128,target=taylor,explore=0.2",2,39,11,0,181.018231,5.178925,12.856149,0.356726,17.017428,-0.232666,0.092907,0.183604,1.853297,0.000000

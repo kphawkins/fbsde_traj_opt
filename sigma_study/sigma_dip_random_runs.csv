@@ -1,0 +1,7 @@
+problem,config,seed,batch,final_cost,v0_estimate,seconds,iterations,accepted,forward_seconds,backward_seconds,line_search_seconds,failed
+L1 double inverted pendulum,"ut:rotate=random",0,128,40.489786,0.678342,180.145146,390,21,6.675781,66.926817,106.542237,0
+L1 double inverted pendulum,"ut:rotate=random",1,128,31.426142,1.166171,180.057039,354,20,6.682013,69.243682,104.131064,0
+L1 double inverted pendulum,"ut:rotate=random",2,128,31.550055,10.265200,180.208335,333,14,7.194661,68.226608,104.786786,0
+L1 double inverted pendulum,"cut:rotate=random",0,256,18.539336,0.166687,180.631482,249,20,11.622403,94.660515,74.348377,0
+L1 double inverted pendulum,"cut:rotate=random",1,256,45.586968,3.913894,180.395994,274,6,12.304616,89.686890,78.404269,0
+L1 double inverted pendulum,"cut:rotate=random",2,256,30.826581,2.309915,180.236206,269,20,12.434654,90.552027,77.249319,0

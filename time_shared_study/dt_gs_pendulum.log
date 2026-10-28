@@ -1,0 +1,14 @@
+
+=== L1 inverted pendulum: grid optimum 2.2977 ===
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 0: DT-FBSDE failed at iteration 77: TimeSharedLinearFit::SolveKnots: the fit is not finite.
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 0: final gap     +nan% after 9.4 s
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 1: DT-FBSDE failed at iteration 161: TimeSharedLinearFit::SolveKnots: the fit is not finite.
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 1: final gap     +nan% after 18.6 s
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 2: DT-FBSDE failed at iteration 160: TimeSharedLinearFit::SolveKnots: the fit is not finite.
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 2: final gap     +nan% after 18.0 s
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 3: DT-FBSDE failed at iteration 148: TimeSharedLinearFit::SolveKnots: the fit is not finite.
+poly6:time=linear,knots=16,pass=gs,stale=0.1 seed 3: final gap     +nan% after 15.5 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1 seed 0: final gap  +459.87% after 30.1 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1 seed 1: final gap  +351.36% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1 seed 2: final gap   +97.68% after 30.0 s
+poly6:rank=8,time=linear,knots=16,balance=1,sweeps=2,pass=gs,stale=0.1 seed 3: final gap  +163.34% after 30.1 s

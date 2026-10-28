@@ -1,0 +1,258 @@
+<style>
+.page { padding: 0; padding-block: 48px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.status { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.88rem; color: var(--ink-2); }
+.status b { font-weight: 500; color: var(--ink); }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 20px; }
+.legend i.dot { width: 9px; height: 9px; border-radius: 50%; }
+.eq { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.9rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; overflow-x: auto; white-space: pre; line-height: 1.7; }
+.kterm { color: var(--accent); font-weight: 500; }
+.pending { border: 1px dashed var(--rule); border-radius: 6px; padding: 14px 16px; color: var(--ink-2); font-size: 0.9rem; }
+tr.group td { font-weight: 600; color: var(--ink-2); background: var(--band); font-size: 0.8rem; letter-spacing: 0.02em; }
+tr.base td { color: var(--ink-3); }
+td.best { color: var(--good); font-weight: 600; }
+td.label { white-space: normal; min-width: 14rem; text-align: left; }
+.kbar { display: inline-block; height: 8px; border-radius: 2px; background: var(--accent); vertical-align: middle; margin-right: 6px; opacity: 0.8; }
+</style>
+<main class="page">
+  <div class="stack" style="max-width:1040px;margin:0 auto;gap:40px;display:grid">
+  <header class="stack prose">
+    <div class="eyebrow">DT-FBSDE · Taylor noiseless estimator · random {−1, 0, 1} drifts</div>
+    <h1>Off-Policy Drift Study</h1>
+    <p class="lede"><!--LEDE--></p>
+    <div class="status" id="status"></div>
+  </header>
+
+  <div class="verdict">
+    <div class="eyebrow">What the runs show so far</div>
+    <!--FINDINGS-->
+  </div>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>The estimator and its K term</h2>
+      <!--ESTIMATOR-->
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Stage 1: how much random drift?</h2>
+      <!--STAGE1-->
+    </div>
+    <div class="legend" id="legend1"></div>
+    <div id="stage1"></div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>How much the K term is used</h2>
+      <!--KTERM-->
+    </div>
+    <div class="grid2" id="kcharts"></div>
+    <div class="table-wrap" id="ktable"></div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Stage 2: ablation and tricks</h2>
+      <!--STAGE2-->
+    </div>
+    <div id="stage2"></div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Confirmation on 8 seeds</h2>
+      <!--CONFIRM-->
+    </div>
+    <div id="confirm"></div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>Double inverted pendulum</h2>
+      <!--DIP-->
+    </div>
+    <div id="dip" class="stack"></div>
+  </section>
+
+  <section class="stack">
+    <div class="prose stack">
+      <h2>How to read the numbers</h2>
+      <!--NOTES-->
+    </div>
+  </section>
+  </div>
+</main>
+
+<script>
+const DATA = /*DATA*/null;
+const NS = "http://www.w3.org/2000/svg";
+const PROBLEMS = ["L1 inverted pendulum", "L1 double integrator"];
+const EPS = [0.03, 0.1, 0.2, 0.3, 0.5];
+const SERIES = [
+  { key: "greedy", name: "Double greedy (old default)", color: "var(--ink-2)", match: s => s.target === "greedy" },
+  { key: "current", name: "Exact re-evaluation of μ", color: "var(--s4)", match: s => s.target === "current" },
+  { key: "taylor", name: "Taylor, target policy μ", color: "var(--s1)", match: s => s.target === "taylor" && s.tpolicy !== "greedy" },
+  { key: "taylor-greedy", name: "Taylor, target policy greedy", color: "var(--s2)", match: s => s.target === "taylor" && s.tpolicy === "greedy" },
+];
+function el(tag, attrs = {}, parent) { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (parent) parent.appendChild(n); return n; }
+function h(tag, attrs = {}, text) { const n = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (text !== undefined) n.textContent = text; return n; }
+const pct = g => g === null || g === undefined ? "–" : ((g >= 0 ? "+" : "") + g.toFixed(Math.abs(g) >= 10 ? 0 : 1) + "%");
+const num = (v, d = 3) => v === null || v === undefined ? "–" : v.toFixed(d);
+
+function stage1Entries(problem, series) {
+  return EPS.map(e => DATA.stage1.find(r => r.problem === problem && series.match(r.setting) &&
+    Number(r.setting.explore) === e && Object.keys(r.setting).every(k => ["target", "tpolicy", "explore"].includes(k)))).filter(Boolean);
+}
+
+function lineChart(container, title, problem, value, yLabel, opts = {}) {
+  const card = h("div", { class: "chart-card" });
+  card.appendChild(h("div", { class: "chart-title" }, title));
+  const W = 520, H = 280, m = { l: 52, r: 16, t: 10, b: 40 };
+  const all = [];
+  const lines = (opts.series || SERIES).map(s => ({ s, pts: stage1Entries(problem, s).map(r => ({ e: Number(r.setting.explore), v: value(r), r })).filter(p => p.v !== null) }));
+  lines.forEach(l => l.pts.forEach(p => { all.push(p.v); if (opts.dots) p.r.gaps.forEach(g => all.push(g)); }));
+  const ymax = opts.ymax || Math.max(...all) * 1.08, ymin = opts.ymin ?? 0;
+  const x = e => m.l + (e / 0.5) * (W - m.l - m.r);
+  const y = v => H - m.b - ((v - ymin) / (ymax - ymin)) * (H - m.t - m.b);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `${title}, ${problem}` }, card);
+  const ticks = opts.ticks || niceTicks(ymin, ymax);
+  for (const t of ticks) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), stroke: "var(--grid)" }, svg);
+    const lab = el("text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, svg); lab.textContent = opts.fmt ? opts.fmt(t) : t;
+  }
+  for (const e of EPS) {
+    const lab = el("text", { x: x(e), y: H - m.b + 16, "text-anchor": "middle" }, svg); lab.textContent = e;
+  }
+  const xl = el("text", { x: (m.l + W - m.r) / 2, y: H - 6, "text-anchor": "middle" }, svg); xl.textContent = "ε, probability of a random drift per stage";
+  const yl = el("text", { x: 12, y: (m.t + H - m.b) / 2, "text-anchor": "middle", transform: `rotate(-90 12 ${(m.t + H - m.b) / 2})` }, svg); yl.textContent = yLabel;
+  if (opts.refLine !== undefined) el("line", { x1: m.l, x2: W - m.r, y1: y(opts.refLine), y2: y(opts.refLine), stroke: "var(--ink-3)", "stroke-dasharray": "3 4" }, svg);
+  for (const l of lines) {
+    if (!l.pts.length) continue;
+    if (opts.dots) l.pts.forEach(p => p.r.gaps.forEach(g => el("circle", { cx: x(p.e), cy: y(g), r: 2.2, fill: l.s.color, opacity: 0.35 }, svg)));
+    el("path", { d: l.pts.map((p, i) => `${i ? "L" : "M"}${x(p.e)},${y(p.v)}`).join(""), fill: "none", stroke: l.s.color, "stroke-width": 2 }, svg);
+    for (const p of l.pts) {
+      const c = el("circle", { cx: x(p.e), cy: y(p.v), r: 3.8, fill: l.s.color, stroke: "var(--surface)", "stroke-width": 1.5 }, svg);
+      el("title", {}, c).textContent = `${l.s.name}, ε = ${p.e}: ${opts.fmt ? opts.fmt(p.v) : p.v.toFixed(3)}`;
+    }
+  }
+  container.appendChild(card);
+}
+function niceTicks(lo, hi) {
+  const span = hi - lo, step0 = Math.pow(10, Math.floor(Math.log10(span / 4)));
+  const step = [1, 2, 5, 10].map(k => k * step0).find(s => span / s <= 6);
+  const out = []; for (let t = Math.ceil(lo / step) * step; t <= hi + 1e-12; t += step) out.push(+t.toFixed(10)); return out;
+}
+function legend(id, series) {
+  const lg = document.getElementById(id);
+  for (const s of series) { const sp = h("span"); const i = h("i", { class: "dot" }); i.style.background = s.color; sp.append(i, document.createTextNode(s.name)); lg.appendChild(sp); }
+}
+
+function renderStatus() {
+  const s = document.getElementById("status");
+  for (const [k, v] of DATA.status) { const sp = h("span"); sp.append(document.createTextNode(k + ": ")); sp.appendChild(h("b", {}, v)); s.appendChild(sp); }
+}
+
+function renderStage1() {
+  legend("legend1", SERIES);
+  const grid = h("div", { class: "grid2" });
+  for (const p of PROBLEMS) lineChart(grid, `${p.replace("L1 ", "")}: final gap to the grid optimum after 30 s (median line, seeds as dots)`, p, r => r.gap_median, "final gap", { dots: true, fmt: t => t + "%", ymin: 0 });
+  document.getElementById("stage1").appendChild(grid);
+  const kc = document.getElementById("kcharts");
+  const tay = SERIES.slice(2);
+  for (const p of PROBLEMS) lineChart(kc, `${p.replace("L1 ", "")}: Girsanov drift ‖D‖ = ‖Σ⁻¹(F^μ − K)‖, mean over samples`, p, r => r.mean_girsanov_drift, "mean ‖D‖", { series: tay, refLine: 1, fmt: t => t.toFixed(1) });
+  for (const p of PROBLEMS) lineChart(kc, `${p.replace("L1 ", "")}: K term as a share of the target, mean |gᵀ(F^μ − K)| / mean |Ŷ|`, p, r => r.k_share === null ? null : 100 * r.k_share, "K share of Ŷ", { series: tay, fmt: t => t + "%" });
+}
+
+const COLS = [
+  ["Pendulum gap", r => r.p ? pct(r.p.gap_median) : "–", "p"],
+  ["Integrator gap", r => r.d ? pct(r.d.gap_median) : "–", "d"],
+  ["‖D‖ (pend.)", r => r.p ? num(r.p.mean_girsanov_drift, 2) : "–"],
+  ["K share (pend.)", r => r.p && r.p.k_share !== null ? (100 * r.p.k_share).toFixed(2) + "%" : "–"],
+  ["Off-policy samples", r => r.p && r.p.off_policy_fraction !== null ? (100 * r.p.off_policy_fraction).toFixed(0) + "%" : "–"],
+  ["|K| where off-policy", r => r.p ? num(r.p.mean_off_policy_correction, 4) : "–"],
+  ["Mean signed K", r => r.p && r.p.mean_signed_first_order_correction !== null ? (r.p.mean_signed_first_order_correction >= 0 ? "+" : "") + num(r.p.mean_signed_first_order_correction, 4) : "–"],
+  ["Taylor residual", r => r.p ? num(r.p.mean_taylor_residual, 4) : "–"],
+];
+function pairRows(entries) {
+  const by = {};
+  for (const r of entries) { by[r.model] = by[r.model] || { model: r.model, setting: r.setting }; by[r.model][r.problem === PROBLEMS[0] ? "p" : "d"] = r; }
+  return Object.values(by);
+}
+function describe(s) {
+  const parts = [];
+  parts.push({ greedy: "double greedy", current: "exact re-eval.", taylor: "Taylor" }[s.target] || s.target);
+  if (s.target === "taylor") parts.push(s.tpolicy === "greedy" ? "greedy target" : "μ target");
+  parts.push(`ε = ${s.explore ?? "0.03"}`);
+  if (s.order !== undefined) parts.push(["order 0 (no K term)", "order 1 (K only)", "order 2 (full)"][Number(s.order)]);
+  if (s.hold) parts.push(`hold ${s.hold} stages`);
+  if (s.gweight) parts.push(`Girsanov weight κ = ${s.gweight}`);
+  if (s.inflate) parts.push("no noise inflation");
+  return parts.join(" · ");
+}
+function table(container, groups) {
+  const wrap = h("div", { class: "table-wrap" }); const t = h("table");
+  const head = h("tr"); head.appendChild(h("th", {}, "Setting")); COLS.forEach(c => head.appendChild(h("th", {}, c[0]))); t.appendChild(head);
+  for (const g of groups) {
+    const gr = h("tr", { class: "group" }); const td = h("td", { colspan: String(COLS.length + 1) }, g.name); gr.appendChild(td); t.appendChild(gr);
+    const rows = g.rows;
+    const best = {};
+    for (const k of ["p", "d"]) { const vals = rows.filter(r => r[k] && !r.base).map(r => r[k].gap_median); best[k] = vals.length ? Math.min(...vals) : null; }
+    for (const r of rows) {
+      const tr = h("tr", r.base ? { class: "base" } : {});
+      tr.appendChild(h("td", { class: "label" }, (r.base ? "baseline: " : "") + describe(r.setting)));
+      for (const c of COLS) { const cell = h("td", {}, c[1](r)); if (c[2] && r[c[2]] && !r.base && r[c[2]].gap_median === best[c[2]]) cell.className = "best"; tr.appendChild(cell); }
+      t.appendChild(tr);
+    }
+  }
+  wrap.appendChild(t); container.appendChild(wrap);
+}
+function renderKTable() {
+  const rows = pairRows(DATA.stage1.filter(r => r.setting.target === "taylor"));
+  rows.sort((a, b) => (a.setting.tpolicy || "").localeCompare(b.setting.tpolicy || "") || Number(a.setting.explore) - Number(b.setting.explore));
+  table(document.getElementById("ktable"), [
+    { name: "Taylor, target policy μ", rows: rows.filter(r => r.setting.tpolicy !== "greedy") },
+    { name: "Taylor, target policy greedy", rows: rows.filter(r => r.setting.tpolicy === "greedy") },
+  ]);
+}
+function renderStage2() {
+  const box = document.getElementById("stage2");
+  if (!DATA.stage2.length) { box.appendChild(h("div", { class: "pending" }, "Stage 2 is running. This section fills in when it finishes.")); return; }
+  const rows = pairRows(DATA.stage2);
+  const base = pairRows(DATA.stage1);
+  const baseline = (pred) => base.filter(pred).map(r => ({ ...r, base: true }));
+  const groups = [];
+  for (const g of DATA.stage2_groups) {
+    const members = rows.filter(r => g.keys.every(k => k in r.setting) && (g.pred ? new Function("s", "return " + g.pred)(r.setting) : true));
+    if (!members.length) continue;
+    const bl = g.baseline ? baseline(r => new Function("s", "return " + g.baseline)(r.setting) && Object.keys(r.setting).every(k => ["target", "tpolicy", "explore"].includes(k))) : [];
+    groups.push({ name: g.name, rows: [...bl, ...members] });
+  }
+  table(box, groups);
+}
+function renderDip() {
+  const box = document.getElementById("dip");
+  dipTable(box, DATA.dip, "Main comparison: two runs at a time, 240 s, 4 seeds", "Running.");
+  dipTable(box, DATA.dip_early, "Early phase: six runs at a time, 180 s, about 40 iterations each", "Not run.");
+}
+function dipTable(box, rows, caption, empty) {
+  box.appendChild(h("h3", {}, caption));
+  if (!rows.length) { box.appendChild(h("div", { class: "pending" }, empty)); return; }
+  rows = [...rows].sort((a, b) => a.gap_median - b.gap_median);
+  const wrap = h("div", { class: "table-wrap" }); const t = h("table");
+  const head = h("tr"); ["Setting", "Seeds", "Gap to best known, median", "Worst", "‖D‖", "K share", "|K| where off-policy", "Iterations"].forEach(c => head.appendChild(h("th", {}, c))); t.appendChild(head);
+  for (const r of rows) {
+    const tr = h("tr"); tr.appendChild(h("td", { class: "label" }, describe(r.setting)));
+    [String(r.runs - r.broke) + " of " + r.runs, pct(r.gap_median), pct(r.gap_worst), num(r.mean_girsanov_drift, 2), r.k_share === null ? "–" : (100 * r.k_share).toFixed(2) + "%", num(r.mean_off_policy_correction, 3), String(Math.round(r.iterations))].forEach(v => tr.appendChild(h("td", {}, v)));
+    t.appendChild(tr);
+  }
+  wrap.appendChild(t); box.appendChild(wrap);
+}
+function renderConfirm() {
+  const box = document.getElementById("confirm");
+  if (!DATA.confirm.length) { box.appendChild(h("div", { class: "pending" }, "Running.")); return; }
+  table(box, [{ name: "3 earlier seeds + 5 new ones per setting", rows: pairRows(DATA.confirm) }]);
+}
+renderStatus(); renderStage1(); renderKTable(); renderStage2(); renderConfirm(); renderDip();
+</script>

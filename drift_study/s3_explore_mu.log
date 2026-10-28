@@ -1,0 +1,22 @@
+
+=== L1 double integrator: grid optimum 4.1367 ===
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2 seed 0: final gap    +1.08% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2 seed 1: final gap    +0.86% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2 seed 2: final gap    +1.12% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4 seed 0: final gap    +7.18% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4 seed 1: final gap    +3.12% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4 seed 2: final gap    +9.02% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4 seed 0: final gap    +1.77% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4 seed 1: final gap    +0.91% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4 seed 2: final gap    +2.12% after 30.0 s
+
+=== L1 inverted pendulum: grid optimum 2.2977 ===
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2 seed 0: final gap    +4.33% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2 seed 1: final gap    +4.97% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.2 seed 2: final gap    +6.28% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4 seed 0: final gap   +24.15% after 30.1 s
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4 seed 1: final gap   +18.41% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.5,explore=0.4 seed 2: final gap   +22.34% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4 seed 0: final gap   +11.67% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4 seed 1: final gap   +16.52% after 30.0 s
+poly4:target=taylor,inflate=1,explorers=0.25,explore=0.4 seed 2: final gap    +9.80% after 30.0 s
