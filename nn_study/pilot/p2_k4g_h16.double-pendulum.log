@@ -1,0 +1,5 @@
+
+=== L1 double inverted pendulum (40 s per run) ===
+L1 double inverted pendulum  k4g_h16            seed  0:   98.8717 ->   23.9816 (best   23.9816) in   40.10 s, 56 iterations
+
+Checkpoints in p2_k4g_h16.double-pendulum.csv, MPC results in /dev/null, grid optima in p2_k4g_h16.double-pendulum.ref.csv

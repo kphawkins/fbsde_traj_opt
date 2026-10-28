@@ -1,0 +1,6 @@
+
+=== L1 inverted pendulum (20 s per run) ===
+grid DP optimum, held out: 2.2977 (1024 rollouts), 2.3099 (first 128)
+L1 inverted pendulum         k4p_h16_m8         seed  0:   98.9781 ->    3.3319 (best    3.3319) in   20.05 s, 178 iterations
+
+Checkpoints in p3_k4p_h16_m8.pendulum.csv, MPC results in /dev/null, grid optima in p3_k4p_h16_m8.pendulum.ref.csv
