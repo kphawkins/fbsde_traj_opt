@@ -1,0 +1,8 @@
+
+=== L1 double inverted pendulum (120 s per run) ===
+L1 double inverted pendulum  llgrad             seed  0:   98.8717 ->   56.2856 (best   56.2856) in  120.04 s, 1771 iterations
+L1 double inverted pendulum  llgrad             seed  1:   98.8717 ->   47.9042 (best   47.9042) in  120.02 s, 1768 iterations
+L1 double inverted pendulum  llgrad             seed  2:   98.8717 ->   51.4425 (best   51.4425) in  120.03 s, 1743 iterations
+L1 double inverted pendulum  llgrad             seed  3:   98.8717 ->   46.8770 (best   46.8770) in  120.01 s, 1792 iterations
+
+Checkpoints in llgrad.double-pendulum.csv, MPC results in /dev/null, grid optima in llgrad.double-pendulum.ref.csv
