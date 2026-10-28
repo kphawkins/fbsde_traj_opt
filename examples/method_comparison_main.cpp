@@ -129,6 +129,11 @@ struct DriverOptions {
   // benchmark's normalization box rather than Euclidean, and the label its traces carry.
   std::size_t nn_samples = 256;
   std::size_t nn_neighbors = 1;
+  // How many stages DT-NN's policy holds a candidate control before reading the table, in 2-D and on the double
+  // inverted pendulum, and how many batches its table keeps.
+  std::size_t nn_lookahead = 1;
+  std::size_t double_pendulum_nn_lookahead = 1;
+  std::size_t nn_memory = 1;
   NearestNeighborYEstimate nn_y_estimate = NearestNeighborYEstimate::kPathwise;
   double nn_exploration = 0.0;
   double nn_exploring_path_fraction = 1.0;
@@ -438,6 +443,8 @@ auto RunNearestNeighbor(const BenchmarkT& benchmark,
   typename Solver::Options solver_options;
   solver_options.num_samples = options.nn_samples;
   solver_options.num_neighbors = options.nn_neighbors;
+  solver_options.lookahead_stages = kN == 4 ? options.double_pendulum_nn_lookahead : options.nn_lookahead;
+  solver_options.memory_batches = options.nn_memory;
   solver_options.y_estimate = options.nn_y_estimate;
   solver_options.exploration_probability = options.nn_exploration;
   solver_options.exploring_path_fraction = options.nn_exploring_path_fraction;
@@ -1163,6 +1170,9 @@ auto PrintUsage() -> void {
       << "  --dt-proximal-reject F   the weight's factor after a rejected update (default 2; 1: unchanged)\n"
       << "  --nn-samples N           DT-NN paths per batch (default 256)\n"
       << "  --nn-neighbors K         DT-NN neighbors averaged (default 1)\n"
+      << "  --nn-lookahead H         stages DT-NN holds a candidate control in 2-D (default 1)\n"
+      << "  --dip-nn-lookahead H     the same on the double inverted pendulum (default 1)\n"
+      << "  --nn-memory B            batches DT-NN's table keeps (default 1)\n"
       << "  --nn-target T            DT-NN's Y: pathwise (default) or greedy\n"
       << "  --nn-explore P           DT-NN exploration probability after the first iteration (default 0)\n"
       << "  --nn-exploring-fraction F  share of DT-NN paths that may explore (default 1)\n"
@@ -1298,6 +1308,12 @@ auto ParseOptions(int argc, char** argv, DriverOptions& options) -> Result<> {
       options.nn_samples = count;
     } else if (argument == "--nn-neighbors") {
       options.nn_neighbors = count;
+    } else if (argument == "--nn-lookahead") {
+      options.nn_lookahead = count;
+    } else if (argument == "--dip-nn-lookahead") {
+      options.double_pendulum_nn_lookahead = count;
+    } else if (argument == "--nn-memory") {
+      options.nn_memory = count;
     } else if (argument == "--nn-target") {
       RESULT_ASSERT(value == "pathwise" || value == "greedy", "--nn-target is pathwise or greedy.");
       options.nn_y_estimate =
